@@ -1,7 +1,7 @@
 ---
 id: B-07
 title: "Проводка: сторож в стартовых скриптах добавляет -XX:AOTCache=$APP_HOME/lib/app.aot, когда кэш есть; кэш и манифест в installDist и distZip"
-status: open
+status: done
 priority: P0
 size: S/M
 stage: stage-2-mvp
@@ -9,6 +9,15 @@ blocked_by: [B-05]
 ---
 
 # B-07 — Проводка в стартовые скрипты и дистрибутив
+
+> **Сделано 06.09.2026.** `StartScriptGuard` — сторож в unix- и windows-скриптах (якорь — текст
+> `# Collect all arguments for the java command:` и строка `set DEFAULT_JVM_OPTS=`; отсутствие
+> якоря — ошибка, называющая смену шаблона Gradle). `jvmArgs` и флаги переносимости —
+> в `applicationDefaultJvmArgs`. `distTar` получает кэш и манифест в `<base>[-version]/lib`
+> **без** `preserveFileTimestamps`: вместо него `aotTrain` нормализует jar-ы к константе
+> воспроизводимого tar (D3, правка). `distZip` печатает предупреждение и кэш не несёт. Три
+> юнит-теста сторожа, три TestKit-теста (скрипты, распакованный tar с mtime `86400` и сходящимся
+> манифестом, zip без кэша).
 
 Путь к кэшу в `-XX:AOTCache` разрешается от текущего каталога (D6 эксперимента), а
 `applicationDefaultJvmArgs` не умеет `$APP_HOME`: шаблон Gradle сам говорит, что единственный

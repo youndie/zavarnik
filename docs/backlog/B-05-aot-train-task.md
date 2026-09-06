@@ -12,7 +12,7 @@ blocked_by: [B-04]
 
 > **Сделано 06.09.2026.** `AotTrainTask` + `StartScriptRun` + `JarManifest`. Запуск настоящего
 > `bin/<app>` с `JAVA_HOME` тулчейна и `JAVA_OPTS=-XX:AOTCacheOutput=…`; старый кэш и манифест
-> удаляются до старта; mtime jar-ов → `FileTime.fromMillis(1000)`; готовность по URL (HttpClient,
+> удаляются до старта; mtime jar-ов → `FileTime.fromMillis(86_400_000)` (с B-07; сначала было `1000`, см. D3); готовность по URL (HttpClient,
 > опрос 50 мс) или `exitAfter`; нагрузка — команды по очереди с проверкой кода; SIGTERM; ожидание
 > строки «AOTCache creation is complete» в журнале (второй JVM-процесс пишет кэш после выхода
 > первого); манифест SHA-256. Пути отказа — SIGKILL и удаление кэша: полузаваренный кэш хуже

@@ -206,10 +206,13 @@ public abstract class AotTrainTask : DefaultTask() {
 
     public companion object {
         /**
-         * Jib's `EPOCH_PLUS_SECOND`, the default modification time it gives every file in an image.
-         * Chosen so that a Jib image needs no configuration to keep the cache valid.
+         * `1970-01-02T00:00:00Z` — the constant Gradle stamps on every entry of a reproducible tar
+         * (`TarCopyAction.CONSTANT_TIME_FOR_TAR_ENTRIES`, the default since Gradle 9). The JVM
+         * compares jar mtimes against the cache; with this constant a `distTar` unpacked anywhere
+         * matches the cache trained in `installDist` without any configuration, and Docker `COPY`
+         * preserves it. Zip cannot carry it at all: DOS timestamps start in 1980 and are local time.
          */
-        public val JAR_MTIME: FileTime = FileTime.fromMillis(1_000)
+        public val JAR_MTIME: FileTime = FileTime.fromMillis(86_400_000)
         private const val CREATION_COMPLETE = "AOTCache creation is complete"
         private const val CREATION_FAILED = "AOTCache creation failed"
         private const val ASSEMBLING = "to assemble AOT cache"

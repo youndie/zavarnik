@@ -32,6 +32,9 @@ functionalTest.compileClasspath += sourceSets.main.get().output
 functionalTest.runtimeClasspath += sourceSets.main.get().output
 
 dependencies {
+    // The unit tests touch GradleException and Property; `java-gradle-plugin` puts the Gradle API on
+    // the main classpath but, with these conventions, not on the unit-test runtime.
+    testImplementation(gradleApi())
     testImplementation(kotlin("test"))
     "functionalTestImplementation"(kotlin("test-junit5"))
     "functionalTestImplementation"(gradleTestKit())
