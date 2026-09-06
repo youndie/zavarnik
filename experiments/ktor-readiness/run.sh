@@ -10,6 +10,9 @@ set -u
 cd "$(dirname "$0")"
 RUNS=${1:-20}
 PORT=${STAND_PORT:-8080}
+# Scratch logs live outside the tree: a one-way replica (mutagen) deletes anything the run writes
+# into the synced directory, mid-run, and the symptom is "No such file" for a file just written.
+TMP=$(mktemp -d)
 JAVA=${JAVA_HOME:?set JAVA_HOME}/bin/java
 echo "# $(date -u +%Y-%m-%dT%H:%M:%SZ) $(uname -sm) $(hostname) runs=$RUNS port=$PORT"
 "$JAVA" -version 2>&1 | sed 's/^/# /'
@@ -40,20 +43,20 @@ workload() {
 }
 
 echo; echo "=== T0 training run through the real start script (SIGTERM after the workload)"
-t0=$(now_ms); JAVA_OPTS="-XX:AOTCacheOutput=$APP/lib/app.aot -Dstand.port=$PORT" "$S" > train.log 2>&1 & PID=$!
+t0=$(now_ms); JAVA_OPTS="-XX:AOTCacheOutput=$APP/lib/app.aot -Dstand.port=$PORT" "$S" > "$TMP/train.log" 2>&1 & PID=$!
 wait_ready $((t0 + 60000)) || { echo "stand did not become ready"; stop_app $PID; exit 1; }
 echo "ready after $(( $(now_ms) - t0 )) ms"; workload; stop_app $PID
-grep -E "creation is complete|Only one|Error" train.log | sed "s#$APP#<app>#"
+grep -E "creation is complete|Only one|Error" "$TMP/train.log" | sed "s#$APP#<app>#"
 echo "cache bytes=$(wc -c < "$APP/lib/app.aot" 2>/dev/null || echo none)"
 
 echo; echo "=== T1 class sources with the cache (one run, -Xlog:class+load)"
-JAVA_OPTS="-Xlog:class+load=info -Dstand.port=$PORT" "$S" > classes.log 2>&1 & PID=$!
+JAVA_OPTS="-Xlog:class+load=info -Dstand.port=$PORT" "$S" > "$TMP/classes.log" 2>&1 & PID=$!
 wait_ready $(( $(now_ms) + 60000 )); workload; stop_app $PID
-total=$(grep -c "source:" classes.log); shared=$(grep -c "source: shared objects file" classes.log)
-app_total=$(grep -E "^\[.*\] (stand\.|io\.ktor\.|kotlinx\.|kotlin\.)" classes.log | grep -c "source:")
-app_shared=$(grep -E "^\[.*\] (stand\.|io\.ktor\.|kotlinx\.|kotlin\.)" classes.log | grep -c "source: shared objects file")
+total=$(grep -c "source:" "$TMP/classes.log"); shared=$(grep -c "source: shared objects file" "$TMP/classes.log")
+app_total=$(grep -E "^\[.*\] (stand\.|io\.ktor\.|kotlinx\.|kotlin\.)" "$TMP/classes.log" | grep -c "source:")
+app_shared=$(grep -E "^\[.*\] (stand\.|io\.ktor\.|kotlinx\.|kotlin\.)" "$TMP/classes.log" | grep -c "source: shared objects file")
 echo "all classes: $shared of $total from the cache; app+ktor+kotlin: $app_shared of $app_total"
-echo "not from the cache, app+ktor+kotlin, top packages:"; grep -E "^\[.*\] (stand\.|io\.ktor\.|kotlinx\.|kotlin\.)" classes.log | grep -v "shared objects file" | sed -E 's/^\[[^]]*\]\[[^]]*\]\[[^]]*\] //; s/ source:.*//' | awk -F. '{print $1"."$2"."$3}' | sort | uniq -c | sort -rn | head -8
+echo "not from the cache, app+ktor+kotlin, top packages:"; grep -E "^\[.*\] (stand\.|io\.ktor\.|kotlinx\.|kotlin\.)" "$TMP/classes.log" | grep -v "shared objects file" | sed -E 's/^\[[^]]*\]\[[^]]*\]\[[^]]*\] //; s/ source:.*//' | awk -F. '{print $1"."$2"."$3}' | sort | uniq -c | sort -rn | head -8
 
 measure() { # $1 label, rest = JAVA_OPTS
   local label=$1; shift; local rows=()
@@ -71,6 +74,6 @@ measure "cache     SerialGC" -XX:+UseSerialGC
 measure "no-cache  G1      " -XX:AOTMode=off -XX:+UseG1GC
 measure "cache     G1      " -XX:+UseG1GC
 echo; echo "=== M2 sanity: the cache variant really used the cache (-XX:AOTMode=on exit code)"
-JAVA_OPTS="-XX:AOTMode=on -XX:+UseSerialGC -Dstand.port=$PORT" "$S" > strict.log 2>&1 & PID=$!
-if wait_ready $(( $(now_ms) + 60000 )); then echo "ready under -XX:AOTMode=on: yes"; else echo "ready under -XX:AOTMode=on: NO"; grep -E "aot|AOT" strict.log | head -5; fi; stop_app $PID
-rm -f train.log classes.log strict.log
+JAVA_OPTS="-XX:AOTMode=on -XX:+UseSerialGC -Dstand.port=$PORT" "$S" > "$TMP/strict.log" 2>&1 & PID=$!
+if wait_ready $(( $(now_ms) + 60000 )); then echo "ready under -XX:AOTMode=on: yes"; else echo "ready under -XX:AOTMode=on: NO"; grep -E "aot|AOT" "$TMP/strict.log" | head -5; fi; stop_app $PID
+rm -rf "$TMP"

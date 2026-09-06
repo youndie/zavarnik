@@ -22,7 +22,7 @@
 | Id этапа | Этап | Что это |
 |---|---|---|
 | `stage-0-research` | Ресёрч | Что JVM проверяет на самом деле; чем тренировка должна заканчиваться; кто это уже сделал. Закрыт 06.09.2026 — [research-architecture](docs/research/research-architecture.md). |
-| `stage-1-stand` | Стенд | Ktor-приложение и замер, который решает, есть ли что публиковать (RQ4, RQ6, JDK 26). |
+| `stage-1-stand` | Стенд | Ktor-приложение и замер, который решает, есть ли что публиковать (RQ4, RQ6, JDK 26). Гейт RQ6 пройден 06.09.2026: −59…−63 % ([B-01](docs/backlog/B-01-ktor-stand-and-readiness-timing.md)). |
 | `stage-2-mvp` | Плагин | `aotTrain` → `aotVerify` → проводка в дистрибутив; TestKit на каждое условие инвалидации. |
 | `stage-3-packaging` | Упаковка | Docker, Jib, переносимость между CPU, отчёт; Windows. |
 | `stage-4-release` | Выпуск | Имя, координаты, публикация, четыре недели наблюдения. |
@@ -33,11 +33,10 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (14)
+## Open (13)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
-| [B-01](docs/backlog/B-01-ktor-stand-and-readiness-timing.md) `[ ]` | Стенд: Ktor-приложение и замер времени готовности с кэшем и без (RQ6) | P0 | M | - |
 | [B-04](docs/backlog/B-04-plugin-skeleton-and-toolchain-checks.md) `[ ]` | Каркас плагина: расширение zavarnik, проверки тулчейна до первой задачи | P0 | M | B-01 |
 | [B-05](docs/backlog/B-05-aot-train-task.md) `[ ]` | aotTrain: тренировочный прогон через настоящий стартовый скрипт, готовность, нагрузка, SIGTERM, манифест | P0 | L | B-04 |
 | [B-06](docs/backlog/B-06-aot-verify-task.md) `[ ]` | aotVerify: запуск с -XX:AOTMode=on, подсчёт источников классов, сверка манифеста — сборка падает с причиной | P0 | M | B-05 |
@@ -52,7 +51,11 @@
 | [B-11](docs/backlog/B-11-aot-report-task.md) `[ ]` | aotReport: таблица «холодный / с кэшем» по времени готовности — артефакт для публикации | P2 | S/M | B-06 |
 | [B-14](docs/backlog/B-14-windows-training.md) `[ ]` | Тренировка на Windows: без SIGTERM нужен другой способ закончить прогон | P3 | M | - |
 
-## Closed (1)
+## Closed (2)
+
+**Стенд**
+
+- [B-01](docs/backlog/B-01-ktor-stand-and-readiness-timing.md) `[x]` - Стенд: Ktor-приложение и замер времени готовности с кэшем и без (RQ6)
 
 **Выпуск**
 

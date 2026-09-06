@@ -1,0 +1,24 @@
+# 2026-09-06T18:31:15Z Linux x86_64 DESKTOP-85OS64M runs=20 port=8080
+# openjdk version "25.0.4" 2026-07-21
+# OpenJDK Runtime Environment (build 25.0.4+7-1-24.04-Ubuntu)
+# OpenJDK 64-Bit Server VM (build 25.0.4+7-1-24.04-Ubuntu, mixed mode, sharing)
+# model name	: Intel(R) Core(TM) Ultra 7 255HX
+# jars=26
+
+=== T0 training run through the real start script (SIGTERM after the workload)
+ready after 630 ms
+AOTCache creation is complete: <app>/lib/app.aot 33763328 bytes
+cache bytes=33763328
+
+=== T1 class sources with the cache (one run, -Xlog:class+load)
+all classes: 3823 of 3836 from the cache; app+ktor+kotlin: 2321 of 2321
+not from the cache, app+ktor+kotlin, top packages:
+
+=== M1 ms to first 200 on /health, 20 runs each, sorted
+no-cache  SerialGC: 539 565 573 598 608 610 618 630 631 648 657 661 665 671 675 679 686 698 711 738 
+cache     SerialGC: 184 192 192 194 194 194 196 199 199 200 205 206 207 211 216 220 220 221 225 229 
+no-cache  G1      : 611 631 648 650 652 653 657 662 663 687 688 699 703 711 722 726 742 793 833 2404 
+cache     G1      : 203 211 214 214 216 216 216 218 219 221 221 221 223 224 225 226 233 234 242 245 
+
+=== M2 sanity: the cache variant really used the cache (-XX:AOTMode=on exit code)
+ready under -XX:AOTMode=on: yes

@@ -204,11 +204,29 @@ written»). Неверно: `.aot.config` пишется в `before_exit` VM, д
 | С Kotlin 2.0.0 лямбды генерируются через `invokedynamic`; `-Xlambdas=class` возвращает классы | kotlinlang.org/docs/whatsnew20.html |
 | Мак: OpenJDK 25.0.2 (`/Users/youndie/Library/Java/JavaVirtualMachines/openjdk-25.0.2`), JBR 25.0.4.1 (`~/.gradle/jdks/jetbrains_s_r_o_-25-aarch64-os_x.2`), Corretto 21; Gradle-дистрибутивы 9.5.1–9.7.1 в `~/.gradle/wrapper/dists` | `/usr/libexec/java_home -V`, `ls` |
 | Linux-машина: OpenJDK 25.0.4 (`/usr/lib/jvm/java-25-openjdk-amd64`), 21; JDK 26 **нет**; Docker 29.1.3; 20 ядер | ssh, `java -version`, `docker version` |
-| Доля классов Kotlin-приложения из кэша (RQ4) — **не измерена** | гипотеза; адрес — [B-02](../backlog/B-02-kotlin-classes-archived-share.md) |
+| Доля классов из кэша на Ktor-стенде (RQ4): 2322 из 2322 классов `stand.*`, `io.ktor.*`, `kotlinx.*`, `kotlin.*`; всего 3824 из 3837 (13 непопавших — классы JDK) — по строкам `source:` в `-Xlog:class+load`, один прогон с нагрузкой | `experiments/ktor-readiness/results/2026-09-06-linux-x86_64-openjdk-25.0.4-run2.log`, T1. Не сравнено с `-Xlambdas=class` и не проверено, что hidden-классы лямбд вообще попадают в подсчёт — [B-02](../backlog/B-02-kotlin-classes-archived-share.md) |
 
 ### 1.9 Что измерено — и что это (не) значит
 
-`hello world` (один класс, `java.util.stream` и `HashMap`), время всего процесса `java` от
+**Ktor-стенд (B-01, критерий остановки RQ6).** `experiments/ktor-readiness/`: Ktor 3.5.2 на CIO,
+kotlinx.serialization, три маршрута, 26 jar-ов, кэш 33,8 МБ. Время от запуска стартового скрипта
+до первого `200` на `/health`, снаружи процесса, 20 прогонов на вариант, медиана — среднее 10-го
+и 11-го значения. Linux-машина, OpenJDK 25.0.4; тренировка — SIGTERM после 40 запросов.
+
+| Вариант | Без кэша, мс | С кэшем, мс | Медиана меньше на |
+|---|---|---|---|
+| SerialGC, прогон 2 | 568 (ряд 526–616, выброс 2260) | 211 | 63 % |
+| G1, прогон 2 | 796 (ряд 631–1022) | 326 | 59 % |
+
+Журнал: `experiments/ktor-readiness/results/2026-09-06-linux-x86_64-openjdk-25.0.4-run2.log`.
+Первый прогон того же дня (журнал не сохранился — реплика стёрла его во время прогона, см.
+README стенда) дал 562 → 184 (SerialGC) и 554 → 210 (G1): ряды G1 между прогонами разошлись
+почти на 250 мс без кэша, при том что отношение осталось тем же. **Вывод для гейта: оба GC, оба
+прогона — больше 40 %, зелёный порог брифа взят; RQ6 закрыт, риск 3 снят.** Что в число не
+входит: время до первого ответа маршрута с JIT-прогревом (JEP 515 — профили методов) не
+мерилось; ZGC и JDK 26 — [B-03](../backlog/B-03-jdk26-on-linux-box.md).
+
+**Положительный контроль стенда — `hello world`** (один класс, `java.util.stream` и `HashMap`), время всего процесса `java` от
 запуска до выхода, 20 прогонов подряд, отсортированные ряды в журналах (`M1`), медиана — среднее
 10-го и 11-го значения.
 
@@ -360,14 +378,14 @@ AVX-512.
 пересобрал jar и **не** запустил `aotVerify`, JVM его не спасёт — поэтому `aotVerify` в `check`
 по умолчанию.
 
-**Риск 3. Выигрыш на Ktor меньше 20 % — проект закрывается (критерий остановки 2).** Не измерен
-(§1.9). Митигация — не митигация, а гейт: [B-01](../backlog/B-01-ktor-stand-and-readiness-timing.md)
-блокирует всё в `stage-2-mvp`.
+**Риск 3 — снят 06.09.2026.** Выигрыш на Ktor: 59–63 % по медиане готовности на двух GC (§1.9),
+порог остановки — 20 %, зелёный — 40 %. Гейт [B-01](../backlog/B-01-ktor-stand-and-readiness-timing.md)
+пройден, `stage-2-mvp` разблокирован.
 
-**Риск 4. Kotlin-классы не архивируются (indy-лямбды — hidden-классы).** Гипотеза; заметка
-Leyden о тренировочных прогонах называет hidden-классы отдельной сложностью. Митигация: D4 (2)
-покажет долю, [B-02](../backlog/B-02-kotlin-classes-archived-share.md) сравнит `-Xlambdas`.
-Если доля низкая — это документация по флагам компилятора, не блокер (бриф, RQ4).
+**Риск 4. Kotlin-классы не архивируются (indy-лямбды — hidden-классы).** Первое измерение
+против: на стенде из кэша пришли все классы приложения, Ktor и Kotlin, которые JVM назвала в
+`class+load` (§1.8). Не закрыт: не проверено, попадают ли hidden-классы лямбд в эти строки, и не
+сравнено с `-Xlambdas=class` — [B-02](../backlog/B-02-kotlin-classes-archived-share.md).
 
 **Риск 5. Windows.** §1.3, следствие 3. Митигация: не поддерживать в MVP, сказать это в README;
 [B-14](../backlog/B-14-windows-training.md).
@@ -395,11 +413,12 @@ arguments for the java command:`, а не номер строки.
 
 ## 4. Что дальше
 
-Порядок работы и критерии приёмки — в [backlog.md](../../backlog.md). Первое содержательное —
-стенд на Ktor ([B-01](../backlog/B-01-ktor-stand-and-readiness-timing.md)): он единственный может
-закрыть проект до того, как написана первая строка плагина, и потому стоит раньше плагина.
-Параллельно и независимо — JDK 26 на Linux-машине ([B-03](../backlog/B-03-jdk26-on-linux-box.md))
-и ответ на вопрос об имени ([B-12](../backlog/B-12-name-and-coordinates.md)).
+Порядок работы и критерии приёмки — в [backlog.md](../../backlog.md). Гейт пройден 06.09.2026:
+стенд на Ktor ([B-01](../backlog/B-01-ktor-stand-and-readiness-timing.md)) дал 59–63 %, имя решено
+([B-12](../backlog/B-12-name-and-coordinates.md)). Дальше — каркас плагина
+([B-04](../backlog/B-04-plugin-skeleton-and-toolchain-checks.md)) и `aotTrain`
+([B-05](../backlog/B-05-aot-train-task.md)); стенд `experiments/ktor-readiness/app` — первый
+кандидат в `samples/ktor` ([B-15](../backlog/B-15-ktor-sample-on-the-plugin-in-ci.md)).
 
 Когда появится код, слои `features/` и `services/` заводятся в тех же PR, `status: draft` до
 слияния; этот документ правится в месте расхождения, а не переписывается.
