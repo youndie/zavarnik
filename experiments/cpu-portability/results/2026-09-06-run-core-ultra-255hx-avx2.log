@@ -1,0 +1,14 @@
+# 2026-09-06T19:55:47Z production-box  Intel(R) Core(TM) Ultra 7 255HX
+# OpenJDK Runtime Environment (build 25.0.4+7-1-24.04-Ubuntu)
+# JVM view:  int UseAVX = 2 {ARCH product} {default}
+
+=== hello world, caches trained on Genoa, run here under -XX:AOTMode=on
+native: exit=0; shared=894; [info][aot,codecache,init] Loaded 326 AOT code entries from AOT Code Cache;
+portable: exit=0; shared=894; 
+
+=== hello native cache, 20 runs — does it crash every time or only sometimes?
+non-zero exits: 0 of 20
+
+=== sample, caches trained on Genoa, run here
+sample-native: ready=yes exit=143; sample classes from cache: 20 of 20; [info][aot,codecache,init] Loaded 495 AOT code entries from AOT Code Cache;
+sample-portable: ready=yes exit=143; sample classes from cache: 20 of 20; 

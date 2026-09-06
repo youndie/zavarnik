@@ -1,0 +1,16 @@
+# 2026-09-06T19:55:01Z training-box  AMD EPYC-Genoa Processor
+# OpenJDK Runtime Environment (build 25.0.4+7-1-24.04-Ubuntu)
+# JVM view:  int UseAVX = 3 {ARCH product} {default}
+
+=== hello world
+native  : 10915840 bytes; [info][aot] Mapped static  region #4 at base 0x0000749da789e000 top 0x0000749da7917000 (Code);[info][aot,codecache,init] Loaded 326 AOT code entries from AOT Code Cache;
+portable: 10358784 bytes; 
+
+=== sample
+sample-native: AOTCache creation is complete: sample-native/lib/app.aot 32849920 bytes; 0 portability flag lines in script
+sample-portable: AOTCache creation is complete: sample-portable/lib/app.aot 32059392 bytes; 1 portability flag lines in script
+
+=== code region in the sample caches (probe via hello classpath is meaningless; header only)
+sample-native: 32849920 bytes
+sample-portable: 32059392 bytes
+22494315
