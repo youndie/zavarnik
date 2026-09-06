@@ -325,7 +325,7 @@ JDK тулчейна < 25 — ошибка (одношаговый режим �
 ```kotlin
 plugins {
     application
-    id("io.github.youndie.zavarnik")          // имя — открытый вопрос 1
+    id("io.github.youndie.zavarnik")          // B-12, решено 06.09.2026
 }
 
 zavarnik {
@@ -380,9 +380,9 @@ Leyden о тренировочных прогонах называет hidden-к
 ([B-08](../backlog/B-08-testkit-invalidation-cases.md)); якорь замены — строка `# Collect all
 arguments for the java command:`, а не номер строки.
 
-**Открытый вопрос 1. Имя и координаты.** `io.github.youndie.zavarnik` (прецедент — viddik) или
-`website.kotlin.leyden` (бриф). Рекомендация — первое; решение владельца —
-[B-12](../backlog/B-12-name-and-coordinates.md).
+**Открытый вопрос 1 — закрыт 06.09.2026.** Имя и координаты: `io.github.youndie.zavarnik`,
+группа `io.github.youndie`, модуль `zavarnik-gradle-plugin` (прецедент — viddik; `website.kotlin.leyden`
+из брифа отвергнут — чужое имя проекта в id). Решение владельца — [B-12](../backlog/B-12-name-and-coordinates.md).
 
 **Открытый вопрос 2. `-XX:AOTMode=on` в прод-скрипте?** Сейчас — нет (D2): отсутствие кэша
 замедляет, а не роняет. Compose делает это опцией `exitAppOnAotFailure`. Вернуться после первого

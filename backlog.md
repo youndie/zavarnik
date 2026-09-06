@@ -33,7 +33,7 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (15)
+## Open (14)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
@@ -42,7 +42,6 @@
 | [B-05](docs/backlog/B-05-aot-train-task.md) `[ ]` | aotTrain: тренировочный прогон через настоящий стартовый скрипт, готовность, нагрузка, SIGTERM, манифест | P0 | L | B-04 |
 | [B-06](docs/backlog/B-06-aot-verify-task.md) `[ ]` | aotVerify: запуск с -XX:AOTMode=on, подсчёт источников классов, сверка манифеста — сборка падает с причиной | P0 | M | B-05 |
 | [B-07](docs/backlog/B-07-start-scripts-and-distribution-wiring.md) `[ ]` | Проводка: сторож в стартовых скриптах добавляет -XX:AOTCache=$APP_HOME/lib/app.aot, когда кэш есть; кэш и манифест в installDist и distZip | P0 | S/M | B-05 |
-| [B-12](docs/backlog/B-12-name-and-coordinates.md) `[?]` | Имя плагина и координаты Maven: io.github.youndie.zavarnik или website.kotlin.leyden | P0 | XS | - |
 | [B-02](docs/backlog/B-02-kotlin-classes-archived-share.md) `[ ]` | Доля классов Kotlin-приложения, пришедших из кэша: indy-лямбды, корутины, сериализация (RQ4) | P1 | S | B-01 |
 | [B-03](docs/backlog/B-03-jdk26-on-linux-box.md) `[ ]` | JDK 26 на Linux-машине: ZGC (JEP 516) и состояние JDK-8377932 — прогоном, а не чтением | P1 | S | - |
 | [B-08](docs/backlog/B-08-testkit-invalidation-cases.md) `[ ]` | TestKit: каждый случай инвалидации из журнала эксперимента становится тестом плагина | P1 | M | B-06 |
@@ -53,7 +52,11 @@
 | [B-11](docs/backlog/B-11-aot-report-task.md) `[ ]` | aotReport: таблица «холодный / с кэшем» по времени готовности — артефакт для публикации | P2 | S/M | B-06 |
 | [B-14](docs/backlog/B-14-windows-training.md) `[ ]` | Тренировка на Windows: без SIGTERM нужен другой способ закончить прогон | P3 | M | - |
 
-## Closed (0)
+## Closed (1)
+
+**Выпуск**
+
+- [B-12](docs/backlog/B-12-name-and-coordinates.md) `[x]` - Имя плагина и координаты Maven: io.github.youndie.zavarnik или website.kotlin.leyden
 
 <!-- END INDEX -->
 

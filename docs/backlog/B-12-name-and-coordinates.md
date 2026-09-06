@@ -1,7 +1,7 @@
 ---
 id: B-12
 title: "Имя плагина и координаты Maven: io.github.youndie.zavarnik или website.kotlin.leyden"
-status: question
+status: done
 priority: P0
 size: XS
 stage: stage-4-release
@@ -19,7 +19,9 @@ Maven Central через общий воркфлоу sborka. Имя `zavarnik` �
   `zavarnik-gradle-plugin` — тот же путь, что у viddik, без новых секретов и без домена в
   координатах. Альтернатива из брифа, `website.kotlin.leyden`, привязывает плагин к сайту и к
   чужому имени проекта (`leyden`); её цена — объяснять это в каждом README.
-- Решить до [B-13](B-13-release-v0-1-and-four-week-watch.md): координаты на Central не
+- **Решено 06.09.2026:** `io.github.youndie.zavarnik`, группа `io.github.youndie`, модуль
+  `zavarnik-gradle-plugin`. Ответ владельца — в чате, без оговорок.
+- Решено до [B-13](B-13-release-v0-1-and-four-week-watch.md): координаты на Central не
   переписываются.
 
 - AC: ответ владельца записан здесь, `status` переведён в `done`, а имя — в ресёрч §3 (открытый
