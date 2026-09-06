@@ -33,21 +33,21 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (5)
+## Open (3)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
-| [B-02](docs/backlog/B-02-kotlin-classes-archived-share.md) `[ ]` | Доля классов Kotlin-приложения, пришедших из кэша: indy-лямбды, корутины, сериализация (RQ4) | P1 | S | B-01 |
-| [B-03](docs/backlog/B-03-jdk26-on-linux-box.md) `[ ]` | JDK 26 на Linux-машине: ZGC (JEP 516) и состояние JDK-8377932 — прогоном, а не чтением | P1 | S | - |
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P1 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P1 | M | B-12 |
 | [B-14](docs/backlog/B-14-windows-training.md) `[ ]` | Тренировка на Windows: без SIGTERM нужен другой способ закончить прогон | P3 | M | - |
 
-## Closed (10)
+## Closed (12)
 
 **Стенд**
 
 - [B-01](docs/backlog/B-01-ktor-stand-and-readiness-timing.md) `[x]` - Стенд: Ktor-приложение и замер времени готовности с кэшем и без (RQ6)
+- [B-02](docs/backlog/B-02-kotlin-classes-archived-share.md) `[x]` - Доля классов Kotlin-приложения, пришедших из кэша: indy-лямбды, корутины, сериализация (RQ4)
+- [B-03](docs/backlog/B-03-jdk26-on-linux-box.md) `[x]` - JDK 26 на Linux-машине: ZGC (JEP 516) и состояние JDK-8377932 — прогоном, а не чтением
 
 **Плагин**
 

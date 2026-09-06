@@ -52,7 +52,7 @@ cp -p a/lib/app.aot b/lib/app.aot
 cd b
 case_ "R1 relocated to b/, relative classpath";            run -XX:AOTCache=lib/app.aot -cp lib/app.jar | summ
 case_ "R2 relocated to b/, absolute classpath";            run -XX:AOTCache=lib/app.aot -cp "$WORK/b/lib/app.jar" | summ
-case_ "R3 jar touched (mtime changed, size same)";         touch lib/app.jar; run -XX:AOTCache=lib/app.aot -cp lib/app.jar | summ; cp -p ../a/lib/app.jar lib/app.jar
+case_ "R3 jar touched (mtime changed, size same)";         echo "mtime before=$(stat -c %Y lib/app.jar 2>/dev/null || stat -f %m lib/app.jar)"; sleep 1.1; touch lib/app.jar; echo "mtime after =$(stat -c %Y lib/app.jar 2>/dev/null || stat -f %m lib/app.jar)"; run -XX:AOTCache=lib/app.aot -cp lib/app.jar | summ; cp -p ../a/lib/app.jar lib/app.jar
 case_ "R4 jar replaced by a different jar, same name";     cp lib/other.jar lib/app.jar; run -XX:AOTCache=lib/app.aot -cp lib/app.jar | summ; cp -p ../a/lib/app.jar lib/app.jar
 case_ "R5 extra jar appended";                             run -XX:AOTCache=lib/app.aot -cp lib/app.jar:lib/other.jar | summ
 case_ "R6 extra jar prepended";                            run -XX:AOTCache=lib/app.aot -cp lib/other.jar:lib/app.jar | summ

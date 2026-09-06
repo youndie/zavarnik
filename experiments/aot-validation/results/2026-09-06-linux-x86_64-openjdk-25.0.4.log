@@ -1,4 +1,4 @@
-# 2026-09-06T17:31:57Z Linux x86_64 DESKTOP-85OS64M
+# 2026-09-06T19:41:19Z Linux x86_64 DESKTOP-85OS64M
 # openjdk version "25.0.4" 2026-07-21
 # OpenJDK Runtime Environment (build 25.0.4+7-1-24.04-Ubuntu)
 # OpenJDK 64-Bit Server VM (build 25.0.4+7-1-24.04-Ubuntu, mixed mode, sharing)
@@ -9,7 +9,7 @@
 [info][class,path] (app   ) [1] = lib/app.jar
 [info][class,path] Writing classpath(s) into lib/app.aot (size = 2)
 [info][class,path] (app   ) [1] = lib/app.jar
-AOTCache creation is complete: lib/app.aot 10866688 bytes
+AOTCache creation is complete: lib/app.aot 10858496 bytes
 
 === R1 relocated to b/, relative classpath
 [info][class,path] Longest common prefix substitution in boot/app classpath matching: no
@@ -24,10 +24,12 @@ shared=894 file=0
 shared=894 file=0
 
 === R3 jar touched (mtime changed, size same)
+mtime before=1788723679
+mtime after =1788723681
 [info][class,path] Longest common prefix substitution in boot/app classpath matching: no
 [warning][aot       ] This file is not the one used while building the AOT cache: 'lib/app.jar', timestamp has changed
 [info   ][class,path] Archived app classpath validation: failed
-[info   ][class,load] App source: file:/home/youndie/zavarnik-exp/work/b/lib/app.jar
+[info   ][class,load] App source: file:/tmp/aot25c/b/lib/app.jar
 shared=0 file=1
 
 === R4 jar replaced by a different jar, same name
@@ -47,7 +49,7 @@ shared=894 file=0
 [info][class,path] Longest common prefix: lib/ (4 chars)
 [warning][aot       ] The name of app classpath [1] does not match: expected 'lib/app.jar', got 'lib/other.jar'
 [info   ][class,path] Archived app classpath validation: failed
-[info   ][class,load] App source: file:/home/youndie/zavarnik-exp/work/b/lib/app.jar
+[info   ][class,load] App source: file:/tmp/aot25c/b/lib/app.jar
 shared=0 file=1
 
 === R7 directory appended
@@ -61,7 +63,7 @@ shared=894 file=0
 [info][class,path] Archived app classpath validation: passed
 [error][aot       ] Mismatched values for property jdk.module.addmods: jdk.httpserver specified during runtime but not during dump time
 [error][aot       ] AOT cache has aot-linked classes. It cannot be used when archived full module graph is not used.
-[info ][class,load] App source: file:/home/youndie/zavarnik-exp/work/b/lib/app.jar
+[info ][class,load] App source: file:/tmp/aot25c/b/lib/app.jar
 shared=0 file=1
 
 === R9 -javaagent
@@ -69,7 +71,7 @@ shared=0 file=1
 [info][class,path] Archived app classpath validation: passed
 [error][aot       ] Mismatched values for property jdk.module.addmods: java.instrument specified during runtime but not during dump time
 [error][aot       ] AOT cache has aot-linked classes. It cannot be used when archived full module graph is not used.
-[info ][class,load] App source: file:/home/youndie/zavarnik-exp/work/b/lib/app.jar
+[info ][class,load] App source: file:/tmp/aot25c/b/lib/app.jar
 shared=0 file=1
 
 === R10 SerialGC at runtime (trained with the default GC)
@@ -81,7 +83,7 @@ shared=894 file=0
 === R11 ZGC at runtime
 [warning][aot       ] Unable to use AOT cache.
 [                           ] The saved state of UseCompressedOops and UseCompressedClassPointers is different from runtime, CDS will be disabled.
-[info   ][class,load] App source: file:/home/youndie/zavarnik-exp/work/b/lib/app.jar
+[info   ][class,load] App source: file:/tmp/aot25c/b/lib/app.jar
 shared=0 file=1
 
 === R12 -Xmx changed at runtime
@@ -105,14 +107,14 @@ error lines=3
 
 === D1 train with ABSOLUTE paths in abs1/, run in abs2/ with abs1/ deleted (the container case)
 [info][class,path] Longest common prefix substitution in boot/app classpath matching: yes
-[info][class,path] Longest common prefix: /home/youndie/zavarnik-exp/work/abs2/lib/ (41 chars)
+[info][class,path] Longest common prefix: /tmp/aot25c/abs2/lib/ (21 chars)
 [info][class,path] Archived app classpath validation: passed
 [info][class,load] App source: shared objects file
 shared=894 file=0
 
 === D2 jar mtime normalised to a constant BEFORE training, copied with mtime preserved, training dir deleted
 [info][class,path] Longest common prefix substitution in boot/app classpath matching: yes
-[info][class,path] Longest common prefix: /home/youndie/zavarnik-exp/work/n2/lib/ (39 chars)
+[info][class,path] Longest common prefix: /tmp/aot25c/n2/lib/ (19 chars)
 [info][class,path] Archived app classpath validation: passed
 [info][class,load] App source: shared objects file
 shared=894 file=0
@@ -125,20 +127,20 @@ image mtime : 946681200
 written 10227712 bytes
 
 === E2 training run killed with SIGTERM
-written 10715136 bytes
+written 10711040 bytes
 
 === E3 training run killed with SIGKILL
 not written
 
 === E4 training with a DIRECTORY on the classpath (what 'gradle run' does)
-[0.302s][error][aot] Error: non-empty directory '../out'
+[0.131s][error][aot] Error: non-empty directory '../out'
 Cannot have non-empty directory in paths
 not written
 
 === M1 wall-clock ms of 20 runs, sorted: without cache (-XX:AOTMode=off) then with cache
-124 132 132 137 137 138 139 139 142 142 143 144 145 145 146 148 150 153 153 2107 
-44 45 45 45 45 45 46 46 46 46 47 47 47 48 48 48 49 51 51 51 
+63 64 64 64 64 65 65 65 65 65 65 65 66 66 66 66 66 66 66 69 
+24 24 24 24 24 25 25 25 25 25 25 25 26 26 26 26 26 26 26 27 
 
 === M2 cache size and one-step creation time
-size=10866688 bytes
-create ms=1063
+size=10858496 bytes
+create ms=514

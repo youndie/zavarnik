@@ -50,7 +50,8 @@ AVX-512). Скрипт эксперимента и три журнала: `exper
 | `--add-modules` и `-javaagent` (он добавляет `java.instrument`) — «Mismatched values for property jdk.module.addmods» → «AOT cache has aot-linked classes. It cannot be used when archived full module graph is not used» → кэш не маппится целиком | журнал R8, R9 (`shared=0 file=1`) |
 | JDWP-агент — та же судьба: «AOT cache has aot-linked classes. It cannot be used with JDWP agent» | paketo-buildpacks/spring-boot#578, 06.01.2026 (цитата строки журнала) |
 | Агент, присутствующий **и на тренировке, и на запуске**, кэш не ломает: `App source: shared objects file` на 25.0.2 и 25.0.4. Отказ R9 — про несовпадение модульного графа, а не про агенты как таковые | прогон 06.09.2026 вечером (`-javaagent` в обеих командах, тот же `ag.jar`); TestKit `InvalidationFunctionalTest`, случай R9 |
-| GC можно менять (тренировка на G1, запуск на Serial — принят), но ZGC на JDK 25 — отказ «The saved state of UseCompressedOops and UseCompressedClassPointers is different from runtime, CDS will be disabled» | журнал R10 (`shared>0`), R11 (`shared=0`); `filemap.cpp:2052` |
+| GC можно менять (тренировка на G1, запуск на Serial — принят), но кэш, натренированный под G1, под ZGC отвергается на 25 **и на 26.0.2.1**: «The saved state of UseCompressedOops and UseCompressedClassPointers is different from runtime, CDS will be disabled» — граница не «GC», а сжатые указатели, и `-XX:+AOTStreamableObjects` (диагностический, по умолчанию выключен) её не снимает | журналы R10 (`shared>0`), R11 (`shared=0`) на 25.0.4 и 26.0.2.1; `filemap.cpp:2052`; прогон 06.09.2026: streamable-кэш под G1 и Serial — `918`, под ZGC — отказ |
+| **Симметричный ZGC работает**: кэш, натренированный под `-XX:+UseZGC`, под ZGC принимается — на 25.0.4 `767` классов из кэша (без архивированной кучи; под G1 — `894`), на 26.0.2.1 — `918`, как под G1 (JEP 516) | прогон 06.09.2026, `hello world`, Linux |
 | `-Xmx` менять можно | журнал R12 |
 | Сборка JDK сравнивается по строке `_jvm_ident`; другой билд — отказ. JDK 21 флага не знает вовсе («Unrecognized VM option 'AOTCache=…'») | `filemap.cpp:674` — прочитано, прогоном на двух билдах 25 **не** проверено; JDK 21 — прогон |
 | Кроме строки сборки сравнивается **размер `$JAVA_HOME/lib/modules`** (запись [0] classpath, mtime у неё не проверяется): у образов `eclipse-temurin:25.0.4_7-jdk` и `-jre` одной сборки он разный, и кэш, натренированный на jdk-образе, jre-образ отвергает — «This file is not the one used while building the AOT cache: '/opt/java/openjdk/lib/modules', size has changed» | `samples/ktor/docker-check.sh`, Linux, Docker 29.1.3, 06.09.2026; `aotClassLocation.cpp` — `check_time = !is_jrt` |
@@ -102,7 +103,8 @@ AVX-512). Скрипт эксперимента и три журнала: `exper
 | Условие проверки: `num_app_classpaths() > 0 && _max_used_index >= app_cp_start_index() && has_platform_or_app_classes()` | `aotClassLocation.hpp:198–199`, тег `jdk-25-ga` |
 | Исправление: `dumptime_update_max_used_index(runtime()->_max_used_index)` при `is_dumping_final_static_archive()` | `openjdk/jdk#29728` «8377932: AOT cache is not rejected when JAR file has changed», влит 16.02.2026 |
 | В 25u: коммит `2fb3e9c698`, 16.03.2026; строки нет в `jdk-25.0.2-ga` и `jdk-25.0.3-ga`, есть в `jdk-25.0.4-ga` | `openjdk/jdk25u`, `git log -- src/hotspot/share/cds/aotClassLocation.cpp` |
-| В 26u: коммит `3d23e5061d`, 05.03.2026; строки нет в `jdk-26+36` (GA) и `jdk-26.0.1-ga`, есть в `jdk-26.0.2-ga` | `openjdk/jdk26u` — по исходникам, прогоном **не** проверено ([B-03](../backlog/B-03-jdk26-on-linux-box.md)) |
+| В 26u: коммит `3d23e5061d`, 05.03.2026; строки нет в `jdk-26+36` (GA) и `jdk-26.0.1-ga`, есть в `jdk-26.0.2-ga`. На 26.0.2.1 проверка есть **прогоном**: R3 «timestamp has changed», R4, R6 — `shared=0` | `openjdk/jdk26u`; `experiments/aot-validation/results/2026-09-06-linux-x86_64-openjdk-26.0.2.1.log` (B-03) |
+| JVM сравнивает mtime **в секундах** (`st_mtime`): на JDK 26 весь харнесс до R3 укладывался в одну секунду с созданием jar, `touch` попадал в ту же секунду, и первый прогон показал «принят». Харнесс теперь ждёт 1,1 с и печатает обе метки | тот же журнал, R3: `mtime before=…538`, `after=…540`; `aotClassLocation.cpp` — `_timestamp != st.st_mtime` |
 | На 25.0.4 (Linux и JBR 25.0.4.1 на маке) проверка есть: R3, R4, R6 → `shared=0` | `experiments/aot-validation/results/2026-09-06-linux-x86_64-openjdk-25.0.4.log`, `…-macos-aarch64-jbr-25.0.4.1.log` |
 
 **Следствие 1.** Затронуты 25.0.0–25.0.3 и 26.0.0–26.0.1 — то есть **все** GA-сборки JDK 25
@@ -237,8 +239,9 @@ jar-ы к той же константе, распакованный tar сов�
 | JDK 26 — GA, 26.0.2.1, есть Linux/x64 и macOS/aarch64 | jdk.java.net/26 |
 | С Kotlin 2.0.0 лямбды генерируются через `invokedynamic`; `-Xlambdas=class` возвращает классы | kotlinlang.org/docs/whatsnew20.html |
 | Мак: OpenJDK 25.0.2 (`/Users/youndie/Library/Java/JavaVirtualMachines/openjdk-25.0.2`), JBR 25.0.4.1 (`~/.gradle/jdks/jetbrains_s_r_o_-25-aarch64-os_x.2`), Corretto 21; Gradle-дистрибутивы 9.5.1–9.7.1 в `~/.gradle/wrapper/dists` | `/usr/libexec/java_home -V`, `ls` |
-| Linux-машина: OpenJDK 25.0.4 (`/usr/lib/jvm/java-25-openjdk-amd64`), 21; JDK 26 **нет**; Docker 29.1.3; 20 ядер | ssh, `java -version`, `docker version` |
-| Доля классов из кэша на Ktor-стенде (RQ4): 2322 из 2322 классов `stand.*`, `io.ktor.*`, `kotlinx.*`, `kotlin.*`; всего 3824 из 3837 (13 непопавших — классы JDK) — по строкам `source:` в `-Xlog:class+load`, один прогон с нагрузкой | `experiments/ktor-readiness/results/2026-09-06-linux-x86_64-openjdk-25.0.4-run2.log`, T1. Не сравнено с `-Xlambdas=class` и не проверено, что hidden-классы лямбд вообще попадают в подсчёт — [B-02](../backlog/B-02-kotlin-classes-archived-share.md) |
+| Linux-машина: OpenJDK 25.0.4 (`/usr/lib/jvm/java-25-openjdk-amd64`), 21; OpenJDK 26.0.2.1 в `~/jdks/jdk-26.0.2.1` (поставлен 06.09.2026, B-03); Docker 29.1.3; 20 ядер | ssh, `java -version`, `docker version` |
+| Доля классов из кэша на Ktor-стенде (RQ4): 2322 из 2322 классов `stand.*`, `io.ktor.*`, `kotlinx.*`, `kotlin.*`; всего 3824 из 3837 (13 непопавших — классы JDK) — по строкам `source:` в `-Xlog:class+load`, один прогон с нагрузкой | `experiments/ktor-readiness/results/2026-09-06-linux-x86_64-openjdk-25.0.4-run2.log`, T1 |
+| **Hidden-классы лямбд (`$$Lambda/0x…`) архивируются**: на образце под indy (умолчание Kotlin 2.x) загружено 269 lambda-прокси, **269 из кэша**; с `-Xlambdas=class` — 265 прокси (библиотечные), все из кэша, и 2264 из 2264 jar-классов (против 2262 под indy). Разницы между режимами нет, флаг компилятора не нужен — RQ4 закрыт | `./gradlew -p samples/ktor aotVerify [-PlambdasClass] --rerun-tasks`, `build/zavarnik/aotVerify.log`, Linux 25.0.4, 06.09.2026 (B-02) |
 
 ### 1.9 Что измерено — и что это (не) значит
 
@@ -277,6 +280,7 @@ check`; время готовности **с** кэшем плагин пока 
 | Машина, JDK | Без кэша (`-XX:AOTMode=off`), мс | С кэшем, мс | Размер кэша |
 |---|---|---|---|
 | Linux x86_64, OpenJDK 25.0.4 | 143 (ряд 124–153, один выброс 2107) | 47 | 10,9 МБ |
+| Linux x86_64, OpenJDK 26.0.2.1 | 61 (ряд 60–67) | 21 | 11,0 МБ |
 | macOS arm64, OpenJDK 25.0.2 | 73 | 33 | 10,8 МБ |
 | macOS arm64, JBR 25.0.4.1 | 98 | 37 | — |
 
@@ -378,16 +382,21 @@ mtime, равный умолчанию Jib (`EPOCH_PLUS_SECOND`, `1970-01-01T00:
 [B-09](../backlog/B-09-cpu-portability-adapter-caching.md); до этого — опция `portability` с этим
 умолчанием.
 
-### D7. GC не пинуется; ZGC на JDK < 26 — ошибка конфигурации
+### D7. GC не пинуется; ZGC на JDK < 26 — предупреждение
 
-Почему: §1.1 — смена GC между тренировкой и запуском разрешена (R10, JEP 483 говорит то же), а
-ZGC на 25 — гарантированный отказ (R11). Бриф просил «pin the same GC» — не нужно, и лишнее
-правило пользователь нарушит. Пин остаётся один: **тот же билд JDK** (`_jvm_ident`), и это
-проверяется прогоном `aotVerify`, а не текстом.
+Первая редакция: «ZGC на JDK < 26 — ошибка конфигурации», по R11.
+**Правка при B-03 (06.09.2026):** R11 показывал кэш, натренированный под G1 и запущенный под
+ZGC. Симметричный случай — ZGC с обеих сторон — работает и на 25 (767 классов из кэша, без
+архивированной кучи), и на 26 (918, как G1). Плагин кладёт `jvmArgs` в `DEFAULT_JVM_OPTS` для
+обеих сторон, то есть симметрию делает сам, поэтому ошибка заменена предупреждением о меньшем
+выигрыше до JEP 516. Смена GC между тренировкой и запуском по-прежнему допустима, кроме перехода
+через границу сжатых указателей (ZGC ↔ остальные) — её не снимает и `AOTStreamableObjects` на 26.
+Бриф просил «pin the same GC» — не нужно. Пин остаётся один: **тот же билд JDK** (`_jvm_ident`
+и размер `lib/modules`), и это проверяется прогоном `aotVerify`, а не текстом.
 
 ### D8. Что проверяется на конфигурации, до первого запуска
 
-JDK тулчейна < 25 — ошибка (одношаговый режим — JEP 514); ZGC при < 26 — ошибка; плагин
+JDK тулчейна < 25 — ошибка (одношаговый режим — JEP 514); ZGC при < 26 — предупреждение (D7, правка); плагин
 `application` не применён — ошибка (нет раскладки jar-ов); JDK с JDK-8377932 — предупреждение с
 номером бага. Почему: всё это известно до `installDist`, и ошибка на конфигурации дешевле ошибки
 после тренировки.
@@ -436,10 +445,8 @@ AVX-512.
 порог остановки — 20 %, зелёный — 40 %. Гейт [B-01](../backlog/B-01-ktor-stand-and-readiness-timing.md)
 пройден, `stage-2-mvp` разблокирован.
 
-**Риск 4. Kotlin-классы не архивируются (indy-лямбды — hidden-классы).** Первое измерение
-против: на стенде из кэша пришли все классы приложения, Ktor и Kotlin, которые JVM назвала в
-`class+load` (§1.8). Не закрыт: не проверено, попадают ли hidden-классы лямбд в эти строки, и не
-сравнено с `-Xlambdas=class` — [B-02](../backlog/B-02-kotlin-classes-archived-share.md).
+**Риск 4 — снят 06.09.2026.** Hidden-классы лямбд архивируются: 269 из 269 прокси из кэша под
+indy, разницы с `-Xlambdas=class` нет (§1.8, [B-02](../backlog/B-02-kotlin-classes-archived-share.md)).
 
 **Риск 5. Windows.** §1.3, следствие 3. Митигация: не поддерживать в MVP, сказать это в README;
 [B-14](../backlog/B-14-windows-training.md).
@@ -460,8 +467,8 @@ arguments for the java command:`, а не номер строки.
 замедляет, а не роняет. Compose делает это опцией `exitAppOnAotFailure`. Вернуться после первого
 внешнего пользователя.
 
-**Открытый вопрос 3. JDK 26.** ZGC (JEP 516) и граница исправления JDK-8377932 — по исходникам.
-[B-03](../backlog/B-03-jdk26-on-linux-box.md).
+**Открытый вопрос 3 — закрыт 06.09.2026.** JDK 26.0.2.1 прогнан ([B-03](../backlog/B-03-jdk26-on-linux-box.md)):
+проверка jar-ов есть, симметричный ZGC архивирует кучу, несимметричный отвергается (§1.1, §1.2).
 
 ---
 

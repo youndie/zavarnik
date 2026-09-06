@@ -35,10 +35,13 @@ internal object ConfigurationChecks {
         }
         val args = extension.jvmArgs.get()
         if (args.any { it == ZGC_FLAG } && !jdk.supportsZgcWithAotCache) {
-            throw GradleException(
-                "zavarnik: `$ZGC_FLAG` in jvmArgs with a JDK $jdk toolchain. Before JDK 26 the AOT cache is " +
-                    "incompatible with ZGC and the JVM rejects it (\"The saved state of UseCompressedOops " +
-                    "and UseCompressedClassPointers is different from runtime\"); JEP 516 lifts this in JDK 26.",
+            // Measured, not read: a cache trained under ZGC on 25.0.4 is used under ZGC — 767 classes
+            // from the cache on the hello-world stand against 894 under G1, the difference being the
+            // archived heap objects ZGC cannot map before JEP 516. The flag lives in DEFAULT_JVM_OPTS
+            // for both runs, so the symmetry the JVM needs is what the plugin produces anyway.
+            project.logger.warn(
+                "zavarnik: `$ZGC_FLAG` with a JDK $jdk toolchain — the cache will be used, but without " +
+                    "archived heap objects, which JDK 26 (JEP 516) adds under ZGC; expect a smaller gain.",
             )
         }
         if (jdk.skipsJarValidation) {

@@ -1,4 +1,4 @@
-# 2026-09-06T17:35:13Z Darwin arm64 MacBookAir.netis.cc
+# 2026-09-06T19:40:58Z Darwin arm64 MacBookAir.netis.cc
 # openjdk version "25.0.4.1" 2026-08-18
 # OpenJDK Runtime Environment JBR-25.0.4.1+1-583.48-jcef (build 25.0.4.1+1-b583.48)
 # OpenJDK 64-Bit Server VM JBR-25.0.4.1+1-583.48-jcef (build 25.0.4.1+1-b583.48, mixed mode, sharing)
@@ -24,10 +24,12 @@ shared=909 file=0
 shared=909 file=0
 
 === R3 jar touched (mtime changed, size same)
+mtime before=1788723659
+mtime after =1788723661
 [info][class,path] Longest common prefix substitution in boot/app classpath matching: no
 [warning][aot       ] This file is not the one used while building the AOT cache: 'lib/app.jar', timestamp has changed
 [info   ][class,path] Archived app classpath validation: failed
-[info   ][class,load] App source: file:/private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr2/b/lib/app.jar
+[info   ][class,load] App source: file:/private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr3/b/lib/app.jar
 shared=0 file=1
 
 === R4 jar replaced by a different jar, same name
@@ -47,7 +49,7 @@ shared=909 file=0
 [info][class,path] Longest common prefix: lib/ (4 chars)
 [warning][aot       ] The name of app classpath [1] does not match: expected 'lib/app.jar', got 'lib/other.jar'
 [info   ][class,path] Archived app classpath validation: failed
-[info   ][class,load] App source: file:/private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr2/b/lib/app.jar
+[info   ][class,load] App source: file:/private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr3/b/lib/app.jar
 shared=0 file=1
 
 === R7 directory appended
@@ -61,7 +63,7 @@ shared=909 file=0
 [info][class,path] Archived app classpath validation: passed
 [error][aot       ] Mismatched values for property jdk.module.addmods: jdk.httpserver specified during runtime but not during dump time
 [error][aot       ] AOT cache has aot-linked classes. It cannot be used when archived full module graph is not used.
-[info ][class,load] App source: file:/private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr2/b/lib/app.jar
+[info ][class,load] App source: file:/private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr3/b/lib/app.jar
 shared=0 file=1
 
 === R9 -javaagent
@@ -69,7 +71,7 @@ shared=0 file=1
 [info][class,path] Archived app classpath validation: passed
 [error][aot       ] Mismatched values for property jdk.module.addmods: java.instrument specified during runtime but not during dump time
 [error][aot       ] AOT cache has aot-linked classes. It cannot be used when archived full module graph is not used.
-[info ][class,load] App source: file:/private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr2/b/lib/app.jar
+[info ][class,load] App source: file:/private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr3/b/lib/app.jar
 shared=0 file=1
 
 === R10 SerialGC at runtime (trained with the default GC)
@@ -81,7 +83,7 @@ shared=909 file=0
 === R11 ZGC at runtime
 [warning][aot       ] Unable to use AOT cache.
 [                           ] The saved state of UseCompressedOops and UseCompressedClassPointers is different from runtime, CDS will be disabled.
-[info   ][class,load] App source: file:/private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr2/b/lib/app.jar
+[info   ][class,load] App source: file:/private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr3/b/lib/app.jar
 shared=0 file=1
 
 === R12 -Xmx changed at runtime
@@ -105,14 +107,14 @@ error lines=3
 
 === D1 train with ABSOLUTE paths in abs1/, run in abs2/ with abs1/ deleted (the container case)
 [info][class,path] Longest common prefix substitution in boot/app classpath matching: yes
-[info][class,path] Longest common prefix: /private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr2/abs2/lib/ (130 chars)
+[info][class,path] Longest common prefix: /private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr3/abs2/lib/ (130 chars)
 [info][class,path] Archived app classpath validation: passed
 [info][class,load] App source: shared objects file
 shared=909 file=0
 
 === D2 jar mtime normalised to a constant BEFORE training, copied with mtime preserved, training dir deleted
 [info][class,path] Longest common prefix substitution in boot/app classpath matching: yes
-[info][class,path] Longest common prefix: /private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr2/n2/lib/ (128 chars)
+[info][class,path] Longest common prefix: /private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-jbr3/n2/lib/ (128 chars)
 [info][class,path] Archived app classpath validation: passed
 [info][class,load] App source: shared objects file
 shared=909 file=0
@@ -130,14 +132,14 @@ written  11337728 bytes
 not written
 
 === E4 training with a DIRECTORY on the classpath (what 'gradle run' does)
-[0.155s][error][aot] Error: non-empty directory '../out'
+[0.153s][error][aot] Error: non-empty directory '../out'
 Cannot have non-empty directory in paths
 not written
 
 === M1 wall-clock ms of 20 runs, sorted: without cache (-XX:AOTMode=off) then with cache
-95 95 95 95 95 95 96 96 97 97 100 100 100 101 102 103 104 108 110 115 
-35 35 35 35 35 35 36 36 36 37 37 37 38 38 39 39 39 41 50 50 
+91 91 91 91 91 91 92 92 92 92 92 92 92 92 92 93 95 95 96 98 
+31 32 32 32 32 32 32 32 32 32 32 32 32 32 32 33 33 33 34 35 
 
 === M2 cache size and one-step creation time
 size= 11468800 bytes
-create ms=521
+create ms=431

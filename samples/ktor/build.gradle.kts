@@ -17,7 +17,14 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:2.0.17")
 }
 
-kotlin { jvmToolchain(25) }
+kotlin {
+    jvmToolchain(25)
+    // `-PlambdasClass`: compile lambdas as classes instead of invokedynamic (Kotlin 2.0's default),
+    // for the RQ4 measurement in docs/research — which of the two the cache covers better.
+    if (providers.gradleProperty("lambdasClass").isPresent) {
+        compilerOptions.freeCompilerArgs.add("-Xlambdas=class")
+    }
+}
 
 application { mainClass = "sample.MainKt" }
 

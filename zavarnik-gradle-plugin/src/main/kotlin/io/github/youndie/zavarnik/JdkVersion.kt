@@ -23,7 +23,10 @@ public data class JdkVersion(
                 else -> false
             }
 
-    /** `true` from JDK 26 on: JEP 516 lets the cache be used under any collector, ZGC included. */
+    /**
+     * `true` from JDK 26 on: JEP 516 archives heap objects in a form ZGC can use. Before that a
+     * cache trained and run under ZGC still serves its classes, just without the archived objects.
+     */
     public val supportsZgcWithAotCache: Boolean
         get() = feature >= 26
 

@@ -23,10 +23,10 @@ class ConfigurationChecksFunctionalTest {
     }
 
     @Test
-    fun `refuses ZGC on a JDK 25 toolchain naming JEP 516`() {
+    fun `warns about ZGC on a JDK 25 toolchain naming JEP 516, and goes on`() {
         write(toolchain = 25, extension = "zavarnik { jvmArgs(\"-XX:+UseZGC\") }")
-        val result = runner("help").buildAndFail()
-        assertContains(result.output, "incompatible with ZGC")
+        val result = runner("help").build()
+        assertContains(result.output, "without archived heap objects")
         assertContains(result.output, "JEP 516")
     }
 
