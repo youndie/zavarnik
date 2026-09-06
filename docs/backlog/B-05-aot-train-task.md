@@ -1,7 +1,7 @@
 ---
 id: B-05
 title: "aotTrain: тренировочный прогон через настоящий стартовый скрипт, готовность, нагрузка, SIGTERM, манифест"
-status: open
+status: done
 priority: P0
 size: L
 stage: stage-2-mvp
@@ -9,6 +9,16 @@ blocked_by: [B-04]
 ---
 
 # B-05 — `aotTrain`
+
+> **Сделано 06.09.2026.** `AotTrainTask` + `StartScriptRun` + `JarManifest`. Запуск настоящего
+> `bin/<app>` с `JAVA_HOME` тулчейна и `JAVA_OPTS=-XX:AOTCacheOutput=…`; старый кэш и манифест
+> удаляются до старта; mtime jar-ов → `FileTime.fromMillis(1000)`; готовность по URL (HttpClient,
+> опрос 50 мс) или `exitAfter`; нагрузка — команды по очереди с проверкой кода; SIGTERM; ожидание
+> строки «AOTCache creation is complete» в журнале (второй JVM-процесс пишет кэш после выхода
+> первого); манифест SHA-256. Пути отказа — SIGKILL и удаление кэша: полузаваренный кэш хуже
+> отсутствующего. Windows — ошибка с объяснением. Четыре TestKit-теста на JDK 25.0.4 (Linux)
+> против настоящего HTTP-сервера. Сверх плана: `installDist` не сохраняет mtime, `distZip` не
+> может нести кэш, `distTar` — может (ресёрч §1.5, следствие 2 → B-07).
 
 Сердце плагина. Ресёрч закрыл пять вопросов, от которых зависит форма задачи: classpath из
 каталогов кэш не даёт (E4), поэтому тренируется раскладка `installDist`, а не `run`; кэш пишется
@@ -47,6 +57,9 @@ AOTCacheOutput can be specified» (G5), поэтому кэша в момент 
   «SIGKILL» и «кэш не записан»; файла `app.aot` нет.
 - AC: `touch` любого jar в `lib/` после `aotTrain` делает `aotVerify` красным (проверка
   [B-06](B-06-aot-verify-task.md)), а повторный `aotTrain` — снова зелёным.
-- Якоря: `experiments/aot-validation/run.sh` (E1–E4, D1–D2, M2),
-  `experiments/gradle-start-script/run.sh` (G1–G5), `docs/research/research-architecture.md`
-  (§1.3–§1.5, D1–D3).
+- Якоря: `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/AotTrainTask.kt`,
+  `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/StartScriptRun.kt`,
+  `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/JarManifest.kt`,
+  `zavarnik-gradle-plugin/src/functionalTest/kotlin/io/github/youndie/zavarnik/AotTrainFunctionalTest.kt`,
+  `experiments/aot-validation/run.sh` (E1–E4, D1–D2, M2), `experiments/gradle-start-script/run.sh`
+  (G1–G5), `docs/research/research-architecture.md` (§1.3–§1.5, D1–D3).

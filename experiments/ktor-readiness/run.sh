@@ -22,7 +22,8 @@ grep -m1 "model name" /proc/cpuinfo 2>/dev/null | sed 's/^/# /' || sysctl -n mac
 APP=$(cd app/build/install/stand && pwd); S=$APP/bin/stand
 rm -f "$APP/lib/app.aot"
 # mtime normalisation as the plugin will do it (research D3): the constant Jib uses by default.
-find "$APP/lib" -name '*.jar' -exec touch -t 197001010000.01 {} +
+# TZ pinned: `touch -t` reads local time, and the constant is 1970-01-01T00:00:01Z (Jib's default).
+TZ=UTC find "$APP/lib" -name '*.jar' -exec touch -t 197001010000.01 {} +
 echo "# jars=$(ls "$APP"/lib/*.jar | wc -l | tr -d ' ')"
 
 now_ms() { python3 -c 'import time; print(int(time.time()*1000))'; }

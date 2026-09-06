@@ -24,17 +24,26 @@ blocked_by: [B-05]
   Gradle 9.7.1, G1–G4 в `experiments/gradle-start-script/`. Отвергнуто: передавать флаг через
   `JAVA_OPTS` при развёртывании — перекладывает на каждый Dockerfile то, ради чего плагин
   существует. Отвергнуто: второй скрипт `bin/<app>-train` — два скрипта расходятся.
-- **`installDist` и `distZip` включают `lib/app.aot` и `lib/app.aot.jars`** и зависят от
-  `aotTrain`; `-XX:AOTMode=on` в прод-скрипт по умолчанию **не** ставится — отсутствие кэша
-  должно замедлять, а не ронять сервис. Побочная выгода сторожа: без файла нет ни флага, ни трёх
-  строк `[error][aot]` в stderr (R16).
+- **`distTar` включает `lib/app.aot` и `lib/app.aot.jars` и получает `preserveFileTimestamps = true`;
+  `distZip` кэш не получает и печатает предупреждение** (ресёрч §1.5, следствие 2, 06.09.2026:
+  zip хранит DOS-время в местном поясе без extra-поля, после распаковки mtime зависит от машины;
+  tar хранит epoch и с сохранением времени отдаёт ровно `1 с` — то, что записал `aotTrain`).
+  Зависимость архивов от `aotTrain` — через выход задачи, не через `installDist`: тот сам входит
+  в `aotTrain`, и включение кэша в общий `distributions.main.contents` замкнуло бы цикл.
+  `-XX:AOTMode=on` в прод-скрипт по умолчанию **не** ставится — отсутствие кэша должно замедлять,
+  а не ронять сервис. Побочная выгода сторожа: без файла нет ни флага, ни трёх строк
+  `[error][aot]` в stderr (R16).
+- **`jvmArgs` и флаги переносимости (`-XX:+UnlockDiagnosticVMOptions -XX:-AOTAdapterCaching` при
+  `portability = true`) — в `applicationDefaultJvmArgs`**, то есть в `DEFAULT_JVM_OPTS` скрипта:
+  один источник для тренировки, проверки и прода.
 - Вопрос: где стоять `-XX:-AOTAdapterCaching` — решается в
   [B-09](B-09-cpu-portability-adapter-caching.md), но место в скрипте резервируется здесь.
 - Не покрывает: образ контейнера — [B-10](B-10-docker-and-jib-recipe.md).
 
-- AC: `unzip -p build/distributions/<app>.zip '*/bin/<app>' | grep AOTCache` показывает сторож
-  с `$APP_HOME`; распакованный в `/opt/<app>` дистрибутив стартует с `source: shared objects
-  file` в `-Xlog:class+load` (G4).
+- AC: `tar xf build/distributions/<app>.tar` в `/opt` — `bin/<app>` несёт сторож с `$APP_HOME`,
+  `lib/app.aot` на месте, mtime jar-ов `1`, и старт даёт `source: shared objects file` в
+  `-Xlog:class+load` (G4) на JDK 25.0.4, где mtime проверяется.
+- AC: `distZip` собирается без кэша и печатает предупреждение, называющее причину (DOS-время).
 - AC: тот же дистрибутив без `lib/app.aot` стартует без флага и без строк `[error][aot]`.
 - AC: `JAVA_OPTS=-XX:AOTMode=on bin/<app>` поверх скрипта с кэшем — код 0 (G3); с
   `touch`-нутым jar на JDK 25.0.4 — код 1.
