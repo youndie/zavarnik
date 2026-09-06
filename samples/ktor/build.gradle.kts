@@ -31,6 +31,9 @@ application { mainClass = "sample.MainKt" }
 zavarnik {
     // Both the training run and production, through the start script's DEFAULT_JVM_OPTS.
     jvmArgs("-Dsample.port=18090")
+    // `-PnativeCode`: keep the CPU-specific adapter code in the cache (research D6, B-09) — for
+    // measuring what portability costs, not for a cache that leaves this machine.
+    portability = !providers.gradleProperty("nativeCode").isPresent
     training {
         readyWhen.url("http://127.0.0.1:18090/health")
         // What the workload touches is what the cache holds: two routes, JSON in and out. Built-in
