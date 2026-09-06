@@ -50,7 +50,12 @@ make check
 файла — красный `coverage_map.py`. Группировка и описания пишутся человеком; машина сторожит
 только состав.
 
-### Research (2)
+### Research (4)
 
+Первая фаза — AOT-кэш:
 - [x] [research-architecture](research/research-architecture.md) — что HotSpot проверяет перед тем, как принять кэш; чем кончается тренировка; кто это уже сделал; решения и риски плагина
 - [x] [source-brief](research/source-brief.md) — исходный бриф от 06.09.2026 без правок: семь RQ, MVP и критерии остановки, против которых ресёрч сверяется
+
+Вторая фаза — плагин оптимизации байткода:
+- [x] [research-optimizer](research/research-optimizer.md) — ворота RQ0: доля пользовательского кода в профиле стенда, почему R8 на этом стеке не запускается, что весят кандидаты RQ2–RQ6
+- [x] [source-brief-optimizer](research/source-brief-optimizer.md) — бриф второй фазы без правок: девять RQ, протокол замера, критерии остановки

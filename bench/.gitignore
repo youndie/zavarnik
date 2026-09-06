@@ -1,0 +1,5 @@
+build/
+.gradle/
+.kotlin/
+profile/results/*/
+!profile/results/*.md
