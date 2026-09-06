@@ -1,0 +1,23 @@
+---
+id: B-21
+title: "RQ4 — ленивое логирование: ≤ 1,57 % байт при трёх debug на запрос — линт, не переписывание"
+status: open
+priority: P3
+size: S
+stage: stage-5-optimizer
+blocked_by: [B-16]
+---
+
+# B-21 — RQ4: ленивое логирование как линт
+
+Ресёрч §1.4: весь string-concat с владельцем `Pricing.quote` — 1,57 % байт при трёх
+`logger.debug("…$x…")` на запрос и выключенном debug; `org.slf4j` на стеках аллокаций — 0 %.
+Красный порог брифа — 2 %: бриф сам говорит «lint only».
+
+- **Решение: правило линтера** (kapkan в sborka уже умеет ktlint-правила портфеля —
+  `kapkan:eager-log-template`?), не IR-проход. Плотность логов на стенде — реалистичная для
+  сервиса, у которого debug выключен в проде.
+- Не покрывает: `kotlin-logging` с лямбдами — там нечего чинить.
+
+- AC: правило в kapkan или запись «не делать» с причиной; на стенде — три срабатывания.
+- Якоря: `bench/src/main/kotlin/bench/Pricing.kt`, `docs/research/research-optimizer.md` (§1.4).
