@@ -1,0 +1,128 @@
+# 2026-09-06T17:34:54Z Darwin arm64 MacBookAir.netis.cc
+# openjdk version "25.0.2" 2026-01-20
+# OpenJDK Runtime Environment (build 25.0.2+10-69)
+# OpenJDK 64-Bit Server VM (build 25.0.2+10-69, mixed mode, sharing)
+
+=== T0 train in a/ (relative classpath), one-step workflow
+[info][class,path] Writing classpath(s) into lib/app.aot.config (size = 2)
+[info][class,path] (app   ) [1] = lib/app.jar
+[info][class,path] (app   ) [1] = lib/app.jar
+[info][class,path] Writing classpath(s) into lib/app.aot (size = 2)
+[info][class,path] (app   ) [1] = lib/app.jar
+AOTCache creation is complete: lib/app.aot 10813440 bytes
+
+=== R1 relocated to b/, relative classpath
+[info][class,path] Longest common prefix substitution in boot/app classpath matching: no
+[info][class,load] App source: shared objects file
+shared=895 file=0
+
+=== R2 relocated to b/, absolute classpath
+[info][class,path] Longest common prefix substitution in boot/app classpath matching: no
+[info][class,load] App source: shared objects file
+shared=895 file=0
+
+=== R3 jar touched (mtime changed, size same)
+[info][class,path] Longest common prefix substitution in boot/app classpath matching: no
+[info][class,load] App source: shared objects file
+shared=895 file=0
+
+=== R4 jar replaced by a different jar, same name
+[info][class,path] Longest common prefix substitution in boot/app classpath matching: no
+[info][class,load] App source: shared objects file
+shared=895 file=0
+
+=== R5 extra jar appended
+[info][class,path] Longest common prefix substitution in boot/app classpath matching: no
+[info][class,load] App source: shared objects file
+shared=895 file=0
+
+=== R6 extra jar prepended
+[info][class,path] Longest common prefix substitution in boot/app classpath matching: yes
+[info][class,path] Longest common prefix: lib/ (4 chars)
+[info][class,load] App source: shared objects file
+shared=895 file=0
+
+=== R7 directory appended
+[info][class,path] Longest common prefix substitution in boot/app classpath matching: no
+[info][class,load] App source: shared objects file
+shared=895 file=0
+
+=== R8 --add-modules jdk.httpserver
+[info][class,path] Longest common prefix substitution in boot/app classpath matching: no
+[error][aot       ] Mismatched values for property jdk.module.addmods: jdk.httpserver specified during runtime but not during dump time
+[error][aot       ] AOT cache has aot-linked classes. It cannot be used when archived full module graph is not used.
+[info ][class,load] App source: file:/private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-mac2/b/lib/app.jar
+shared=0 file=1
+
+=== R9 -javaagent
+[info][class,path] Longest common prefix substitution in boot/app classpath matching: no
+[error][aot       ] Mismatched values for property jdk.module.addmods: java.instrument specified during runtime but not during dump time
+[error][aot       ] AOT cache has aot-linked classes. It cannot be used when archived full module graph is not used.
+[info ][class,load] App source: file:/private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-mac2/b/lib/app.jar
+shared=0 file=1
+
+=== R10 SerialGC at runtime (trained with the default GC)
+[info][class,path] Longest common prefix substitution in boot/app classpath matching: no
+[info][class,load] App source: shared objects file
+shared=895 file=0
+
+=== R11 ZGC at runtime
+[warning][aot       ] Unable to use AOT cache.
+[                           ] The saved state of UseCompressedOops and UseCompressedClassPointers is different from runtime, CDS will be disabled.
+[info   ][class,load] App source: file:/private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-mac2/b/lib/app.jar
+shared=0 file=1
+
+=== R12 -Xmx changed at runtime
+[info][class,path] Longest common prefix substitution in boot/app classpath matching: no
+[info][class,load] App source: shared objects file
+shared=895 file=0
+
+=== R13 -XX:AOTMode=on with ZGC: exit code
+exit=1
+
+=== R14 -XX:AOTMode=on with a replaced jar: exit code
+exit=0
+
+=== R15 -XX:AOTMode=on with a missing cache file: exit code
+exit=1
+
+=== R16 default mode with a missing cache file: exit code and stderr
+exit=0
+error lines=3
+
+=== D1 train with ABSOLUTE paths in abs1/, run in abs2/ with abs1/ deleted (the container case)
+[info][class,path] Longest common prefix substitution in boot/app classpath matching: yes
+[info][class,path] Longest common prefix: /private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-mac2/abs2/lib/ (130 chars)
+[info][class,load] App source: shared objects file
+shared=895 file=0
+
+=== D2 jar mtime normalised to a constant BEFORE training, copied with mtime preserved, training dir deleted
+[info][class,path] Longest common prefix substitution in boot/app classpath matching: yes
+[info][class,path] Longest common prefix: /private/tmp/claude-501/-Users-youndie-Documents-GitHub/4c3d19ec-455e-4894-aff8-bd58bb1eff7e/scratchpad/expkit/work-mac2/n2/lib/ (128 chars)
+[info][class,load] App source: shared objects file
+shared=895 file=0
+
+=== D3 docker COPY preserves mtime?
+docker not available here
+
+=== E1 training run ends with Runtime.halt(0): is the cache written?
+written  10174464 bytes
+
+=== E2 training run killed with SIGTERM
+written  10649600 bytes
+
+=== E3 training run killed with SIGKILL
+not written
+
+=== E4 training with a DIRECTORY on the classpath (what 'gradle run' does)
+[0.129s][error][aot] Error: non-empty directory '../out'
+Cannot have non-empty directory in paths
+not written
+
+=== M1 wall-clock ms of 20 runs, sorted: without cache (-XX:AOTMode=off) then with cache
+72 72 72 72 72 73 73 73 73 73 73 73 73 73 74 74 74 74 74 74 
+32 32 32 32 32 32 32 32 32 33 33 33 33 33 33 33 33 33 33 34 
+
+=== M2 cache size and one-step creation time
+size= 10813440 bytes
+create ms=408

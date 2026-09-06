@@ -1,0 +1,39 @@
+# 2026-09-06T17:42:41Z Darwin arm64 MacBookAir.netis.cc
+# openjdk version "25.0.2" 2026-01-20
+# OpenJDK Runtime Environment (build 25.0.2+10-69)
+# OpenJDK 64-Bit Server VM (build 25.0.2+10-69, mixed mode, sharing)
+# Gradle 9.7.1
+
+=== script: classpath line and the guard
+117:CLASSPATH=$APP_HOME/lib/demo.jar:$APP_HOME/lib/gson-2.11.0.jar:$APP_HOME/lib/error_prone_annotations-2.27.0.jar
+205:DEFAULT_JVM_OPTS=""
+207:if [ -f "$APP_HOME/lib/app.aot" ]; then
+208:    DEFAULT_JVM_OPTS="$DEFAULT_JVM_OPTS \"-XX:AOTCache=$APP_HOME/lib/app.aot\""
+
+=== G1 training through the real script: JAVA_OPTS carries -XX:AOTCacheOutput, no cache exists yet
+AOTCache creation is complete: <here>/build/install/demo/lib/app.aot 12632064 bytes
+12632064 app.aot
+1326 demo.jar
+19370 error_prone_annotations-2.27.0.jar
+298435 gson-2.11.0.jar
+
+=== G2 production run through the same script, cache exists now
+[info][aot] Opened AOT cache <here>/build/install/demo/lib/app.aot.
+[info][class,load] demo.App source: shared objects file
+[info][class,load] com.google.gson.Gson source: shared objects file
+
+=== G3 verify mode: -XX:AOTMode=on from JAVA_OPTS on top of the script's -XX:AOTCache
+exit=0
+
+=== G4 the whole install dir relocated, training dir deleted, -XX:AOTMode=on
+[info][class,path] Longest common prefix: /private<relocated>/lib/ (81 chars)
+[info][class,load] demo.App source: shared objects file
+exit=0
+
+=== G5 retraining while a cache exists: the script adds -XX:AOTCache, JAVA_OPTS adds -XX:AOTCacheOutput
+Error occurred during initialization of VM
+Only one of AOTCache or AOTCacheOutput can be specified
+
+=== G6 the same pair with -XX:AOTMode=off
+Error occurred during initialization of VM
+Only one of AOTCache or AOTCacheOutput can be specified
