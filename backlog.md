@@ -33,21 +33,19 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (9)
+## Open (7)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
 | [B-02](docs/backlog/B-02-kotlin-classes-archived-share.md) `[ ]` | Доля классов Kotlin-приложения, пришедших из кэша: indy-лямбды, корутины, сериализация (RQ4) | P1 | S | B-01 |
 | [B-03](docs/backlog/B-03-jdk26-on-linux-box.md) `[ ]` | JDK 26 на Linux-машине: ZGC (JEP 516) и состояние JDK-8377932 — прогоном, а не чтением | P1 | S | - |
-| [B-08](docs/backlog/B-08-testkit-invalidation-cases.md) `[ ]` | TestKit: каждый случай инвалидации из журнала эксперимента становится тестом плагина | P1 | M | B-06 |
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P1 | M | - |
 | [B-10](docs/backlog/B-10-docker-and-jib-recipe.md) `[ ]` | Docker и Jib: рецепт образа, в котором кэш принимается, и aotVerify внутри контейнера | P1 | M | B-07 |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P1 | M | B-12 |
-| [B-15](docs/backlog/B-15-ktor-sample-on-the-plugin-in-ci.md) `[ ]` | samples/ktor на плагине, прогоняемый в CI: сквозная проверка train → verify → dist | P1 | M | B-07 |
 | [B-11](docs/backlog/B-11-aot-report-task.md) `[ ]` | aotReport: таблица «холодный / с кэшем» по времени готовности — артефакт для публикации | P2 | S/M | B-06 |
 | [B-14](docs/backlog/B-14-windows-training.md) `[ ]` | Тренировка на Windows: без SIGTERM нужен другой способ закончить прогон | P3 | M | - |
 
-## Closed (6)
+## Closed (8)
 
 **Стенд**
 
@@ -59,6 +57,8 @@
 - [B-05](docs/backlog/B-05-aot-train-task.md) `[x]` - aotTrain: тренировочный прогон через настоящий стартовый скрипт, готовность, нагрузка, SIGTERM, манифест
 - [B-06](docs/backlog/B-06-aot-verify-task.md) `[x]` - aotVerify: запуск с -XX:AOTMode=on, подсчёт источников классов, сверка манифеста — сборка падает с причиной
 - [B-07](docs/backlog/B-07-start-scripts-and-distribution-wiring.md) `[x]` - Проводка: сторож в стартовых скриптах добавляет -XX:AOTCache=$APP_HOME/lib/app.aot, когда кэш есть; кэш и манифест в installDist и distZip
+- [B-08](docs/backlog/B-08-testkit-invalidation-cases.md) `[x]` - TestKit: каждый случай инвалидации из журнала эксперимента становится тестом плагина
+- [B-15](docs/backlog/B-15-ktor-sample-on-the-plugin-in-ci.md) `[x]` - samples/ktor на плагине, прогоняемый в CI: сквозная проверка train → verify → dist
 
 **Выпуск**
 

@@ -146,4 +146,19 @@ public abstract class VerifySpec {
 
     /** Whether `check` depends on `aotVerify`. `true` by default. */
     public abstract val onCheck: Property<Boolean>
+
+    /**
+     * JVM arguments production adds on top of the start script — an agent, `--add-modules`, a
+     * `JAVA_OPTS` of its own. `aotVerify` runs with them, so a mismatch with the training run is
+     * found here and not in production, where the JVM rejects the cache with three lines on
+     * stderr and exit code 0. Anything the application needs in *both* runs belongs in
+     * [ZavarnikExtension.jvmArgs] instead: an agent present at training time and at run time is
+     * fine; one present on one side only is not.
+     */
+    public abstract val jvmArgs: ListProperty<String>
+
+    /** Adds to [jvmArgs]. */
+    public fun jvmArgs(vararg args: String) {
+        jvmArgs.addAll(args.toList())
+    }
 }

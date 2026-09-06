@@ -49,6 +49,7 @@ AVX-512). Скрипт эксперимента и три журнала: `exper
 | Записи **в конец** classpath разрешены (jar, каталог); запись **в начало** — отказ «The name of app classpath [1] does not match» | журнал R5, R7 (`shared>0`), R6 (`shared=0`) |
 | `--add-modules` и `-javaagent` (он добавляет `java.instrument`) — «Mismatched values for property jdk.module.addmods» → «AOT cache has aot-linked classes. It cannot be used when archived full module graph is not used» → кэш не маппится целиком | журнал R8, R9 (`shared=0 file=1`) |
 | JDWP-агент — та же судьба: «AOT cache has aot-linked classes. It cannot be used with JDWP agent» | paketo-buildpacks/spring-boot#578, 06.01.2026 (цитата строки журнала) |
+| Агент, присутствующий **и на тренировке, и на запуске**, кэш не ломает: `App source: shared objects file` на 25.0.2 и 25.0.4. Отказ R9 — про несовпадение модульного графа, а не про агенты как таковые | прогон 06.09.2026 вечером (`-javaagent` в обеих командах, тот же `ag.jar`); TestKit `InvalidationFunctionalTest`, случай R9 |
 | GC можно менять (тренировка на G1, запуск на Serial — принят), но ZGC на JDK 25 — отказ «The saved state of UseCompressedOops and UseCompressedClassPointers is different from runtime, CDS will be disabled» | журнал R10 (`shared>0`), R11 (`shared=0`); `filemap.cpp:2052` |
 | `-Xmx` менять можно | журнал R12 |
 | Сборка JDK сравнивается по строке `_jvm_ident`; другой билд — отказ. JDK 21 флага не знает вовсе («Unrecognized VM option 'AOTCache=…'») | `filemap.cpp:674` — прочитано, прогоном на двух билдах 25 **не** проверено; JDK 21 — прогон |
@@ -71,6 +72,12 @@ AVX-512). Скрипт эксперимента и три журнала: `exper
 
 **Следствие 3.** «Суперсет» из RQ3 работает только в конец (R5, R7) — это документируется, а не
 детектируется: `aotVerify` запускает тот же скрипт, что и прод, и увидит любое отклонение.
+
+**Следствие 4 (06.09.2026, B-08).** Агент — не запрет, а требование симметрии: `zavarnik.jvmArgs`
+кладёт его в `DEFAULT_JVM_OPTS` для обеих сторон, и кэш принимается. То, что прод добавляет
+**сверх** скрипта (агент из `JAVA_OPTS`, `--add-modules`), объявляется в `verify { jvmArgs(…) }`,
+и `aotVerify` падает с «Mismatched values for property jdk.module.addmods» до того, как это
+увидит прод.
 
 ### 1.2 JDK-8377932: на части JDK кэш не проверяется против jar-ов вовсе
 
@@ -136,6 +143,8 @@ written»). Неверно: `.aot.config` пишется в `before_exit` VM, д
 | Скрипт складывает `DEFAULT_JVM_OPTS $JAVA_OPTS $<APP>_OPTS` — окружение добавляет флаги, не переписывая скрипт | шаблон, строка 293; G1 (`JAVA_OPTS=-XX:AOTCacheOutput=…` через скрипт даёт кэш), G3 (`JAVA_OPTS=-XX:AOTMode=on` поверх флага скрипта — код 0) |
 | Сторож `if [ -f "$APP_HOME/lib/app.aot" ]; then DEFAULT_JVM_OPTS="$DEFAULT_JVM_OPTS \"-XX:AOTCache=$APP_HOME/lib/app.aot\""; fi`, вставленный постобработкой, работает: до тренировки флага нет, после — классы из кэша, после переезда всего каталога — тоже | `experiments/gradle-start-script/build.gradle.kts`; G1, G2, G4 |
 | Windows-скрипт: `set APP_HOME=%DIRNAME%…`, `set DEFAULT_JVM_OPTS=…`, `set CLASSPATH=…` | `windowsStartScript.txt`, строки 34, 40, 75 — прочитано, прогоном не проверено |
+| Каталог-зависимость (`runtimeOnly(files("conf"))`) `installDist` раскладывает **плоско** в `lib/` (файлы рядом с jar-ами), а в `CLASSPATH` оставляет `$APP_HOME/lib/conf` — путь, которого нет. JVM отсутствующую запись терпит, если её нет и при запуске, и кэш тренируется; случай E4 (непустой каталог на classpath) через плагин `application` недостижим | TestKit `InvalidationFunctionalTest`, случай E4, Linux 25.0.4, 06.09.2026 |
+| Второй шаг одношагового режима получает свои флаги через `JAVA_TOOL_OPTIONS`: «Picked up JAVA_TOOL_OPTIONS: -Djava.class.path=… -XX:AOTMode=create» в журнале тренировки | тот же тест, `build/zavarnik/aotTrain.log` |
 
 **Следствие.** Один и тот же скрипт — лаунчер тренировки, проверки и прода (→ D1, D2). Без
 сторожа это невозможно из-за G5: безусловный `-XX:AOTCache` в скрипте делает `-XX:AOTCacheOutput`
@@ -249,6 +258,12 @@ README стенда) дал 562 → 184 (SerialGC) и 554 → 210 (G1): ряды
 **Положительный контроль стенда — `hello world`** (один класс, `java.util.stream` и `HashMap`), время всего процесса `java` от
 запуска до выхода, 20 прогонов подряд, отсортированные ряды в журналах (`M1`), медиана — среднее
 10-го и 11-го значения.
+
+**Образец на плагине** (`samples/ktor`, B-15, Linux 25.0.4, 06.09.2026): готовность на
+тренировке 537 мс, нагрузка 65 мс, кэш 31,7 МБ, манифест 26 jar-ов; `aotVerify`: 2262 из 2262
+классов приложения (100 %) из кэша, 3823 из 3837 всего. Числа из журнала `./gradlew -p samples/ktor
+check`; время готовности **с** кэшем плагин пока не мерит — это `aotReport`
+([B-11](../backlog/B-11-aot-report-task.md)).
 
 | Машина, JDK | Без кэша (`-XX:AOTMode=off`), мс | С кэшем, мс | Размер кэша |
 |---|---|---|---|

@@ -1,6 +1,11 @@
 package io.github.youndie.zavarnik
 
 import java.io.File
+import java.util.jar.Attributes
+import java.util.jar.JarOutputStream
+import java.util.jar.Manifest
+import java.util.zip.ZipEntry
+import javax.tools.ToolProvider
 
 /**
  * A TestKit project: the `application` plugin, a JDK 25 toolchain, and a main class that serves
@@ -10,9 +15,31 @@ import java.io.File
 internal object Fixture {
     const val PORT = 18765
 
+    /** A do-nothing `-javaagent` jar, compiled with the JDK running the tests. */
+    fun agentJar(dir: File): File {
+        val src = File(dir, "agent/Agent.java")
+        src.parentFile.mkdirs()
+        src.writeText("public class Agent { public static void premain(String args) { } }\n")
+        val compiler = ToolProvider.getSystemJavaCompiler()
+        check(
+            compiler.run(null, null, null, "-d", src.parentFile.absolutePath, src.absolutePath) == 0,
+        ) { "javac failed" }
+        val manifest = Manifest()
+        manifest.mainAttributes[Attributes.Name.MANIFEST_VERSION] = "1.0"
+        manifest.mainAttributes[Attributes.Name("Premain-Class")] = "Agent"
+        val jar = File(dir, "agent/agent.jar")
+        JarOutputStream(jar.outputStream(), manifest).use { out ->
+            out.putNextEntry(ZipEntry("Agent.class"))
+            out.write(File(src.parentFile, "Agent.class").readBytes())
+            out.closeEntry()
+        }
+        return jar
+    }
+
     fun write(
         dir: File,
         extension: String = "",
+        dependencies: String = "",
     ) {
         File(dir, "settings.gradle.kts").writeText("rootProject.name = \"fixture\"\n")
         File(dir, "build.gradle.kts").writeText(
@@ -25,6 +52,7 @@ internal object Fixture {
             }
             java { toolchain { languageVersion = JavaLanguageVersion.of(25) } }
             application { mainClass = "fixture.App" }
+            $dependencies
             $extension
             """.trimIndent(),
         )

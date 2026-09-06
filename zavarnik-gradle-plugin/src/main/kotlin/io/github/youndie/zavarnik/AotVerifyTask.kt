@@ -4,6 +4,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
@@ -74,6 +75,10 @@ public abstract class AotVerifyTask : DefaultTask() {
     @get:Input
     public abstract val minCachedShare: Property<Double>
 
+    /** What production adds on top of the script; the verification run adds the same. */
+    @get:Input
+    public abstract val extraJvmArgs: ListProperty<String>
+
     /** The application's output, `-Xlog` included: `build/zavarnik/aotVerify.log`. */
     @get:OutputFile
     public abstract val logFile: RegularFileProperty
@@ -110,7 +115,7 @@ public abstract class AotVerifyTask : DefaultTask() {
                     javaLauncher
                         .get()
                         .metadata.installationPath.asFile,
-                javaOpts = listOf("-XX:AOTMode=on", "-Xlog:class+load=info", "-Xlog:aot=info"),
+                javaOpts = listOf("-XX:AOTMode=on", "-Xlog:class+load=info", "-Xlog:aot=info") + extraJvmArgs.get(),
                 log = logFile.get().asFile,
             )
         run.start()

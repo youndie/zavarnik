@@ -187,6 +187,13 @@ public abstract class AotTrainTask : DefaultTask() {
         while (System.nanoTime() < deadline) {
             val text = if (log.exists()) log.readText() else ""
             if (CREATION_COMPLETE in text && cache.isFile) return
+            if (DIRECTORY_ON_CLASSPATH in text) {
+                throw GradleException(
+                    "zavarnik: the classpath has a directory on it, and the JVM writes no AOT cache for a " +
+                        "classpath that is not jars only (\"$DIRECTORY_ON_CLASSPATH\"). Look for a " +
+                        "`files(\"…\")` directory dependency; the start script's CLASSPATH line names it.\n${run.logTail()}",
+                )
+            }
             if (CREATION_FAILED in text ||
                 (ERROR_MARKER in text && !run.isAlive && !cache.exists() && !text.contains(ASSEMBLING))
             ) {
@@ -215,6 +222,7 @@ public abstract class AotTrainTask : DefaultTask() {
         public val JAR_MTIME: FileTime = FileTime.fromMillis(86_400_000)
         private const val CREATION_COMPLETE = "AOTCache creation is complete"
         private const val CREATION_FAILED = "AOTCache creation failed"
+        private const val DIRECTORY_ON_CLASSPATH = "Cannot have non-empty directory in paths"
         private const val ASSEMBLING = "to assemble AOT cache"
         private const val ERROR_MARKER = "Error"
         private const val POLL_MILLIS = 100L

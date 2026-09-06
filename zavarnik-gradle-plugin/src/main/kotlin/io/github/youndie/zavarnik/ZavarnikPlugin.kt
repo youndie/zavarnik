@@ -99,6 +99,7 @@ public class ZavarnikPlugin : Plugin<Project> {
                 task.readyTimeout.set(extension.training.readyTimeout)
                 task.shutdownTimeout.set(extension.training.shutdownTimeout)
                 task.minCachedShare.set(extension.verify.minCachedShare)
+                task.extraJvmArgs.set(extension.verify.jvmArgs)
             }
         afterEvaluate {
             if (extension.verify.onCheck.get()) {

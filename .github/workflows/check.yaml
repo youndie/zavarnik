@@ -71,6 +71,26 @@ jobs:
       - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: python3 scripts/docs_check.py --on-main
 
+  # The plugin: unit tests, TestKit tests against the installed JDKs 21 and 25, ktlint. The tests
+  # train real AOT caches, so the runner needs JDK 25 — the shared action installs 21 and 25.
+  plugin:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: youndie/sborka/.github/actions/setup-kotlin@main
+      - run: ./gradlew check --console=plain
+
+  # The consumer's view: the Ktor sample asks for the plugin by id and runs train → verify → tar.
+  sample:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: youndie/sborka/.github/actions/setup-kotlin@main
+      - run: ./gradlew -p samples/ktor check distTar --console=plain
+      - run: tar tf samples/ktor/build/distributions/ktor-sample.tar | grep -E "lib/app\.aot(\.jars)?$"
+
   # Separate from the gate, and on a schedule rather than on a pull request, because an anchor rots
   # when somebody refactors a **different** repository. A pull request here is the least likely
   # moment for one to break, and running it there trains people to ignore a red build they did not
