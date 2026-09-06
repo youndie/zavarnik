@@ -65,6 +65,8 @@ slf4j, `-assumenosideeffects` на `Intrinsics.check*`. R8 9.4.17 отрабат
 | 9.5.10-dev, полный classpath | та же ошибка |
 | 9.4.17, coroutines как `--classpath`, `-keep class kotlin.** { *; }` | та же ошибка в другом классе (см. ниже) |
 
+Прецедент: ту же ошибку верификатора порождал сам компилятор Kotlin до 1.5.0 — KT-42753 «VerifyError: Bad invokespecial instruction: interface method reference is in an indirect superinterface» при `-Xjvm-default=all`, исправлено в 1.5.0. Правило JVM известно и давно учтено в kotlinc; R8 при member rebinding его нарушает. Почему никто не заметил: в DEX такого ограничения нет, classfile-бэкенд R8 — второстепенный. Трекер — issuetracker.google.com, компонент R8; заводить или нет — владелец (B-17).
+
 **Механизм — по `javap`.** В оригинальном `CompletableDeferred.class` (coroutines 1.11.0, class
 version 52) синтетический аксессор `access$cancel$jd` делает `invokespecial
 InterfaceMethod CompletableDeferred.cancel:()V` — вызов default-метода через текущий интерфейс.
@@ -101,12 +103,14 @@ stdlib 8,4 %; аллокации — Ktor 36,8 %, kotlinx 26,4 %, stdlib 26,8 %.
 |---|---|
 | **Пользовательский код — 2,1 % CPU и 9,9 % аллокаций** на самом «бизнесовом» эндпоинте по владельцу; на CRUD и echo — доли процента | `baseline/business.*.collapsed`, `attribute.py` |
 | 36 % CPU `/business` — опрос очереди диспетчера: `LockFreeTaskQueue.removeFirstOrNull` 30,1 % self + `LockFreeTaskQueueCore.removeFirstOrNull` 5,9 %; ещё `WorkQueue.pollBuffer` 3,6 %, `LimitedDispatcher.dispatch` 1,9 % | `baseline/business.cpu.collapsed`, top self frames |
+| **Спин — не артефакт закрепления ядер (B-23, 07.09.2026).** `taskset` 0–7: `removeFirstOrNull` 21,8 % + `Core` 6,0 % + `obtainTaskOrDeallocateWorker` 7,9 %; то же плюс `-XX:ActiveProcessorCount=8`: `Core.removeFirstOrNull` 31,0 %; без `taskset`: `obtainTaskOrDeallocateWorker` 33,2 % + `Core.removeFirstOrNull` 8,6 %. Во всех трёх — треть CPU в очереди `LimitedDispatcher`; rps в чистом окне 34,3 / 32,4 / 34,4 тыс. | `bench/profile/results/spin-{taskset8,taskset8-apc8,unpinned}/`, `ENDPOINTS=business PROFILES=cpu` |
+| В WSL2 нет ни `intel_pstate`, ни `cpufreq` в `/sys` — частотой и турбо правит Windows-хост; из гостя их не зафиксировать | `ls /sys/devices/system/cpu/` на Linux-машине |
 | Боксинг примитивов (`Integer`/`Long`/`Double`/…) — **1,26 %** всех аллоцированных байт на `/business` | leaf-типы alloc-профиля |
 | Самый крупный пользовательский источник — `Regex("…")` внутри хендлера: `Matcher`, `int[]`, `boolean[]`, `byte[]` под `Pattern` — ≈ 6,5 % байт, владелец `Pricing.quote` | `Pricing.quote -> java.util.regex.Matcher` 1,77 %, `int[]` 1,56 %, `boolean[]` 1,49 %, `byte[]` 1,67 % |
 | Промежуточные коллекции цепочек — ≈ 4,6 %: `Object[]` 2,06 %, `ArrayList` 0,93 %, `LinkedHashMap$Entry` 0,89 %, `ArrayList$Itr` 0,71 % | те же владельцы |
 | Вершина alloc-профиля вообще — `byte[]` 18,4 %, `String` 6,8 %, `Object[]` 5,9 %: буферы ввода-вывода Ktor и разбор JSON | leaf-типы |
 | Debug-шаблоны (три `logger.debug("…$x…")` на запрос при выключенном debug): весь string-concat с владельцем `Pricing.quote` — **1,57 %** байт; кадров `org.slf4j` на стеках аллокаций — 0,00 % (вызов `debug(String)` сам ничего не аллоцирует) | стеки с `StringConcatHelper`/`StringBuilder` и владельцем `bench.Pricing` |
-| Квирк Ktor: `kotlin.reflect.jvm.internal.KClassImpl.toString` под `call.receive<T>()` — 0,67 % байт на `/business` в хендлере; строка типа строится на каждый запрос | `MainKt$main$1$2$9 -> byte[] via KClassImpl.toString` |
+| Квирк Ktor: `kotlin.reflect.jvm.internal.KClassImpl.toString` на каждый `call.receive<T>()` — **1,98 %** всех байт `/business` (22 стека; 0,67 % из них — та часть, где владелец хендлер). Стек: `SuspendFunctionGun.loop → DefaultTransformKt$installDefaultTransformations$2.invokeSuspend → KClassImpl.toString` — строка типа строится в default-трансформациях приёма тела, на каждый запрос | `bench/profile/results/ktor-typeinfo-stacks.txt` — все 22 стека с байтами, материал для репорта в Ktor (по решению владельца) |
 | `Regex` в хендлере целиком: все стеки под `java.util.regex.*` с кадром `bench.*` — **6,45 %** байт | `business.alloc.collapsed` |
 | RQ6, статически: из 283 методов `bench.*` **10** длиннее `FreqInlineSize=325` байт — `Pricing.quote` (машина состояний, 1827), хендлеры `invokeSuspend` 447–816, `deserialize` сериализаторов 332–459; длиннее `HugeMethodLimit=8000` — ни одного | `javap -c -p` по `bench.jar`, Linux; не проверено `-XX:+PrintInlining`, влияет ли это на что-то в горячем пути |
 
@@ -266,11 +270,15 @@ coroutines, ценнее любого плагина для всех их пол
 
 **Риск 2. Один повтор профиля, загрязнённый базовый прогон (§1.6).** Доли по владельцу от
 загрязнения не зависят (это пропорции внутри одного процесса), rps — зависят, поэтому rps
-заново снят в A/B. Профиль повторить стоит, если фаза продолжится.
+заново снят в A/B. Три CPU-профиля B-23 дали те же доли (user 1,7–2,0 %) — это и есть повтор.
+Для любого будущего rps-замера: Core Ultra 7 255HX — мобильный чип, турбо и тепловой троттлинг
+двигают частоту сильнее соседних сборок, а из WSL2 частота не фиксируется (§1.4) — значит,
+либо замер на машине, где `cpufreq` виден и governor `performance` ставится, либо честно
+широкий доверительный интервал.
 
-**Риск 3. Спин диспетчера — артефакт закрепления ядер?** Гипотеза и проверка — B-23. Если
-артефакт, треть CPU в профиле — свойство стенда, и вердикт по CPU-доле пользовательского кода
-надо пересчитать (она вырастет, но не до 25 %: остальные две трети — Ktor и stdlib).
+**Риск 3 — снят 07.09.2026.** Спин диспетчера не артефакт закрепления ядер: он одинаков под
+`taskset`, под `-XX:ActiveProcessorCount=8` и без ограничений (§1.4, B-23). Это свойство CIO
+под такой нагрузкой; доля CPU пользовательского кода остаётся 1,7–2,0 %.
 
 **Открытый вопрос 1.** Заводить ли issue в R8 (B-17) и куда нести находки про Ktor (B-23) —
 владелец.

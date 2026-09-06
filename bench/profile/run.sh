@@ -27,7 +27,7 @@ for i in $(seq 200); do curl -s -o /dev/null -X POST -H 'Content-Type: applicati
 
 # JVM pinned to 8 cores, the load generator to 8 others: the profile is of the service, not of oha.
 JVM_CPUS=${JVM_CPUS:-0-7}; LOAD_CPUS=${LOAD_CPUS:-8-15}
-taskset -pc "$JVM_CPUS" $PID >/dev/null
+[ "$JVM_CPUS" = none ] || taskset -pc "$JVM_CPUS" $PID >/dev/null
 
 run_endpoint() { # $1 name, rest = oha args
   local name=$1; shift
@@ -49,14 +49,25 @@ import json,sys; d=json.load(open(sys.argv[1])); s=d["summary"]; p=d["latencyPer
 print(f"rps={s['requestsPerSec']:.0f} p50={p['p50']*1000:.2f}ms p99={p['p99']*1000:.2f}ms requests={s['successRate']*100:.1f}% ok")
 PY
   # Allocation profile in a second window under the same load: the two profilers must not overlap.
-  "$ASPROF" -d "$MEASURE" -e alloc --total -o collapsed -f "$OUT/$name.alloc.collapsed" $PID > /dev/null 2>&1 &
-  pc=$!
-  taskset -c "$LOAD_CPUS" "$OHA" -z "${MEASURE}s" -c "$CONNS" --no-tui --output-format json "$@" > "$OUT/$name.oha2.json" 2>&1
-  wait $pc
-  python3 profile/attribute.py "$OUT/$name.cpu.collapsed" "$OUT/$name.alloc.collapsed" | tee -a "$OUT/summary.md"
+  if [[ " ${PROFILES:-cpu alloc} " == *" alloc "* ]]; then
+    "$ASPROF" -d "$MEASURE" -e alloc --total -o collapsed -f "$OUT/$name.alloc.collapsed" $PID > /dev/null 2>&1 &
+    pc=$!
+    taskset -c "$LOAD_CPUS" "$OHA" -z "${MEASURE}s" -c "$CONNS" --no-tui --output-format json "$@" > "$OUT/$name.oha2.json" 2>&1
+    wait $pc
+    python3 profile/attribute.py "$OUT/$name.cpu.collapsed" "$OUT/$name.alloc.collapsed" | tee -a "$OUT/summary.md"
+  else
+    python3 profile/attribute.py "$OUT/$name.cpu.collapsed" | tee -a "$OUT/summary.md"
+  fi
+  awk '{n=split($0,a,";"); leaf=a[n]; sub(/ [0-9]+$/,"",leaf); c[leaf]+=$NF; t+=$NF} END{for(k in c) printf "%5.1f%% %s\n", 100*c[k]/t, k}' "$OUT/$name.cpu.collapsed" | sort -nr | head -5 | sed 's/^/cpu self: /' | tee -a "$OUT/summary.md"
 }
-run_endpoint echo "http://127.0.0.1:$PORT/echo?msg=hello-from-oha"
-run_endpoint items "http://127.0.0.1:$PORT/items?limit=20"
-run_endpoint business -m POST -T application/json -D profile/order.json "http://127.0.0.1:$PORT/business"
+# ENDPOINTS="echo items business" (default: all); PROFILES="cpu alloc" (default: both).
+ENDPOINTS=${ENDPOINTS:-"echo items business"}
+for ep in $ENDPOINTS; do
+  case $ep in
+    echo) run_endpoint echo "http://127.0.0.1:$PORT/echo?msg=hello-from-oha" ;;
+    items) run_endpoint items "http://127.0.0.1:$PORT/items?limit=20" ;;
+    business) run_endpoint business -m POST -T application/json -D profile/order.json "http://127.0.0.1:$PORT/business" ;;
+  esac
+done
 echo; echo "## GC and JIT from the service log" | tee -a "$OUT/summary.md"
 grep -c "" "$OUT/service.log" | sed 's/^/lines=/' | tee -a "$OUT/summary.md"
