@@ -6,7 +6,7 @@ that production will actually accept it**, and ship it inside the distribution. 
 Quarkus have this built in; everything else has a two-command workflow that fails silently when
 the environment differs. This plugin turns that silence into a red build.
 
-**Status: research, no code yet.** What the JVM validates before it uses a cache, what a training
+**Status: the research is done and the RQ6 gate is passed (a Ktor app becomes ready 59–69% sooner); the plugin skeleton exists, the tasks are being written.** What the JVM validates before it uses a cache, what a training
 run has to do for the cache to be written at all, and what already exists elsewhere — all of it
 is measured, not assumed, and recorded in [`docs/research/`](docs/research/). Three findings shape
 the plugin:

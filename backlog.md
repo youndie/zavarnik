@@ -33,11 +33,10 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (13)
+## Open (12)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
-| [B-04](docs/backlog/B-04-plugin-skeleton-and-toolchain-checks.md) `[ ]` | Каркас плагина: расширение zavarnik, проверки тулчейна до первой задачи | P0 | M | B-01 |
 | [B-05](docs/backlog/B-05-aot-train-task.md) `[ ]` | aotTrain: тренировочный прогон через настоящий стартовый скрипт, готовность, нагрузка, SIGTERM, манифест | P0 | L | B-04 |
 | [B-06](docs/backlog/B-06-aot-verify-task.md) `[ ]` | aotVerify: запуск с -XX:AOTMode=on, подсчёт источников классов, сверка манифеста — сборка падает с причиной | P0 | M | B-05 |
 | [B-07](docs/backlog/B-07-start-scripts-and-distribution-wiring.md) `[ ]` | Проводка: сторож в стартовых скриптах добавляет -XX:AOTCache=$APP_HOME/lib/app.aot, когда кэш есть; кэш и манифест в installDist и distZip | P0 | S/M | B-05 |
@@ -51,11 +50,15 @@
 | [B-11](docs/backlog/B-11-aot-report-task.md) `[ ]` | aotReport: таблица «холодный / с кэшем» по времени готовности — артефакт для публикации | P2 | S/M | B-06 |
 | [B-14](docs/backlog/B-14-windows-training.md) `[ ]` | Тренировка на Windows: без SIGTERM нужен другой способ закончить прогон | P3 | M | - |
 
-## Closed (2)
+## Closed (3)
 
 **Стенд**
 
 - [B-01](docs/backlog/B-01-ktor-stand-and-readiness-timing.md) `[x]` - Стенд: Ktor-приложение и замер времени готовности с кэшем и без (RQ6)
+
+**Плагин**
+
+- [B-04](docs/backlog/B-04-plugin-skeleton-and-toolchain-checks.md) `[x]` - Каркас плагина: расширение zavarnik, проверки тулчейна до первой задачи
 
 **Выпуск**
 

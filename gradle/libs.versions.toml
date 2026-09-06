@@ -1,0 +1,10 @@
+[versions]
+kotlin = "2.4.10"
+# The shared build conventions. One number: every sborka plugin below takes its version from here.
+sborka = "0.3.0.31"
+
+[plugins]
+kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+sborkaJvm = { id = "io.github.youndie.sborka.jvm", version.ref = "sborka" }
+sborkaLint = { id = "io.github.youndie.sborka.lint", version.ref = "sborka" }
+sborkaPublish = { id = "io.github.youndie.sborka.publish", version.ref = "sborka" }
