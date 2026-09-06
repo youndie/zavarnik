@@ -34,21 +34,20 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (9)
+## Open (8)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P1 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P1 | M | B-12 |
 | [B-19](docs/backlog/B-19-rq5-constant-hoisting.md) `[ ]` | RQ5 — константа Regex в хендлере: 6,45 % байт, единственный кандидат с весом выше порога | P1 | M | B-16 |
-| [B-23](docs/backlog/B-23-dispatcher-spin-hypothesis.md) `[ ]` | 36 % CPU /business — опрос очереди LimitedDispatcher: артефакт закрепления на 8 ядрах или свойство CIO? | P1 | S | - |
 | [B-17](docs/backlog/B-17-r8-invokespecial-rebinding-upstream.md) `[?]` | R8 ломает invokespecial на default-методы интерфейсов Kotlin — заводить ли issue в r8 | P2 | XS | - |
 | [B-18](docs/backlog/B-18-rq6-inline-bloat-diagnostic.md) `[ ]` | RQ6 — диагностика размеров методов против порогов C2: всегда полезна, но проверить, что порог что-то значит | P2 | S | B-16 |
 | [B-20](docs/backlog/B-20-rq3-collection-chains.md) `[ ]` | RQ3 — промежуточные коллекции цепочек: ≈ 4,6 % байт на /business | P2 | L | B-16 |
 | [B-14](docs/backlog/B-14-windows-training.md) `[ ]` | Тренировка на Windows: без SIGTERM нужен другой способ закончить прогон | P3 | M | - |
 | [B-21](docs/backlog/B-21-rq4-lazy-logging-lint.md) `[ ]` | RQ4 — ленивое логирование: ≤ 1,57 % байт при трёх debug на запрос — линт, не переписывание | P3 | S | B-16 |
 
-## Closed (14)
+## Closed (15)
 
 **Стенд**
 
@@ -78,6 +77,7 @@
 
 - [B-16](docs/backlog/B-16-rq0-gate-profile-split-and-r8.md) `[x]` - RQ0 — ворота второй фазы: доля пользовательского кода в профиле и базовая линия R8
 - [B-22](docs/backlog/B-22-rq2-boxing-diagnostic.md) `[-]` - RQ2 — боксинг: 1,26 % байт, ниже красного порога — только диагностика
+- [B-23](docs/backlog/B-23-dispatcher-spin-hypothesis.md) `[x]` - 36 % CPU /business — опрос очереди LimitedDispatcher: артефакт закрепления на 8 ядрах или свойство CIO?
 
 <!-- END INDEX -->
 
