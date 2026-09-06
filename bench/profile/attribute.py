@@ -10,12 +10,15 @@ the Kotlin stdlib, the JDK, and the JVM itself:
            which is the view that bounds what a plugin over that code could change.
 
 The categories are prefixes, listed in CATEGORIES; a frame that matches none is `other`.
-Usage: attribute.py <collapsed file> [<collapsed file> ...]
+Usage: attribute.py [--categories name=prefix[,prefix]...;name=prefix...] <collapsed file> ...
+       The default categories are the bench's; another service passes its own, first match wins,
+       e.g. --categories "user=io.konekt.;kompot=io.github.youndie.kompot.;exposed=org.jetbrains.exposed."
+       followed by the defaults for ktor, kotlinx, kotlin and jdk.
 """
 import sys
 from collections import Counter
 
-CATEGORIES = [
+DEFAULT_CATEGORIES = [
     ("user", ("bench.",)),
     ("ktor", ("io.ktor.",)),
     ("kotlinx", ("kotlinx.",)),
@@ -23,6 +26,7 @@ CATEGORIES = [
     ("jdk", ("java.", "jdk.", "sun.", "javax.", "com.sun.")),
     ("slf4j", ("org.slf4j.",)),
 ]
+CATEGORIES = list(DEFAULT_CATEGORIES)
 
 
 def category(frame: str) -> str:
@@ -59,12 +63,19 @@ def attribute(path: str):
 
 
 def main():
-    for path in sys.argv[1:]:
+    args = sys.argv[1:]
+    if args and args[0] == "--categories":
+        extra = [(part.split("=", 1)[0], tuple(part.split("=", 1)[1].split(","))) for part in args[1].split(";") if part]
+        names = {name for name, _ in extra}
+        CATEGORIES[:] = extra + [c for c in DEFAULT_CATEGORIES if c[0] not in names]
+        args = args[2:]
+    order = [name for name, _ in CATEGORIES] + ["other", "jvm"]
+    for path in args:
         total, self_c, owner_c, anywhere = attribute(path)
         print(f"## {path}  (samples: {total})")
         print(f"| category | self | owner |")
         print(f"|---|---|---|")
-        for cat in ["user", "ktor", "kotlinx", "kotlin", "slf4j", "other", "jdk", "jvm"]:
+        for cat in order:
             s, o = self_c.get(cat, 0), owner_c.get(cat, 0)
             if s or o:
                 print(f"| {cat} | {100 * s / total:5.1f}% | {100 * o / total:5.1f}% |")
