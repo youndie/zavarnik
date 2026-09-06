@@ -73,7 +73,7 @@ public class ZavarnikPlugin : Plugin<Project> {
                 task.manifestFile.set(extension.cacheFileName.flatMap { libFile("$it.jars") })
                 task.logFile.set(layout.buildDirectory.file("zavarnik/aotTrain.log"))
                 task.readyUrl.set(extension.training.readyWhen.url)
-                task.workload.set(extension.training.workload.commands)
+                task.workload.set(extension.training.workload.steps)
                 task.exitAfter.set(extension.training.exitAfter)
                 task.readyTimeout.set(extension.training.readyTimeout)
                 task.shutdownTimeout.set(extension.training.shutdownTimeout)
@@ -101,6 +101,20 @@ public class ZavarnikPlugin : Plugin<Project> {
                 task.minCachedShare.set(extension.verify.minCachedShare)
                 task.extraJvmArgs.set(extension.verify.jvmArgs)
             }
+        tasks.register(REPORT_TASK, AotReportTask::class.java) { task ->
+            task.group = GROUP
+            task.description = "Measures time to readiness with and without the AOT cache and writes a markdown table."
+            task.dependsOn(train)
+            task.installDir.set(installDir)
+            task.scriptName.set(scriptName)
+            task.javaLauncher.set(launcher)
+            task.cacheFile.set(train.flatMap { it.cacheFile })
+            task.readyUrl.set(extension.training.readyWhen.url)
+            task.readyTimeout.set(extension.training.readyTimeout)
+            task.shutdownTimeout.set(extension.training.shutdownTimeout)
+            task.runs.set(providers.gradleProperty(RUNS_PROPERTY).map(String::toInt).orElse(DEFAULT_RUNS))
+            task.reportFile.set(layout.buildDirectory.file("reports/zavarnik/aotReport.md"))
+        }
         afterEvaluate {
             if (extension.verify.onCheck.get()) {
                 tasks.named(LifecycleBasePlugin.CHECK_TASK_NAME).configure { it.dependsOn(verify) }
@@ -186,6 +200,13 @@ public class ZavarnikPlugin : Plugin<Project> {
 
         /** `aotVerify`. */
         public const val VERIFY_TASK: String = "aotVerify"
+
+        /** `aotReport`. */
+        public const val REPORT_TASK: String = "aotReport"
+
+        /** `-Pzavarnik.runs=N`: runs per variant in `aotReport`. */
+        public const val RUNS_PROPERTY: String = "zavarnik.runs"
+        private const val DEFAULT_RUNS = 10
 
         /** The task group the plugin's tasks show up under. */
         public const val GROUP: String = "zavarnik"

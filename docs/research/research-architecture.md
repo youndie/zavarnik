@@ -53,6 +53,7 @@ AVX-512). Скрипт эксперимента и три журнала: `exper
 | GC можно менять (тренировка на G1, запуск на Serial — принят), но ZGC на JDK 25 — отказ «The saved state of UseCompressedOops and UseCompressedClassPointers is different from runtime, CDS will be disabled» | журнал R10 (`shared>0`), R11 (`shared=0`); `filemap.cpp:2052` |
 | `-Xmx` менять можно | журнал R12 |
 | Сборка JDK сравнивается по строке `_jvm_ident`; другой билд — отказ. JDK 21 флага не знает вовсе («Unrecognized VM option 'AOTCache=…'») | `filemap.cpp:674` — прочитано, прогоном на двух билдах 25 **не** проверено; JDK 21 — прогон |
+| Кроме строки сборки сравнивается **размер `$JAVA_HOME/lib/modules`** (запись [0] classpath, mtime у неё не проверяется): у образов `eclipse-temurin:25.0.4_7-jdk` и `-jre` одной сборки он разный, и кэш, натренированный на jdk-образе, jre-образ отвергает — «This file is not the one used while building the AOT cache: '/opt/java/openjdk/lib/modules', size has changed» | `samples/ktor/docker-check.sh`, Linux, Docker 29.1.3, 06.09.2026; `aotClassLocation.cpp` — `check_time = !is_jrt` |
 | Отказ по умолчанию **тихий**: три строки `[error][aot]` в stderr и код выхода 0 | журнал R16 |
 | `-XX:AOTMode=on` делает отказ фатальным: «Error occurred during initialization of VM / Unable to use AOT cache», код 1 — для ZGC, подменённого jar, отсутствующего файла | журнал R13–R15 (`exit=1`) |
 | Каталог на classpath при тренировке — кэша нет: «Error: non-empty directory … Cannot have non-empty directory in paths» | журнал E4; JEP 483 «Class paths must contain only JAR files» |
@@ -72,6 +73,14 @@ AVX-512). Скрипт эксперимента и три журнала: `exper
 
 **Следствие 3.** «Суперсет» из RQ3 работает только в конец (R5, R7) — это документируется, а не
 детектируется: `aotVerify` запускает тот же скрипт, что и прод, и увидит любое отклонение.
+
+**Следствие 5 (06.09.2026, B-10).** «Тот же JDK» означает *тот же образ*, а не ту же версию:
+многостадийный Dockerfile тренирует кэш в стадии сборки и переносит `installDist` в стадию
+рантайма **на том же самом** `eclipse-temurin:<полный тег>-jdk`. Вариант «сборка на jdk, рантайм
+на jre» отвергнут по факту выше; вариант «обе стадии на jre» (Gradle на JRE, только Kotlin-исходники)
+не проверен — гипотеза, адрес — [B-10](../backlog/B-10-docker-and-jib-recipe.md), продолжение.
+Проверено `docker-check.sh`: контейнер стартует под `-XX:AOTMode=on`, 3816 классов из кэша,
+20 из 20 классов `sample.*`; образ 647 МБ.
 
 **Следствие 4 (06.09.2026, B-08).** Агент — не запрет, а требование симметрии: `zavarnik.jvmArgs`
 кладёт его в `DEFAULT_JVM_OPTS` для обеих сторон, и кэш принимается. То, что прод добавляет

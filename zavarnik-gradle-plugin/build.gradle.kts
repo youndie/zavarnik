@@ -9,7 +9,7 @@ plugins {
 // Functional tests run real Gradle builds through TestKit against real JDKs — they train real AOT
 // caches — and take minutes, so they live in their own source set and their own task rather than
 // slowing `test` down. `check` still runs both.
-val functionalTest: SourceSet by sourceSets.creating
+val functionalTest: SourceSet = sourceSets.create("functionalTest")
 
 gradlePlugin {
     plugins {

@@ -26,19 +26,14 @@ zavarnik {
     jvmArgs("-Dsample.port=18090")
     training {
         readyWhen.url("http://127.0.0.1:18090/health")
-        // What the workload touches is what the cache holds: two routes, JSON in and out.
+        // What the workload touches is what the cache holds: two routes, JSON in and out. Built-in
+        // requests rather than curl, so the same build runs inside the Dockerfile's build stage.
         workload {
-            exec("curl", "-sf", "http://127.0.0.1:18090/api/warm")
-            exec(
-                "curl",
-                "-sf",
-                "-X",
-                "POST",
-                "-H",
-                "Content-Type: application/json",
-                "-d",
-                """{"items":[{"id":1,"name":"x","tags":["a"],"price":2.5}],"note":"n"}""",
+            get("http://127.0.0.1:18090/api/warm")
+            post(
                 "http://127.0.0.1:18090/api/order",
+                "application/json",
+                """{"items":[{"id":1,"name":"x","tags":["a"],"price":2.5}],"note":"n"}""",
             )
         }
     }

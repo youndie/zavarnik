@@ -124,14 +124,59 @@ public abstract class ReadinessSpec {
     }
 }
 
-/** The workload: external commands, run in order, each with its own exit code checked. */
+/**
+ * The workload: HTTP requests and external commands, run in the order they were declared, each
+ * checked — a non-2xx answer or a non-zero exit fails the training run.
+ *
+ * Prefer [get] and [post] to `exec("curl", …)`: they need nothing installed, which is what makes
+ * the training run work inside a `docker build` stage or on a runner without curl.
+ */
 public abstract class WorkloadSpec {
-    /** The commands, each as its argument list. */
-    public abstract val commands: ListProperty<List<String>>
+    /** The steps, in order. */
+    public abstract val steps: ListProperty<WorkloadStep>
 
-    /** Appends a command. */
+    /** Appends an HTTP `GET`. */
+    public fun get(url: String) {
+        steps.add(WorkloadStep.http("GET", url, null, null))
+    }
+
+    /** Appends an HTTP `POST` with a body. */
+    public fun post(
+        url: String,
+        contentType: String,
+        body: String,
+    ) {
+        steps.add(WorkloadStep.http("POST", url, contentType, body))
+    }
+
+    /** Appends an external command. */
     public fun exec(vararg command: String) {
-        commands.add(command.toList())
+        steps.add(WorkloadStep.command(command.toList()))
+    }
+}
+
+/** One workload step: either an HTTP request or an external command. A plain value, so it can be a task input. */
+public data class WorkloadStep(
+    val command: List<String>,
+    val method: String,
+    val url: String,
+    val contentType: String?,
+    val body: String?,
+) : java.io.Serializable {
+    /** `true` for an external command, `false` for an HTTP request. */
+    val isCommand: Boolean get() = command.isNotEmpty()
+
+    override fun toString(): String = if (isCommand) command.joinToString(" ") else "$method $url"
+
+    public companion object {
+        internal fun http(
+            method: String,
+            url: String,
+            contentType: String?,
+            body: String?,
+        ): WorkloadStep = WorkloadStep(emptyList(), method, url, contentType, body)
+
+        internal fun command(command: List<String>): WorkloadStep = WorkloadStep(command, "", "", null, null)
     }
 }
 

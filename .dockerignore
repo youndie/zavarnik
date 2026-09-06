@@ -1,0 +1,8 @@
+# The build context is the repository root (the sample takes the plugin from ../..). Nothing
+# below is needed to build it, and build/ directories would carry a cache trained by the wrong JDK.
+**/build/
+**/.gradle/
+**/.kotlin/
+.git/
+experiments/
+docs/

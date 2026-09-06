@@ -1,7 +1,7 @@
 ---
 id: B-10
 title: "Docker и Jib: рецепт образа, в котором кэш принимается, и aotVerify внутри контейнера"
-status: open
+status: done
 priority: P1
 size: M
 stage: stage-3-packaging
@@ -9,6 +9,17 @@ blocked_by: [B-07]
 ---
 
 # B-10 — Docker и Jib
+
+> **Сделано 06.09.2026 — Docker.** `samples/ktor/Dockerfile`: две стадии на одном
+> `eclipse-temurin:25.0.4_7-jdk` (ARG с полным тегом), тренировка и `aotVerify` в стадии сборки,
+> `COPY --from=build` установленного каталога в `/opt/app`. `samples/ktor/docker-check.sh`
+> собирает образ, стартует его под `-XX:AOTMode=on -Xlog:class+load` и считает классы из кэша по
+> выводу контейнера: ready, 3816 из кэша, 20 из 20 `sample.*`. Две находки по дороге: в образе
+> Temurin нет `curl` — отсюда встроенные `workload { get(); post() }`; jre-образ той же сборки
+> отвергает кэш jdk-образа по размеру `lib/modules` (ресёрч §1.1, следствие 5). Образ 647 МБ.
+> **Не сделано — Jib:** его раскладка (`/app/libs`, `/app/classes`) и порядок classpath — не
+> `installDist`; после смены константы mtime (D3) Jib «без настроек» больше не обещается. Отдельная
+> задача, если найдётся потребитель; сюда — не тянуть.
 
 Ресёрч проверил кирпичи по одному: `COPY` сохраняет mtime (D3, Docker 29.1.3), перенос по
 абсолютному пути переживает удаление тренировочного каталога (D1), нормализованный mtime
@@ -30,4 +41,5 @@ blocked_by: [B-07]
 - AC: `docker run` образа из рецепта печатает `source: shared objects file` для класса
   приложения; образ с `touch`-нутым jar — `timestamp has changed`.
 - AC: Jib-образ с умолчаниями — то же, без единой настройки времени.
-- Якоря: `experiments/aot-validation/run.sh` (D1–D3), `docs/research/research-architecture.md` (§1.5, D3).
+- Якоря: `samples/ktor/Dockerfile`, `samples/ktor/docker-check.sh`, `.dockerignore`,
+  `experiments/aot-validation/run.sh` (D1–D3), `docs/research/research-architecture.md` (§1.1 следствие 5, §1.5, D3).

@@ -19,7 +19,7 @@ class AotVerifyFunctionalTest {
         zavarnik {
             training {
                 readyWhen.url("http://127.0.0.1:${Fixture.PORT}/health")
-                workload { exec("curl", "-sf", "http://127.0.0.1:${Fixture.PORT}/work") }
+                workload { get("http://127.0.0.1:${Fixture.PORT}/work") }
             }
         }
         """.trimIndent()
