@@ -170,6 +170,9 @@ a Kotlin bytecode optimizer — and closed it instead: user code owns 1–4% of 
 the allocations of a Ktor service, and R8 cannot even serve as the baseline on this stack. The
 negative result, with numbers, is [`docs/research/research-optimizer.md`](docs/research/research-optimizer.md).
 
+Two write-ups: [OpenJDK 25.0.0–25.0.3 uses a stale AOT cache without saying so](https://kotlin.website/blog/stale-aot-cache-on-jdk25)
+and [User code is 1–4 % of a Ktor service's CPU](https://kotlin.website/blog/user-code-share-of-a-ktor-service).
+
 | Directory | What it is |
 |---|---|
 | `zavarnik-gradle-plugin/` | the plugin: tasks, start-script guard, checks, TestKit tests |
