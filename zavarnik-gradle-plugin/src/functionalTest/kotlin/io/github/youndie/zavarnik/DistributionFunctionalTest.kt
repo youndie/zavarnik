@@ -129,10 +129,12 @@ class DistributionFunctionalTest {
         }
     }
 
+    // With the configuration cache on: a consumer that has it on (konekt) found the zip warning
+    // carrying the project into the cache, which the sample without it never saw.
     private fun runner(vararg args: String): GradleRunner =
         GradleRunner
             .create()
             .withProjectDir(projectDir)
             .withPluginClasspath()
-            .withArguments(*args, "--stacktrace")
+            .withArguments(*args, "--stacktrace", "--configuration-cache")
 }

@@ -222,12 +222,16 @@ public class ZavarnikPlugin : Plugin<Project> {
             tar.mustRunAfter(train)
         }
         tasks.named(DIST_ZIP_TASK, Zip::class.java).configure { zip ->
-            zip.doFirst("zavarnikZipWarning") {
-                logger.warn(
-                    "zavarnik: ${zip.name} ships no AOT cache. Zip stores DOS timestamps in local time and " +
+            // Plain values captured here, and the task's own logger: an action that reached for the
+            // project or the extension would carry them into the configuration cache, which refuses.
+            val applicationName = application.applicationName
+            val zipName = zip.name
+            zip.doFirst("zavarnikZipWarning") { task ->
+                task.logger.warn(
+                    "zavarnik: $zipName ships no AOT cache. Zip stores DOS timestamps in local time and " +
                         "the JVM checks jar mtimes against the cache, so an unzipped distribution would " +
                         "reject it on another machine. Ship distTar or installDist (Docker COPY) instead; " +
-                        "`${application.applicationName}` will run without the cache.",
+                        "`$applicationName` will run without the cache.",
                 )
             }
         }
