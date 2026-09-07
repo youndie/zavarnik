@@ -1,5 +1,6 @@
 package io.github.youndie.zavarnik
 
+import io.github.youndie.zavarnik.runner.Training
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.distribution.DistributionContainer
@@ -13,6 +14,7 @@ import org.gradle.api.tasks.bundling.Zip
 import org.gradle.jvm.application.tasks.CreateStartScripts
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.language.base.plugins.LifecycleBasePlugin
+import java.io.File
 import java.time.Duration
 
 /**
@@ -58,6 +60,14 @@ public class ZavarnikPlugin : Plugin<Project> {
         val toolchains = extensions.getByType(JavaToolchainService::class.java)
         val launcher = toolchains.launcherFor(java.toolchain)
         val installDist = tasks.named(INSTALL_DIST_TASK, Sync::class.java)
+        // The jars leave `installDist` already carrying the mtime the cache will be checked against.
+        // `aotTrain` pins them too, but the container recipe trains inside a container of an image
+        // built from `installDist`, and what the runner pins there the image never sees (B-28).
+        installDist.configure { sync ->
+            sync.doLast("zavarnikPinJarTimestamps") { task ->
+                Training.pinJarTimestamps(File((task as Sync).destinationDir, "lib"))
+            }
+        }
         val installDir = installDist.map { layout.projectDirectory.dir(it.destinationDir.absolutePath) }
         val libFile = { name: String -> installDir.map { it.file("lib/$name") } }
         val scriptName = provider { application.applicationName }

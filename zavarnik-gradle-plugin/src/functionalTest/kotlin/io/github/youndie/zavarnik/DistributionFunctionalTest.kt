@@ -37,6 +37,15 @@ class DistributionFunctionalTest {
     }
 
     @Test
+    fun `installDist alone pins the jar mtimes, before any training`() {
+        Fixture.write(projectDir, extension = extension)
+        runner("installDist").build()
+        val jar = File(projectDir, "build/install/fixture/lib/fixture.jar")
+        assertEquals(Training.JAR_MTIME.toMillis(), jar.lastModified())
+        assertTrue(!File(projectDir, "build/install/fixture/lib/app.aot").exists())
+    }
+
+    @Test
     fun `distTar ships the cache with jar mtimes the cache was trained against`() {
         Fixture.write(projectDir, extension = extension)
         runner("distTar").build()

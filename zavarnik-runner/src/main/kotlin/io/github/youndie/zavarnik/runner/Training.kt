@@ -44,7 +44,7 @@ public class Training(
         // be specified"). The manifest goes with it so a failed run leaves no half-truth behind.
         cache.delete()
         manifest.delete()
-        normaliseJarTimestamps(installation.lib)
+        pinJarTimestamps(installation.lib)
         val run = StartScriptRun(installation.script, javaHome, listOf("-XX:AOTCacheOutput=${cache.absolutePath}"), log)
         run.start()
         try {
@@ -120,12 +120,17 @@ public class Training(
         )
     }
 
-    private fun normaliseJarTimestamps(lib: File) {
-        val jars = lib.listFiles { file -> file.isFile && file.name.endsWith(".jar") }.orEmpty()
-        for (jar in jars) Files.setLastModifiedTime(jar.toPath(), JAR_MTIME)
-    }
-
     public companion object {
+        /**
+         * Sets every `*.jar` in [lib] to [JAR_MTIME]. The plugin does this to `installDist` as well,
+         * so an image built from the installed distribution carries the constant before any
+         * training — the runner then pins inside its own container, which the image never sees.
+         */
+        public fun pinJarTimestamps(lib: File) {
+            val jars = lib.listFiles { file -> file.isFile && file.name.endsWith(".jar") }.orEmpty()
+            for (jar in jars) Files.setLastModifiedTime(jar.toPath(), JAR_MTIME)
+        }
+
         /**
          * `1970-01-02T00:00:00Z` — the constant Gradle stamps on every entry of a reproducible tar
          * (`TarCopyAction.CONSTANT_TIME_FOR_TAR_ENTRIES`, the default since Gradle 9). The JVM
