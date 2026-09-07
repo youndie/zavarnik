@@ -1,0 +1,48 @@
+cold  rep1 (cache opened: 0):  C1 {speed: 125903.335 bytes/s; standard: 3.473 s, 437474 bytes, 3834 methods; osr: 0.009 s, 866 bytes, 2 methods; nmethods_size: 10422944 bytes; nmethods_code_size: 7726208 bytes}| C2 {speed: 37944.366 bytes/s; standard: 22.924 s, 897728 bytes, 1373 methods; osr: 1.827 s, 41446 bytes, 19 methods; nmethods_size: 5218472 bytes; nmethods_code_size: 3175728 bytes}| Tier1 {speed: 23723.966 bytes/s; st
+cache rep1 (cache opened: 1):  C1 {speed: 123803.461 bytes/s; standard: 3.220 s, 397209 bytes, 3513 methods; osr: 0.033 s, 5494 bytes, 30 methods; nmethods_size: 8089232 bytes; nmethods_code_size: 5823272 bytes}| C2 {speed: 39439.575 bytes/s; standard: 19.767 s, 774185 bytes, 1242 methods; osr: 0.443 s, 22878 bytes, 32 methods; nmethods_size: 4608024 bytes; nmethods_code_size: 2845768 bytes}| Tier1 {speed: 21882.774 bytes/s; s
+cold  rep2 (cache opened: 0):  C1 {speed: 145203.845 bytes/s; standard: 3.074 s, 445898 bytes, 3914 methods; osr: 0.002 s, 729 bytes, 2 methods; nmethods_size: 10205904 bytes; nmethods_code_size: 7523520 bytes}| C2 {speed: 35613.287 bytes/s; standard: 24.673 s, 871303 bytes, 1354 methods; osr: 1.001 s, 43020 bytes, 24 methods; nmethods_size: 5115992 bytes; nmethods_code_size: 3185328 bytes}| Tier1 {speed: 48588.267 bytes/s; st
+cache rep2 (cache opened: 1):  C1 {speed: 127154.598 bytes/s; standard: 4.021 s, 509451 bytes, 3964 methods; osr: 0.027 s, 5280 bytes, 30 methods; nmethods_size: 11026968 bytes; nmethods_code_size: 8042120 bytes}| C2 {speed: 61206.839 bytes/s; standard: 17.382 s, 1101526 bytes, 1656 methods; osr: 1.675 s, 64918 bytes, 36 methods; nmethods_size: 6794224 bytes; nmethods_code_size: 4209728 bytes}| Tier1 {speed: 31057.061 bytes/s;
+cold  rep3 (cache opened: 0):  C1 {speed: 122368.970 bytes/s; standard: 4.200 s, 513297 bytes, 4268 methods; osr: 0.005 s, 1287 bytes, 4 methods; nmethods_size: 12079648 bytes; nmethods_code_size: 8941944 bytes}| C2 {speed: 32244.636 bytes/s; standard: 30.940 s, 994237 bytes, 1620 methods; osr: 0.395 s, 16143 bytes, 17 methods; nmethods_size: 5564336 bytes; nmethods_code_size: 3403312 bytes}| Tier1 {speed: 20654.873 bytes/s; s
+cache rep3 (cache opened: 1):  C1 {speed: 86697.845 bytes/s; standard: 5.395 s, 467862 bytes, 3818 methods; osr: 0.115 s, 9826 bytes, 40 methods; nmethods_size: 9457576 bytes; nmethods_code_size: 6812120 bytes}| C2 {speed: 30706.733 bytes/s; standard: 30.173 s, 921650 bytes, 1454 methods; osr: 0.843 s, 30755 bytes, 33 methods; nmethods_size: 5394232 bytes; nmethods_code_size: 3301448 bytes}| Tier1 {speed: 16596.538 bytes/s; st
+--- raw CITime block of the last run:
+Accumulated compiler times
+----------------------------------------------------------
+  Total compilation time   :  36.526 s
+    Standard compilation   :  35.568 s, Average : 0.007 s
+    Bailed out compilation :   0.000 s, Average : 0.000 s
+    On stack replacement   :   0.958 s, Average : 0.013 s
+    Invalidated            :   0.000 s, Average : 0.000 s
+
+    C1 Compile Time:        5.394 s
+       Setup time:            0.008 s
+       Build HIR:             1.674 s
+         Parse:                 1.440 s
+         Optimize blocks:       0.018 s
+         GVN:                   0.086 s
+         Null checks elim:      0.041 s
+         Range checks elim:     0.004 s
+         Other:                 0.085 s
+       Emit LIR:              0.962 s
+         LIR Gen:               0.213 s
+         Linear Scan:           0.742 s
+         Other:                 0.006 s
+       Code Emission:         0.287 s
+       Code Installation:     2.433 s
+       Other:                 0.030 s
+
+    C2 Compile Time:       30.939 s
+       Parse:                 4.153 s
+       Optimize:             16.739 s
+         Escape Analysis:      10.588 s
+           Conn Graph:           10.479 s
+           Macro Eliminate:       0.112 s
+         GVN 1:                 0.833 s
+         Incremental Inline:    0.026 s
+           IdealLoop:             0.000 s
+          (IGVN:                  0.041 s)
+          (Inline:                0.007 s)
+          (Prune Useless:         0.033 s)
+           Other:                 0.026 s
+         Vector:                0.000 s
+           Box elimination:     0.000 s
+             IGVN:              0.000 s
