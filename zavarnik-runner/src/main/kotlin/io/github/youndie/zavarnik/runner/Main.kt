@@ -4,39 +4,74 @@ import java.io.File
 import kotlin.system.exitProcess
 
 /**
- * `java -cp lib/zavarnik-runner.jar io.github.youndie.zavarnik.runner.Main train|verify [<install dir>]`
+ * `java -cp <runner jar> io.github.youndie.zavarnik.runner.Main train|verify [<dir>] [--out <dir>]`
  *
  * The same training and verification the Gradle tasks do, on a bare JRE: inside the runtime
- * stage of a container image, where there is no Gradle and, in Temurin's images, no curl. The
- * install directory defaults to the one this jar sits in (`<dir>/lib/zavarnik-runner.jar`); the
- * JDK is the one running the runner, which is the point — the cache must be trained by the JVM
- * that will use it. Logs go to `lib/zavarnik-<command>.log`.
+ * stage of a container image, where there is no Gradle and, in Temurin's images, no curl. `<dir>`
+ * is the installation — a distribution (`bin/`, `lib/`) or a Jib image's `/app` — and defaults to
+ * the directory this jar sits two levels under (`<dir>/lib/zavarnik-runner.jar`,
+ * `/app/zavarnik/zavarnik-runner.jar`). The JDK is the one running the runner, which is the
+ * point: the cache must be trained by the JVM that will use it.
+ *
+ * `--out` is for a container started with a host directory mounted: the logs go there, and so
+ * does the cache a training run writes, so that the host can lay it over the image as a layer.
+ * Without it, everything is written beside the runner jar.
  */
 public object Main {
     @JvmStatic
     public fun main(args: Array<String>) {
         val command = args.getOrNull(0)
-        if (command != TRAIN && command != VERIFY) {
-            System.err.println(
-                "usage: java -cp lib/zavarnik-runner.jar io.github.youndie.zavarnik.runner.Main $TRAIN|$VERIFY [<install dir>]",
-            )
-            exitProcess(USAGE)
-        }
-        val dir = args.getOrNull(1)?.let(::File) ?: ownInstallDir()
-        try {
-            val installation = Installation(dir)
-            val config = RunnerConfig.read(installation.config)
-            val javaHome = File(System.getProperty("java.home"))
-            val log = File(installation.lib, "zavarnik-$command.log")
-            if (command == TRAIN) {
-                Training(installation, config, javaHome, log).run()
-            } else {
-                Verification(installation, config, javaHome, log).run()
+        if (command != TRAIN && command != VERIFY) usage()
+        var dir: File? = null
+        var out: File? = null
+        var i = 1
+        while (i < args.size) {
+            when (args[i]) {
+                "--out" -> out = args.getOrNull(++i)?.let(::File) ?: usage()
+                else -> if (dir == null) dir = File(args[i]) else usage()
             }
+            i++
+        }
+        val installDir = dir ?: ownInstallDir()
+        try {
+            run(command, installDir, out)
         } catch (failed: RunnerException) {
             System.err.println(failed.message)
             exitProcess(FAILURE)
         }
+    }
+
+    private fun run(
+        command: String,
+        dir: File,
+        out: File?,
+    ) {
+        val javaHome = File(System.getProperty("java.home"))
+        val jib = File(dir, "jib-classpath-file").isFile
+        val configDir = File(dir, if (jib) Installation.JIB_RUNNER_DIR else "lib")
+        val config = RunnerConfig.read(File(configDir, RunnerConfig.FILE_NAME))
+        val installation =
+            if (jib) {
+                // A training run writes the cache where the host can reach it; a verification
+                // reads the one the image carries.
+                val runnerDir = if (command == TRAIN && out != null) out else File(dir, Installation.JIB_RUNNER_DIR)
+                Installation.jib(dir, javaHome, config.launchJvmArgs, runnerDir)
+            } else {
+                Installation.distribution(dir, javaHome)
+            }
+        val log = File(out ?: installation.runnerDir, "zavarnik-$command.log")
+        if (command == TRAIN) {
+            Training(installation, config, log).run()
+        } else {
+            Verification(installation, config, log).run()
+        }
+    }
+
+    private fun usage(): Nothing {
+        System.err.println(
+            "usage: java -cp <runner jar> io.github.youndie.zavarnik.runner.Main $TRAIN|$VERIFY [<install dir>] [--out <dir>]",
+        )
+        exitProcess(USAGE)
     }
 
     private fun ownInstallDir(): File {

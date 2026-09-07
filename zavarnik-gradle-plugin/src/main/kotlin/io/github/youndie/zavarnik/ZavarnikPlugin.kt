@@ -33,8 +33,9 @@ import java.time.Duration
  * it is there, and `distTar` ships it. `distZip` cannot: zip stores DOS timestamps in local time,
  * and the JVM checks jar mtimes against the cache. Every distribution also carries the runner —
  * `lib/zavarnik-runner.jar` with `lib/zavarnik.properties` — which trains and verifies without
- * Gradle, on the JRE of a runtime image ([RunnerFilesTask]). What the plugin refuses at
- * configuration time, and why, is in [ConfigurationChecks].
+ * Gradle, on the JRE of a runtime image ([RunnerFilesTask]). With Jib applied — which is what
+ * `ktor { docker { } }` does — `jibAotTrain` and `jibAotVerify` do the same inside the Jib image
+ * ([JibSupport]). What the plugin refuses at configuration time, and why, is in [ConfigurationChecks].
  */
 public class ZavarnikPlugin : Plugin<Project> {
     override fun apply(target: Project) {
@@ -43,6 +44,13 @@ public class ZavarnikPlugin : Plugin<Project> {
 
         target.plugins.withId(ConfigurationChecks.APPLICATION_PLUGIN_ID) {
             target.wire(extension)
+        }
+        // Jib — also what `ktor { docker { } }` applies. The Jib-facing class is loaded here and
+        // nowhere else, so a build without Jib never needs Jib's types.
+        target.plugins.withId(JibSupport.JIB_PLUGIN_ID) {
+            target.plugins.withId(ConfigurationChecks.APPLICATION_PLUGIN_ID) {
+                JibSupport.wire(target, extension)
+            }
         }
 
         // The checks and the JVM arguments read the extension, so they wait for the build script to
@@ -83,6 +91,7 @@ public class ZavarnikPlugin : Plugin<Project> {
                 task.workload.set(extension.training.workload.steps)
                 task.minCachedShare.set(extension.verify.minCachedShare)
                 task.verifyJvmArgs.set(extension.verify.jvmArgs)
+                task.launchJvmArgs.convention(emptyList())
                 task.outputDir.set(layout.buildDirectory.dir("zavarnik/runner"))
             }
         // Into the distribution's shared content, so installDist, distTar and distZip all carry

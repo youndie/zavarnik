@@ -58,14 +58,14 @@ public abstract class AotTrainTask : DefaultTask() {
 
     @TaskAction
     public fun train() {
-        val installation = Installation(installDir.get().asFile, scriptName.get())
-        val config = RunnerConfig.read(installation.config)
         val javaHome =
             javaLauncher
                 .get()
                 .metadata.installationPath.asFile
+        val installation = Installation.distribution(installDir.get().asFile, javaHome, scriptName.get())
+        val config = RunnerConfig.read(installation.config)
         try {
-            Training(installation, config, javaHome, logFile.get().asFile, logger::lifecycle).run()
+            Training(installation, config, logFile.get().asFile, logger::lifecycle).run()
         } catch (failed: RunnerException) {
             throw GradleException(failed.message ?: failed.toString(), failed)
         }

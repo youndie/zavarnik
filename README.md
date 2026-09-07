@@ -114,6 +114,34 @@ read the same file and fail with the same messages; a failed `verify` leaves no 
 sample this takes the image from 647 MB (both stages `-jdk`) to 562 MB, with every application
 class still coming from the cache.
 
+### Jib and the Ktor plugin
+
+`ktor { docker { } }` is Jib underneath, and Jib's default layout puts `/app/classes` and
+`/app/resources` on the classpath — directories, for which the JVM writes no cache at all. With
+Jib applied the plugin refuses that at configuration time and adds two tasks:
+
+```kotlin
+plugins {
+    id("io.ktor.plugin") version "3.5.2"          // or com.google.cloud.tools.jib directly
+    id("io.github.youndie.zavarnik")
+}
+
+jib { containerizingMode = "packaged" }          // jars only; the plugin refuses the default
+```
+
+```bash
+./gradlew jibAotTrain     # jibDockerBuild, then the runner trains inside a container of that image
+./gradlew jibAotVerify    # jibDockerBuild again — now with the cache as a layer — and verifies inside it
+./gradlew jib             # the image with the cache, wherever jib pushes it
+```
+
+Jib reads its configuration once per build, so the first training and the first verification
+are two invocations; from then on the cache is a layer of every Jib build and `-XX:AOTCache` is
+in the entrypoint. The runner runs as the host user with `build/zavarnik/jib/` mounted, so the
+cache lands on the host and Jib's file timestamps are never touched. What this mode costs: a
+Docker daemon on the build machine — the one thing Jib let a build do without. `jib` straight to
+a registry, with no daemon, builds an image without a cache.
+
 ## The red build
 
 `aotVerify` is the point. It checks three independent things and names the one that failed:
@@ -196,6 +224,7 @@ and [User code is 1–4 % of a Ktor service's CPU](https://kotlin.website/blog/u
 | `zavarnik-gradle-plugin/` | the plugin: tasks, start-script guard, checks, TestKit tests |
 | `zavarnik-runner/` | what the tasks call and what `lib/zavarnik-runner.jar` runs: training, verification, no Gradle |
 | `samples/ktor/` | a Ktor server on the plugin, with the Dockerfile and an in-container check |
+| `samples/ktor-jib/` | the same server on `ktor { docker { } }`, trained and verified through Jib |
 | `bench/` | the benchmark service and the profiling harness |
 | `experiments/` | the experiments the research cites, scripts and logs |
 | `docs/` | layered documentation; start at [`docs/README.md`](docs/README.md); the plan is [`backlog.md`](backlog.md) |

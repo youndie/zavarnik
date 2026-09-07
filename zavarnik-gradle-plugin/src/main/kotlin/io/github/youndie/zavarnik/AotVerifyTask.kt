@@ -53,15 +53,15 @@ public abstract class AotVerifyTask : DefaultTask() {
 
     @TaskAction
     public fun verify() {
-        val installation = Installation(installDir.get().asFile, scriptName.get())
-        val config = RunnerConfig.read(installation.config)
         val javaHome =
             javaLauncher
                 .get()
                 .metadata.installationPath.asFile
+        val installation = Installation.distribution(installDir.get().asFile, javaHome, scriptName.get())
+        val config = RunnerConfig.read(installation.config)
         val summary =
             try {
-                Verification(installation, config, javaHome, logFile.get().asFile, logger::lifecycle).run()
+                Verification(installation, config, logFile.get().asFile, logger::lifecycle).run()
             } catch (failed: RunnerException) {
                 throw GradleException(failed.message ?: failed.toString(), failed)
             }

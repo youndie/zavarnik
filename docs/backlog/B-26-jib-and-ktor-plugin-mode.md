@@ -1,7 +1,7 @@
 ---
 id: B-26
 title: "Режим для Jib и Ktor-плагина: тренировка в образе без стартового скрипта, кэш вторым слоем"
-status: open
+status: done
 priority: P2
 size: M
 stage: stage-3-packaging
@@ -41,3 +41,22 @@ Ktor-плагин собирает образ через Jib (`jibDockerBuild`/`
   `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/ZavarnikPlugin.kt`,
   `docs/research/research-architecture.md` (§1.5, D3), `docs/backlog/B-10-docker-and-jib-recipe.md`.
 - После: [B-27](B-27-workload-headers-and-captures.md) (заголовки и захват — нужны и здесь).
+
+**Сделано 07.09.2026.** Раннер: `Launch` (стартовый скрипт или `java … -cp @/app/jib-classpath-file
+<main>`), `Installation.jib` разбирает `jib-classpath-file` и `jib-main-class-file`, отказывает на
+каталоге в classpath, mtime не трогает; манифест и подсчёт классов — по нескольким каталогам jar-ов
+(`classpath/`, `libs/`), имена в манифесте относительные. `Main train|verify [<dir>] [--out <dir>]`.
+Плагин: `JibSupport` подключается на `com.google.cloud.tools.jib` **через рефлексию по расширению
+`jib`** — TestKit подкладывает плагин в отдельный класслоадер, и жёсткая ссылка на `JibExtension`
+падала `NoClassDefFoundError`; `jibAotTrain` (`jibDockerBuild` → `docker run --user uid:gid -v
+build/zavarnik/jib:/zavarnik-out … Main train /app --out /zavarnik-out`) и `jibAotVerify`; при наличии
+кэша на конфигурации — `extraDirectories` в `/app/zavarnik` и `-XX:AOTCache` в `jvmFlags`; отказ на
+`exploded`. Уточнение к плану: «два вызова» нужны только в первый раз — дальше кэш есть на
+конфигурации, и `jibAotTrain jibAotVerify` одним вызовом проверяет образ с предыдущим кэшем.
+Образец `samples/ktor-jib` на `io.ktor.plugin` 3.5.2 + `jib-check.sh`, в CI. Тесты:
+`InstallationTest`, `JibFunctionalTest` (настоящий Jib 3.5.4 и Docker; без Docker пропускается).
+Проверено `jib-check.sh` на Linux-машине (Docker 29.1.3, Jib 3.5.4, база `eclipse-temurin:25-jre`
+= Temurin 25.0.4+7): entrypoint несёт `-Dsample.port`, флаги переносимости и
+`-XX:AOTCache=/app/zavarnik/app.aot`; под `-XX:AOTMode=on` — 20 из 20 `sample.*` и 3818 классов
+из кэша, `verify` внутри образа — 2259 из 2259 классов приложения; кэш 31 МБ, образ 537 МБ против
+494 без кэша; файлы в `build/zavarnik/jib/` принадлежат пользователю хоста.

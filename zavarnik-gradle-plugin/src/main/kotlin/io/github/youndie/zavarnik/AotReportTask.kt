@@ -1,7 +1,8 @@
 package io.github.youndie.zavarnik
 
+import io.github.youndie.zavarnik.runner.ApplicationRun
 import io.github.youndie.zavarnik.runner.JitStats
-import io.github.youndie.zavarnik.runner.StartScriptRun
+import io.github.youndie.zavarnik.runner.Launch
 import io.github.youndie.zavarnik.runner.Workload
 import io.github.youndie.zavarnik.runner.WorkloadStep
 import org.gradle.api.DefaultTask
@@ -191,17 +192,13 @@ public abstract class AotReportTask : DefaultTask() {
     private fun start(
         javaOpts: List<String>,
         log: File,
-    ): StartScriptRun {
+    ): ApplicationRun {
         val script = File(installDir.get().asFile, "bin/${scriptName.get()}")
-        val run =
-            StartScriptRun(
-                script,
-                javaLauncher
-                    .get()
-                    .metadata.installationPath.asFile,
-                javaOpts,
-                log,
-            )
+        val javaHome =
+            javaLauncher
+                .get()
+                .metadata.installationPath.asFile
+        val run = ApplicationRun(Launch.Script(script, javaHome), javaOpts, log)
         run.start()
         return run
     }

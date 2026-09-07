@@ -26,12 +26,12 @@ public data class LoadedClasses(
         private const val CACHE_SOURCE = "shared objects file"
         private val loadLine = Regex("""\[class,load\s*\] (\S+) source: (.+)$""")
 
-        /** Reads a `class+load` log against the classes found in [libDir]'s jars. */
+        /** Reads a `class+load` log against the classes found in the jars of [jarDirs]. */
         public fun of(
             log: File,
-            libDir: File,
+            jarDirs: List<File>,
         ): LoadedClasses {
-            val application = classesIn(libDir)
+            val application = classesIn(jarDirs)
             var total = 0
             var fromCache = 0
             var applicationTotal = 0
@@ -51,10 +51,13 @@ public data class LoadedClasses(
             return LoadedClasses(total, fromCache, applicationTotal, applicationFromCache)
         }
 
-        /** Every class name inside the `*.jar` files of [libDir], multi-release entries folded onto their base name. */
-        public fun classesIn(libDir: File): Set<String> {
+        /** Every class name inside the `*.jar` files of [jarDirs], multi-release entries folded onto their base name. */
+        public fun classesIn(jarDirs: List<File>): Set<String> {
             val names = HashSet<String>()
-            val jars = libDir.listFiles { file -> file.isFile && file.name.endsWith(".jar") }.orEmpty()
+            val jars =
+                jarDirs.flatMap { dir ->
+                    dir.listFiles { file -> file.isFile && file.name.endsWith(".jar") }.orEmpty().toList()
+                }
             for (jar in jars) {
                 ZipFile(jar).use { zip ->
                     for (entry in zip.entries()) {

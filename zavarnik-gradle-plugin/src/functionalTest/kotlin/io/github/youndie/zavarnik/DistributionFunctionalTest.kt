@@ -64,7 +64,7 @@ class DistributionFunctionalTest {
         assertTrue(File(lib, "zavarnik.properties").isFile)
         assertTrue(File(lib, "zavarnik-runner.jar").length() > 1_000_000)
         assertEquals(Training.JAR_MTIME.toMillis(), File(lib, "fixture.jar").lastModified())
-        assertTrue(JarManifest.differences(lib, File(lib, "app.aot.jars")).isEmpty())
+        assertTrue(JarManifest.differences(File(unpacked, "fixture"), listOf(lib), File(lib, "app.aot.jars")).isEmpty())
     }
 
     @Test

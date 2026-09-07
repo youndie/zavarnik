@@ -18,6 +18,12 @@ public data class RunnerConfig(
     val workload: List<WorkloadStep>,
     val minCachedShare: Double,
     val verifyJvmArgs: List<String>,
+    /**
+     * For a Jib image only: the flags the image starts with (Jib's `jvmFlags`, the user's `jvmArgs`,
+     * the portability flags), which the runner has to put on its own command line — a distribution's
+     * start script carries them itself. Empty for a distribution.
+     */
+    val launchJvmArgs: List<String> = emptyList(),
 ) {
     /** `<cacheFileName>.jars`. */
     val manifestFileName: String get() = "$cacheFileName.jars"
@@ -31,6 +37,7 @@ public data class RunnerConfig(
         props["shutdownTimeoutMillis"] = shutdownTimeout.toMillis().toString()
         props["minCachedShare"] = minCachedShare.toString()
         props["verifyJvmArgs"] = verifyJvmArgs.joinToString(SEPARATOR)
+        props["launchJvmArgs"] = launchJvmArgs.joinToString(SEPARATOR)
         workload.forEachIndexed { i, step ->
             val key = "workload.$i"
             if (step.isCommand) {
@@ -102,6 +109,7 @@ public data class RunnerConfig(
                 workload = steps,
                 minCachedShare = props.getProperty("minCachedShare", DEFAULT_MIN_CACHED_SHARE).toDouble(),
                 verifyJvmArgs = list("verifyJvmArgs"),
+                launchJvmArgs = list("launchJvmArgs"),
             )
         }
 

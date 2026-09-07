@@ -40,6 +40,7 @@ internal object Fixture {
         dir: File,
         extension: String = "",
         dependencies: String = "",
+        plugins: String = "",
     ) {
         File(dir, "settings.gradle.kts").writeText("rootProject.name = \"fixture\"\n")
         File(dir, "build.gradle.kts").writeText(
@@ -49,6 +50,7 @@ internal object Fixture {
             plugins {
                 application
                 id("io.github.youndie.zavarnik")
+                $plugins
             }
             java { toolchain { languageVersion = JavaLanguageVersion.of(25) } }
             application { mainClass = "fixture.App" }

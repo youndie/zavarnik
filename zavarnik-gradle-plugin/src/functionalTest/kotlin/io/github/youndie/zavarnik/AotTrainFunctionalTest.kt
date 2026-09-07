@@ -35,7 +35,7 @@ class AotTrainFunctionalTest {
         val cache = File(lib, "app.aot")
         assertTrue(cache.length() > 1_000_000, "cache is ${cache.length()} bytes")
         val manifest = File(lib, "app.aot.jars").readLines().filter { it.isNotBlank() }
-        assertEquals(listOf("fixture.jar", "zavarnik-runner.jar"), manifest.map { it.substringAfter("  ") })
+        assertEquals(listOf("lib/fixture.jar", "lib/zavarnik-runner.jar"), manifest.map { it.substringAfter("  ") })
         assertEquals(Training.JAR_MTIME.toMillis(), File(lib, "fixture.jar").lastModified())
         val log = File(projectDir, "build/zavarnik/aotTrain.log").readText()
         assertContains(log, "AOTCache creation is complete")

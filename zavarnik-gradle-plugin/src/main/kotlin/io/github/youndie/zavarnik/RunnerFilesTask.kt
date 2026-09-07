@@ -55,6 +55,10 @@ public abstract class RunnerFilesTask : DefaultTask() {
     @get:Input
     public abstract val verifyJvmArgs: ListProperty<String>
 
+    /** For a Jib image: the flags the entrypoint starts with, which the runner has to repeat. Empty otherwise. */
+    @get:Input
+    public abstract val launchJvmArgs: ListProperty<String>
+
     /** `build/zavarnik/runner/`, copied into `lib/` by the distribution. */
     @get:OutputDirectory
     public abstract val outputDir: DirectoryProperty
@@ -71,6 +75,7 @@ public abstract class RunnerFilesTask : DefaultTask() {
             workload = workload.get(),
             minCachedShare = minCachedShare.get(),
             verifyJvmArgs = verifyJvmArgs.get(),
+            launchJvmArgs = launchJvmArgs.get(),
         ).write(File(dir, RunnerConfig.FILE_NAME))
         val embedded =
             Main::class.java.getResourceAsStream(EMBEDDED_RUNNER)

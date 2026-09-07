@@ -17,7 +17,6 @@ import java.io.File
 public class Verification(
     private val installation: Installation,
     private val config: RunnerConfig,
-    private val javaHome: File,
     private val log: File,
     private val report: (String) -> Unit = ::println,
 ) {
@@ -27,7 +26,7 @@ public class Verification(
         val manifest = installation.manifest(config)
         if (!cache.isFile) {
             throw RunnerException(
-                "zavarnik: no AOT cache in ${installation.lib.path} — run aotTrain first (or the runner's `train`).",
+                "zavarnik: no AOT cache in ${installation.runnerDir.path} — run aotTrain first (or the runner's `train`).",
             )
         }
         if (!manifest.isFile) {
@@ -35,19 +34,28 @@ public class Verification(
                 "zavarnik: ${cache.name} has no manifest next to it — run aotTrain again.",
             )
         }
-        val differences = JarManifest.differences(installation.lib, manifest)
+        val differences = JarManifest.differences(installation.dir, installation.jarDirs, manifest)
         if (differences.isNotEmpty()) {
             throw RunnerException(
-                "zavarnik: the jars in lib/ are not the ones ${cache.name} was trained against:\n" +
+                "zavarnik: the jars are not the ones ${cache.name} was trained against:\n" +
                     differences.joinToString("\n") { "  - $it" } +
                     "\nRun aotTrain again after every change to the classpath.",
             )
         }
+        // A distribution's start script adds -XX:AOTCache itself when the file is there; a Jib
+        // image's entrypoint does too, but this run is not the entrypoint, so the flag is put here.
+        val cacheFlag =
+            if (installation.launch is Launch.Script) {
+                emptyList()
+            } else {
+                listOf(
+                    "-XX:AOTCache=${cache.absolutePath}",
+                )
+            }
         val run =
-            StartScriptRun(
-                installation.script,
-                javaHome,
-                listOf("-XX:AOTMode=on", "-Xlog:class+load=info", "-Xlog:aot=info") + config.verifyJvmArgs,
+            ApplicationRun(
+                installation.launch,
+                cacheFlag + listOf("-XX:AOTMode=on", "-Xlog:class+load=info", "-Xlog:aot=info") + config.verifyJvmArgs,
                 log,
             )
         run.start()
@@ -71,7 +79,7 @@ public class Verification(
             )
         }
         run.stop(config.shutdownTimeout)
-        val loaded = LoadedClasses.of(log, installation.lib)
+        val loaded = LoadedClasses.of(log, installation.jarDirs)
         val summary =
             "${loaded.applicationFromCache} of ${loaded.applicationTotal} application classes " +
                 "(${percent(loaded.applicationShare)}) came from ${cache.name}; " +

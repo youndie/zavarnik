@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit
 public class Training(
     private val installation: Installation,
     private val config: RunnerConfig,
-    private val javaHome: File,
     private val log: File,
     private val report: (String) -> Unit = ::println,
 ) {
@@ -34,9 +33,10 @@ public class Training(
         }
         val cache = installation.cache(config)
         val manifest = installation.manifest(config)
-        if (!installation.script.isFile) {
+        val launch = installation.launch
+        if (launch is Launch.Script && !launch.script.isFile) {
             throw RunnerException(
-                "zavarnik: start script not found at ${installation.script} — is the installation complete?",
+                "zavarnik: start script not found at ${launch.script} — is the installation complete?",
             )
         }
         // A cache that already exists would make the start script add -XX:AOTCache, and the JVM
@@ -44,8 +44,9 @@ public class Training(
         // be specified"). The manifest goes with it so a failed run leaves no half-truth behind.
         cache.delete()
         manifest.delete()
-        pinJarTimestamps(installation.lib)
-        val run = StartScriptRun(installation.script, javaHome, listOf("-XX:AOTCacheOutput=${cache.absolutePath}"), log)
+        cache.parentFile.mkdirs()
+        if (installation.pinsJarTimestamps) for (dir in installation.jarDirs) pinJarTimestamps(dir)
+        val run = ApplicationRun(launch, listOf("-XX:AOTCacheOutput=${cache.absolutePath}"), log)
         run.start()
         try {
             exercise(run, cache)
@@ -55,7 +56,7 @@ public class Training(
             manifest.delete()
             throw failed
         }
-        JarManifest.write(installation.lib, manifest)
+        JarManifest.write(installation.dir, installation.jarDirs, manifest)
         report(
             "zavarnik: cache ${cache.name} is ${cache.length() / KIB} KiB; " +
                 "manifest ${manifest.name} lists ${manifest.readLines().count { it.isNotBlank() }} jars",
@@ -63,7 +64,7 @@ public class Training(
     }
 
     private fun exercise(
-        run: StartScriptRun,
+        run: ApplicationRun,
         cache: File,
     ) {
         val readyMillis =
@@ -94,7 +95,7 @@ public class Training(
      * output, and the file appears in place only on success.
      */
     private fun awaitCacheAssembled(
-        run: StartScriptRun,
+        run: ApplicationRun,
         cache: File,
     ) {
         val deadline = System.nanoTime() + config.shutdownTimeout.toNanos()

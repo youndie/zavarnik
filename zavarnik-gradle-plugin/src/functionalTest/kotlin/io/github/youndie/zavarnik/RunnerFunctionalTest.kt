@@ -62,8 +62,8 @@ class RunnerFunctionalTest {
         }
         val tampered = runner("verify")
         assertEquals(1, tampered.exit, tampered.output)
-        assertContains(tampered.output, "the jars in lib/ are not the ones app.aot was trained against")
-        assertContains(tampered.output, "fixture.jar")
+        assertContains(tampered.output, "the jars are not the ones app.aot was trained against")
+        assertContains(tampered.output, "lib/fixture.jar: changed since aotTrain")
     }
 
     private class Run(

@@ -9,19 +9,12 @@ import java.time.Duration
 import java.util.concurrent.TimeUnit
 
 /**
- * One run of the application through its start script: start, wait for readiness, stop with
+ * One run of the application through its [Launch]: start, wait for readiness, stop with
  * `SIGTERM`, wait for the launcher.
- *
- * The script, not `java` directly, because the classpath string the JVM records in the cache is
- * the one the script builds, in the script's order — the only way to train against the string
- * production will present is to run production's launcher (research D1). JVM flags for this run
- * travel through `JAVA_OPTS`, which the script folds into the command line after its own
- * `DEFAULT_JVM_OPTS`.
  */
-public class StartScriptRun(
-    private val script: File,
-    private val javaHome: File,
-    private val javaOpts: List<String>,
+public class ApplicationRun(
+    private val launch: Launch,
+    private val jvmArgs: List<String>,
     private val log: File,
 ) {
     private lateinit var process: Process
@@ -38,12 +31,11 @@ public class StartScriptRun(
         }
         log.parentFile.mkdirs()
         val builder =
-            ProcessBuilder(script.absolutePath)
-                .directory(script.parentFile.parentFile)
+            ProcessBuilder(launch.command(jvmArgs))
+                .directory(launch.directory)
                 .redirectErrorStream(true)
                 .redirectOutput(log)
-        builder.environment()["JAVA_HOME"] = javaHome.absolutePath
-        builder.environment()["JAVA_OPTS"] = javaOpts.joinToString(" ")
+        builder.environment().putAll(launch.environment(jvmArgs))
         startedAt = System.nanoTime()
         process = builder.start()
     }
@@ -127,11 +119,7 @@ public class StartScriptRun(
     /** Last lines of the process log, for an error message. */
     public fun logTail(lines: Int = LOG_TAIL_LINES): String =
         if (log.exists()) {
-            log
-                .readLines()
-                .takeLast(
-                    lines,
-                ).joinToString("\n", prefix = "--- ${log.name}, last $lines lines:\n")
+            log.readLines().takeLast(lines).joinToString("\n", prefix = "--- ${log.name}, last $lines lines:\n")
         } else {
             ""
         }
