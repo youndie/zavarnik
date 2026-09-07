@@ -68,7 +68,7 @@ class DistributionFunctionalTest {
     }
 
     @Test
-    fun `a wildcard classpath in the start script trains and verifies like a listed one`() {
+    fun `a wildcard classpath in the start script is refused before anything is trained`() {
         Fixture.write(
             projectDir,
             extension =
@@ -80,10 +80,9 @@ class DistributionFunctionalTest {
                     }
                     """.trimIndent(),
         )
-        val result = runner("aotVerify").build()
-        assertContains(File(projectDir, "build/install/fixture/bin/fixture").readText(), "\$APP_HOME/lib/*")
-        assertEquals(TaskOutcome.SUCCESS, result.task(":aotVerify")?.outcome)
-        assertContains(result.output, "application classes (100.0%) came from app.aot")
+        val result = runner("installDist").buildAndFail()
+        assertContains(result.output, "CLASSPATH has a wildcard")
+        assertContains(result.output, "differs between filesystems and container runtimes")
     }
 
     @Test

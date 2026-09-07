@@ -48,4 +48,13 @@ class StartScriptGuardTest {
         assertContains(failure.message.orEmpty(), StartScriptGuard.UNIX_ANCHOR)
         assertFailsWith<GradleException> { StartScriptGuard.windows("@echo off\r\n", "app.aot") }
     }
+
+    @Test
+    fun `a wildcard classpath is refused, unix and windows alike`() {
+        val unix = "#!/bin/sh\nCLASSPATH=\$APP_HOME/lib/*\n\n# Collect all arguments for the java command:\nexec java"
+        val failure = assertFailsWith<GradleException> { StartScriptGuard.unix(unix, "app.aot") }
+        assertContains(failure.message!!, "wildcard")
+        val windows = "@echo off\r\nset DEFAULT_JVM_OPTS=\r\nset CLASSPATH=%APP_HOME%\\lib\\*\r\n"
+        assertFailsWith<GradleException> { StartScriptGuard.windows(windows, "app.aot") }
+    }
 }

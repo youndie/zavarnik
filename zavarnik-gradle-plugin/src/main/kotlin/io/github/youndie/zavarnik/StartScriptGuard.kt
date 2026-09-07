@@ -27,6 +27,7 @@ public object StartScriptGuard {
         cacheFileName: String,
     ): String {
         if (UNIX_ANCHOR !in script) throw missingAnchor("unix", UNIX_ANCHOR)
+        refuseWildcard(script)
         val guard =
             """
             |if [ -f "${'$'}APP_HOME/lib/$cacheFileName" ]; then
@@ -47,11 +48,34 @@ public object StartScriptGuard {
         val lines = script.split(separator)
         val index = lines.indexOfFirst { it.startsWith(WINDOWS_ANCHOR_PREFIX) }
         if (index < 0) throw missingAnchor("windows", WINDOWS_ANCHOR_PREFIX)
+        refuseWildcard(script)
         val guard =
             "if exist \"%APP_HOME%\\lib\\$cacheFileName\" " +
                 "set DEFAULT_JVM_OPTS=%DEFAULT_JVM_OPTS% \"-XX:AOTCache=%APP_HOME%\\lib\\$cacheFileName\""
         return (lines.take(index + 1) + guard + lines.drop(index + 1)).joinToString(separator)
     }
+
+    /**
+     * A wildcard on the classpath is refused. The JVM expands a `lib` wildcard in directory order,
+     * which is whatever the filesystem answers — and that differs between container runtimes: a cache
+     * trained under Docker's overlay2 on a CI runner recorded `ktor-http-cio` first, the k0s node's
+     * containerd handed the JVM `packages-shared-api` first, and production rejected the cache with
+     * "The name of app classpath [1] does not match" and started without it, silently. `aotVerify`
+     * cannot catch it — it runs where the training ran. A listed classpath is the same string
+     * everywhere.
+     */
+    private fun refuseWildcard(script: String) {
+        if (WILDCARD.containsMatchIn(script)) {
+            throw GradleException(
+                "zavarnik: the start script's CLASSPATH has a wildcard (`lib/*`). The JVM expands it in directory " +
+                    "order, which differs between filesystems and container runtimes, and a cache trained on one " +
+                    "is rejected on the other — silently, in production. List the jars: leave " +
+                    "`startScripts.classpath` alone, or set it to the files by name.",
+            )
+        }
+    }
+
+    private val WILDCARD = Regex("""CLASSPATH=.*[/\\]\*""")
 
     private fun missingAnchor(
         which: String,
