@@ -142,7 +142,9 @@ cache lands on the host and Jib's file timestamps are never touched. An applicat
 its database to start gets the stand's network and environment through
 `zavarnik { jib { dockerRunArgs("--network", "stand_default", "-e", "DB_URL=…") } }`. What this mode costs: a
 Docker daemon on the build machine — the one thing Jib let a build do without. `jib` straight to
-a registry, with no daemon, builds an image without a cache.
+a registry, with no daemon, builds an image without a cache. Jib 3.5.4 itself does not support
+Gradle's configuration cache; a build that has it on runs the Jib tasks with
+`--no-configuration-cache`.
 
 ## The red build
 
