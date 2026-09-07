@@ -1,13 +1,16 @@
 ---
 id: B-17
 title: "R8 ломает invokespecial на default-методы интерфейсов Kotlin — заводить ли issue в r8"
-status: question
+status: dropped
 priority: P2
 size: XS
 stage: stage-5-optimizer
 ---
 
 # B-17 — R8 и `invokespecial` на не-прямой суперинтерфейс: issue в r8?
+
+> **Снята 07.09.2026: писать не будем** — решение владельца. Разбор с `javap` и прецедент
+> KT-42753 остаются в ресёрче (§1.3) как готовый материал, если решение изменится.
 
 Ресёрч §1.3: R8 9.4.17 и 9.5.10-dev в режиме `--classfile` переписывают
 `invokespecial CompletableDeferred.cancel` в `invokespecial Job.cancel` (member rebinding), и

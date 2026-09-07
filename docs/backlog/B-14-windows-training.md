@@ -1,13 +1,16 @@
 ---
 id: B-14
 title: "Тренировка на Windows: без SIGTERM нужен другой способ закончить прогон"
-status: open
+status: dropped
 priority: P3
 size: M
 stage: stage-3-packaging
 ---
 
 # B-14 — Тренировка на Windows
+
+> **Снята 07.09.2026** — решение владельца: тренировка на Windows не нужна; ограничение
+> записано в README (Requirements).
 
 Ресёрч проверил завершение тренировки только на macOS и Linux: `SIGTERM` пишет кэш (E2), и
 `Runtime.halt` тоже (E1). На Windows сигнала нет, `destroy()` у `Process` — `TerminateProcess`,

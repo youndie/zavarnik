@@ -34,16 +34,14 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (4)
+## Open (2)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
-| [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P1 | M | - |
-| [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P1 | M | B-12 |
-| [B-17](docs/backlog/B-17-r8-invokespecial-rebinding-upstream.md) `[?]` | R8 ломает invokespecial на default-методы интерфейсов Kotlin — заводить ли issue в r8 | P2 | XS | - |
-| [B-14](docs/backlog/B-14-windows-training.md) `[ ]` | Тренировка на Windows: без SIGTERM нужен другой способ закончить прогон | P3 | M | - |
+| [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
+| [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
-## Closed (20)
+## Closed (22)
 
 **Стенд**
 
@@ -64,6 +62,7 @@
 
 - [B-10](docs/backlog/B-10-docker-and-jib-recipe.md) `[x]` - Docker и Jib: рецепт образа, в котором кэш принимается, и aotVerify внутри контейнера
 - [B-11](docs/backlog/B-11-aot-report-task.md) `[x]` - aotReport: таблица «холодный / с кэшем» по времени готовности — артефакт для публикации
+- [B-14](docs/backlog/B-14-windows-training.md) `[-]` - Тренировка на Windows: без SIGTERM нужен другой способ закончить прогон
 - [B-24](docs/backlog/B-24-aot-report-warmup-curve.md) `[x]` - aotReport: показывать не только готовность, но и прогрев — работу JIT после старта
 
 **Выпуск**
@@ -73,6 +72,7 @@
 **Вторая фаза**
 
 - [B-16](docs/backlog/B-16-rq0-gate-profile-split-and-r8.md) `[x]` - RQ0 — ворота второй фазы: доля пользовательского кода в профиле и базовая линия R8
+- [B-17](docs/backlog/B-17-r8-invokespecial-rebinding-upstream.md) `[-]` - R8 ломает invokespecial на default-методы интерфейсов Kotlin — заводить ли issue в r8
 - [B-18](docs/backlog/B-18-rq6-inline-bloat-diagnostic.md) `[x]` - RQ6 — диагностика размеров методов против порогов C2: всегда полезна, но проверить, что порог что-то значит
 - [B-19](docs/backlog/B-19-rq5-constant-hoisting.md) `[-]` - RQ5 — константа Regex в хендлере: 6,45 % байт, единственный кандидат с весом выше порога
 - [B-20](docs/backlog/B-20-rq3-collection-chains.md) `[-]` - RQ3 — промежуточные коллекции цепочек: ≈ 4,6 % байт на /business
@@ -102,6 +102,11 @@
 запускается. B-18 переехала в kapkan (issue в sborka), B-19–B-21 сняты, B-22 снята раньше.
 Открытыми остаются два вопроса о репортах в чужие трекеры — B-17 и B-23, — и решаются они
 только владельцем.
+
+**Отложенное остаётся `open` с записанной причиной, а не исчезает.** [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md)
+(выпуск) и [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) (положительный контроль
+`SIGILL`) отложены владельцем 07.09.2026 — статус `open`, приоритет `P3`, в работу не берутся;
+внешние репорты (B-17) и Windows (B-14) сняты его же решением.
 
 **Проверять то, что JVM проверять не будет.**
 [B-06](docs/backlog/B-06-aot-verify-task.md) сверяет хэши jar-ов сама, а не полагается на

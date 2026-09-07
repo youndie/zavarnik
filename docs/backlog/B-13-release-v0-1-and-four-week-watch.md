@@ -2,13 +2,17 @@
 id: B-13
 title: "Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения"
 status: open
-priority: P1
+priority: P3
 size: M
 stage: stage-4-release
 blocked_by: [B-12]
 ---
 
 # B-13 — Выпуск v0.1 и четыре недели наблюдения
+
+> **Отложено владельцем 07.09.2026.** Снапшоты идут с каждого пуша (см. ниже), плагин
+> резолвится из reposilite; Plugin Portal, Central и объявление — когда владелец решит.
+> Задача остаётся `open`, чтобы на неё можно было ссылаться; в работу не берётся.
 
 > **Снапшоты — 07.09.2026.** `publish-snapshot.yaml` зовёт `publish-wip.yaml` sborka с двумя
 > именованными секретами; каждый пуш в `main` после `check` кладёт в reposilite `snapshots` модуль
