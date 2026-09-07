@@ -1,43 +1,90 @@
 # zavarnik
 
+[![check](https://github.com/youndie/zavarnik/actions/workflows/check.yaml/badge.svg)](https://github.com/youndie/zavarnik/actions/workflows/check.yaml)
+
 A Gradle plugin that gives a plain JVM application — Ktor, http4k, anything on the `application`
 plugin — a [Project Leyden](https://openjdk.org/projects/leyden/) AOT cache: train it, **verify
 that production will actually accept it**, and ship it inside the distribution. Spring Boot and
 Quarkus have this built in; everything else has a two-command workflow that fails silently when
 the environment differs. This plugin turns that silence into a red build.
 
-```kotlin
-plugins {
-    application
-    id("io.github.youndie.zavarnik")
-}
+*zavarnik* is a teapot: you brew the cache once and pour it into every start.
 
-zavarnik {
-    training {
-        readyWhen.url("http://127.0.0.1:8080/health")
-        workload {
-            get("http://127.0.0.1:8080/api/warm")
-            post("http://127.0.0.1:8080/api/order", "application/json", """{"items":[]}""")
-        }
-    }
-}
+**Status:** works end to end, tested against real JDKs; **not yet on the Plugin Portal**, so the
+plugin id below does not resolve from a fresh build until the first release. Watch this repository.
+
+## Requirements
+
+- **JDK 25 or newer** as the project's toolchain — the one-step training workflow is JEP 514
+  (JDK 25). Prefer 25.0.4+ / 26.0.2+: earlier builds never check the jars against the cache
+  ([JDK-8377932](https://bugs.openjdk.org/browse/JDK-8377932)); the plugin checks them itself and
+  warns.
+- **The `application` plugin.** The cache is trained through the start script over the
+  `lib/*.jar` layout; a classpath of directories, which is what `run` uses, yields no cache.
+- **Linux or macOS for training** — the training run is stopped with `SIGTERM`, and a killed JVM
+  writes no cache. Production on Windows works; training on it does not yet.
+- **The same JDK build in production as in training**, down to the image: the JVM compares the
+  build string and the size of `lib/modules`, and the `-jre` package of the same Temurin build
+  has a different one. Train in the image that runs — the sample's Dockerfile shows how.
+- **Ship `installDist` or `distTar`.** A zip cannot carry the cache: DOS timestamps are local time,
+  and the JVM checks jar mtimes.
+- Gradle 9 (developed and tested on 9.7.1).
+
+## Quickstart
+
+1. Apply the plugin next to `application` and say how to tell the app is up and what to hit:
+
+   ```kotlin
+   plugins {
+       application
+       id("io.github.youndie.zavarnik")
+   }
+
+   zavarnik {
+       training {
+           readyWhen.url("http://127.0.0.1:8080/health")
+           workload {
+               get("http://127.0.0.1:8080/api/warm")
+               post("http://127.0.0.1:8080/api/order", "application/json", """{"items":[]}""")
+           }
+       }
+   }
+   ```
+
+2. `./gradlew check` — `aotTrain` runs the installed application through its own start script
+   with `-XX:AOTCacheOutput`, waits for the readiness URL, runs the workload, stops the JVM and
+   waits for the cache to be assembled; `aotVerify` then fails the build unless production would
+   accept the result (below).
+
+3. `./gradlew distTar` or `docker build` — the start scripts pick the cache up when it is there,
+   the tar carries it, and [`samples/ktor/Dockerfile`](samples/ktor/Dockerfile) trains it on the
+   very image that runs it.
+
+## The red build
+
+`aotVerify` is the point. It checks three independent things and names the one that failed:
+the jars in `lib/` match the manifest the training wrote, the application starts with the cache
+made mandatory (`-XX:AOTMode=on`), and at least 90% of its classes come from the cache.
+
+A jar rebuilt after training — caught by the manifest, before anything is started:
+
+```
+> zavarnik: the jars in lib/ are not the ones app.aot was trained against:
+    - ktor-sample.jar: changed since aotTrain
+  Run aotTrain again after every change to the classpath.
 ```
 
-`aotTrain` runs the installed application through its own start script with `-XX:AOTCacheOutput`,
-waits for the readiness URL, runs the workload, stops the JVM with `SIGTERM` and waits for the
-cache to be assembled. `aotVerify` — on `check` by default — fails the build unless three
-independent things hold: the jars in `lib/` match the manifest the training wrote, the
-application starts with the cache made mandatory (`-XX:AOTMode=on`), and at least 90% of its
-classes come from the cache. The start scripts pick the cache up when it is there, `distTar`
-ships it, and [`samples/ktor/Dockerfile`](samples/ktor/Dockerfile) trains it on the very image
-that runs it. `aotReport` measures what the user gets — and what they do not.
+A jar merely touched — the JVM refuses it, and the build says why in the JVM's own words:
 
-**Status:** the plugin works end to end and is covered by unit and TestKit tests against real
-JDKs; the release (a GitHub remote, the Plugin Portal) is ahead. What the JVM validates before it
-uses a cache, what a training run has to do for the cache to be written at all, and what the cache
-does to the JIT — all of it is measured, not assumed, and recorded in
-[`docs/research/`](docs/research/), with the experiments and their logs committed under
-[`experiments/`](experiments/).
+```
+> zavarnik: the application did not start with the cache under -XX:AOTMode=on. The JVM's reasons:
+    [0.009s][warning][aot] This file is not the one used while building the AOT cache:
+                           '.../lib/ktor-sample.jar', timestamp has changed
+    [0.009s][error  ][aot] shared class paths mismatch
+```
+
+Without the plugin both cases are three lines on stderr and exit code 0 — the application runs,
+just without the cache, and nobody notices until someone measures.
 
 ## What the report shows
 
@@ -49,58 +96,38 @@ does to the JIT — all of it is measured, not assumed, and recorded in
 | with `app.aot` | 233 ms | 99 570 | 3388 | 1172 |
 
 Two tables on purpose. Readiness improves two- to threefold. The JIT work after the start does
-not: the cache holds classes, heap objects and method profiles (JEP 515), not compiled code, so C2
-compiles the same thousand-odd methods either way. A report that showed only the first table
-would promise a warm service the JVM does not deliver.
+not: the cache holds classes, heap objects and method profiles, not compiled code, so C2 compiles
+the same thousand-odd methods either way. The extra fifth of requests in the cached window is
+where the profiles (JEP 515) do help: the JIT starts on the hot methods at once instead of
+discovering them. A report that showed only the first table would promise a warm service the
+JVM does not deliver.
 
 ## Findings the plugin is built on
 
 - The cache survives relocation to another absolute path, but not a touched jar, a prepended
   classpath entry, `--add-modules`, a `-javaagent` on one side only, or a change of the
   compressed-oops boundary (ZGC ↔ the other collectors). An agent or ZGC on *both* sides is fine.
-- OpenJDK 25.0.0–25.0.3 and 26.0.0–26.0.1 never validate the application jars against a cache
-  made by the one-step workflow ([JDK-8377932](https://bugs.openjdk.org/browse/JDK-8377932)):
-  a stale cache is used silently, exit code 0. The plugin verifies the jars itself.
+- Found while building this: OpenJDK 25.0.0–25.0.3 and 26.0.0–26.0.1 never validate the
+  application jars against a cache made by the one-step workflow — a stale cache is used
+  silently, exit code 0. The bug is [JDK-8377932](https://bugs.openjdk.org/browse/JDK-8377932),
+  fixed upstream in 25.0.4 and 26.0.2; which builds it affects, and that `-XX:AOTMode=on` does
+  not catch it, is measured here.
 - The cache is written on any exit except `SIGKILL`, `Runtime.halt` included, so training needs
   no hook inside the application.
-- "The same JDK" means the same image: the `-jdk` and `-jre` packages of one Temurin build have
-  different `lib/modules`, and the JVM rejects the cache by its size.
-- A zip cannot carry the cache — DOS timestamps are local time — and a tar can, if the jars are
-  pinned to the timestamp Gradle stamps on a reproducible tar. `aotTrain` does that.
 - The JVM caches machine code for the training CPU's instruction set. The plugin turns that off
-  by default (`portability = true`); it costs nothing measurable, and a cache trained on an
-  EPYC with AVX-512 runs on a Core Ultra without it either way.
+  by default (`portability = true`); it costs nothing measurable.
 
-Every one of these has a script and a log behind it in [`experiments/`](experiments/).
+Every one of these has a script and a log behind it in [`experiments/`](experiments/); the
+reasoning is in [`docs/research/`](docs/research/), written for a coding agent first: every claim
+carries a path to where it was verified.
 
-## The benchmark, and the second phase that did not survive it
+## Also in this repository
 
-[`bench/`](bench/) is a Ktor CIO service with three kinds of endpoint — echo, JSON CRUD over an
-in-memory store, and a "business" endpoint written the way services are written — plus a
-harness that measures throughput with `oha` while `async-profiler` samples CPU and allocations,
-and an attribution script that splits every sample by where the code came from: user code,
-Ktor, kotlinx, the stdlib, the JDK. It also runs against a real service from inside its
-container ([`bench/profile/konekt.sh`](bench/profile/konekt.sh)).
-
-It was built for a second phase — a Kotlin/JVM bytecode optimizer, a K2 IR compiler plugin plus an
-ASM transform, judged against R8 as the existing tool
-([`docs/research/research-optimizer.md`](docs/research/research-optimizer.md)). The gate question
-was how much of a Ktor service's profile user code even owns. The answer closed the phase:
-
-- on the benchmark's business endpoint user code owns 2% of the CPU and 10% of the allocations;
-  on a real service, 1–4% and 3–5% — the rest is Ktor, coroutines, the stdlib and the database
-  driver, none of which an IR plugin over user code can touch;
-- R8 could not serve as the baseline at all: on this stack it rewrites `invokespecial` on
-  Kotlin interface default methods to the declaring interface, which the JDK 25 verifier rejects
-  — a bug with a `javap` reproduction, not a configuration problem;
-- of the candidate rewrites, boxing and lazy logging fell under the brief's own thresholds; the
-  regex compiled per request (6% of bytes) is a one-line manual fix.
-
-What survived: the benchmark, the attribution methodology, and two findings for upstream —
-the R8 rewrite and a `KClassImpl.toString` on every `receive<T>()` in Ktor. The method-size
-diagnostic moved to the portfolio's lint ([youndie/sborka#28](https://github.com/youndie/sborka/issues/28)).
-
-## Layout
+[`bench/`](bench/) is a Ktor CIO benchmark service with a profiling harness that attributes every
+CPU and allocation sample to where the code came from. It was built to justify a second phase —
+a Kotlin bytecode optimizer — and closed it instead: user code owns 1–4% of the CPU and 3–10% of
+the allocations of a Ktor service, and R8 cannot even serve as the baseline on this stack. The
+negative result, with numbers, is [`docs/research/research-optimizer.md`](docs/research/research-optimizer.md).
 
 | Directory | What it is |
 |---|---|
@@ -108,8 +135,7 @@ diagnostic moved to the portfolio's lint ([youndie/sborka#28](https://github.com
 | `samples/ktor/` | a Ktor server on the plugin, with the Dockerfile and an in-container check |
 | `bench/` | the benchmark service and the profiling harness |
 | `experiments/` | the experiments the research cites, scripts and logs |
-| `docs/` | layered documentation for a coding agent; start at [`docs/README.md`](docs/README.md) |
-| `backlog.md` | the plan, one file per item under `docs/backlog/` |
+| `docs/` | layered documentation; start at [`docs/README.md`](docs/README.md); the plan is [`backlog.md`](backlog.md) |
 
 ## Checks
 
