@@ -1,3 +1,6 @@
+import org.gradle.api.file.ArchiveOperations
+import org.gradle.kotlin.dsl.support.serviceOf
+
 plugins {
     alias(libs.plugins.kotlinJvm)
     `java-gradle-plugin`
@@ -33,16 +36,24 @@ functionalTest.runtimeClasspath += sourceSets.main.get().output
 
 // The runner is the implementation: the tasks call it in-process, and the distribution carries
 // it as one self-contained jar so that `train` and `verify` also run where there is no Gradle —
-// the runtime stage of a container image. The fat jar comes from the runner project's own
-// consumable configuration and is embedded as a resource, so the published plugin needs nothing
-// but its ordinary dependency on the runner at build time.
-val runnerJar: Configuration by configurations.creating {
-    isCanBeConsumed = false
-    isCanBeResolved = true
-}
+// the runtime stage of a container image. Its classes go *into* the plugin jar and the fat jar
+// goes in as a resource, so the published plugin is one artifact with no dependency of its own
+// to resolve: the runner is not published separately.
+val runnerJar =
+    configurations.create("runnerJar") {
+        isCanBeConsumed = false
+        isCanBeResolved = true
+    }
+val runnerClasses =
+    configurations.create("runnerClasses") {
+        isCanBeConsumed = false
+        isCanBeResolved = true
+        isTransitive = false
+    }
 
 dependencies {
-    implementation(project(":zavarnik-runner"))
+    compileOnly(project(":zavarnik-runner"))
+    runnerClasses(project(":zavarnik-runner"))
     runnerJar(project(mapOf("path" to ":zavarnik-runner", "configuration" to "runnerJar")))
     // The unit tests touch GradleException and Property; `java-gradle-plugin` puts the Gradle API on
     // the main classpath but, with these conventions, not on the unit-test runtime.
@@ -60,6 +71,19 @@ tasks.processResources {
         rename { "zavarnik-runner.jar" }
     }
 }
+
+tasks.jar {
+    // `zipTree` from the script would drag the script object into the task; the injected service does not.
+    val archives = serviceOf<ArchiveOperations>()
+    from(runnerClasses.elements.map { jars -> jars.map { jar -> archives.zipTree(jar.asFile) } }) {
+        exclude("META-INF/MANIFEST.MF")
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// TestKit's plugin classpath is the main runtime classpath, which a compileOnly dependency is
+// not on; the runner's classes have to be there for the plugin under test to load.
+tasks.pluginUnderTestMetadata { pluginClasspath.from(runnerClasses) }
 
 val functionalTestTask =
     tasks.register<Test>("functionalTest") {
