@@ -183,6 +183,11 @@ a Kotlin bytecode optimizer — and closed it instead: user code owns 1–4% of 
 the allocations of a Ktor service, and R8 cannot even serve as the baseline on this stack. The
 negative result, with numbers, is [`docs/research/research-optimizer.md`](docs/research/research-optimizer.md).
 
+On a service not written for it — [konekt](https://github.com/youndie/konekt), Ktor CIO with
+Exposed and Postgres under a one-core limit — the cache trained inside the image took `docker start`
+to `/health` from 4.4 s to 2.0 s and the first request from 510 ms to 240 ms at the median of ten
+restarts each; the record is in that repository's `docs/research/measurements-2026-09-07/aot/`.
+
 Two write-ups: [OpenJDK 25.0.0–25.0.3 uses a stale AOT cache without saying so](https://kotlin.website/blog/stale-aot-cache-on-jdk25)
 and [User code is 1–4 % of a Ktor service's CPU](https://kotlin.website/blog/user-code-share-of-a-ktor-service).
 

@@ -40,5 +40,10 @@ dev-код, verify. У workload не было ни заголовков, ни с
   `zavarnik-runner/src/main/kotlin/io/github/youndie/zavarnik/runner/Json.kt`,
   `zavarnik-runner/src/main/kotlin/io/github/youndie/zavarnik/runner/WorkloadStep.kt`,
   `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/ZavarnikExtension.kt`.
-- Дальше — эксперимент в konekt: тренировка на стенде, `coldstart.sh 5` против образа с кэшем и без;
-  порог тот же, что был у самого проекта, — меньше 20 % по готовности означает отрицательный результат.
+- **Эксперимент в konekt сделан 07.09.2026** (ветка `feat/aot-cache-experiment`, задача konekt B-123,
+  запись `docs/research/measurements-2026-09-07/aot/` и §6a `research-measurements.md` там же):
+  тренировка раннером внутри контейнера стендового образа (приложение не стартует без Postgres),
+  кэш вторым слоем, `verify` под `-XX:AOTMode=on` — 5329 из 5332 классов приложения из кэша;
+  `coldstart.sh` попеременно по двум образам, по 10 рестартов: готовность **4380 → 2042 мс**,
+  первый запрос **510 → 240 мс** по медиане, следующая сотня без изменений; кэш 65 МиБ,
+  образ 602 → 685 МБ. Порог 20 % взят с запасом; выпускать ли — решение владельца konekt.
