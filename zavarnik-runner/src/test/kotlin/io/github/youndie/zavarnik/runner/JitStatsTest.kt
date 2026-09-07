@@ -1,4 +1,4 @@
-package io.github.youndie.zavarnik
+package io.github.youndie.zavarnik.runner
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

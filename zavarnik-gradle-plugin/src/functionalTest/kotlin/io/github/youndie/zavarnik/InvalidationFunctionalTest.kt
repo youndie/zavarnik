@@ -1,5 +1,6 @@
 package io.github.youndie.zavarnik
 
+import io.github.youndie.zavarnik.runner.Training
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import java.io.File
@@ -34,7 +35,7 @@ class InvalidationFunctionalTest {
         val jar = File(projectDir, "build/install/fixture/lib/fixture.jar")
         // Any mtime other than the one aotTrain pinned; a fixed one, because the point is the
         // difference, not the clock.
-        assertTrue(jar.setLastModified(AotTrainTask.JAR_MTIME.toMillis() + TOUCH_OFFSET_MILLIS))
+        assertTrue(jar.setLastModified(Training.JAR_MTIME.toMillis() + TOUCH_OFFSET_MILLIS))
         val jdk = JdkVersion.parse(System.getProperty("java.runtime.version"))!!
         if (jdk.skipsJarValidation) {
             // JDK-8377932: the JVM does not look, the hash has not changed, so nothing objects. This

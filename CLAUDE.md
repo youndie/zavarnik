@@ -2,7 +2,8 @@
 
 Gradle-плагин для AOT-кэша Project Leyden в обычных JVM-приложениях на плагине `application`.
 Состояние: ресёрч закрыт, гейт RQ6 пройден; `aotTrain`, `aotVerify`, `aotReport`, сторож в скриптах, `distTar`,
-образец `samples/ktor` с Dockerfile и проверкой в контейнере (B-04…B-11, B-15) — дальше выпуск (B-13, нужен remote) и
+образец `samples/ktor` с Dockerfile и проверкой в контейнере (B-04…B-11, B-15), раннер `zavarnik-runner`
+для тренировки и проверки без Gradle в JRE-стадии образа (B-25); отложены выпуск (B-13) и
 воспроизведение SIGILL на паре машин (B-09). Вторая фаза (плагин оптимизации байткода, `bench/`,
 `docs/research/research-optimizer.md`) закрыта 07.09.2026 по критерию остановки: стенд и методика
 остаются, диагностика уехала в kapkan. См. `backlog.md`.
@@ -14,8 +15,8 @@ Gradle-плагин для AOT-кэша Project Leyden в обычных JVM-п�
    обычно неверно (JVM отвергает кэш молча; на части JDK не проверяет jar-ы вовсе).
 2. `backlog.md` — этапы и решения; сама задача — файл `docs/backlog/B-NN-*.md` с критериями
    приёмки и якорями.
-3. Слой, к которому относится задача: `docs/research/`; код — `zavarnik-gradle-plugin/`, конвенции
-   сборки — sborka (`gradle.properties`, `sborka.*`). Документы `features/` и `services/`
+3. Слой, к которому относится задача: `docs/research/`; код — `zavarnik-gradle-plugin/` (задачи)
+   и `zavarnik-runner/` (логика, без Gradle API), конвенции сборки — sborka (`gradle.properties`, `sborka.*`). Документы `features/` и `services/`
    появятся вместе с задачами плагина, со `status: draft` до слияния.
 
 Расхождение кода с ресёрчем правится **в ресёрче, в месте расхождения**: «здесь было сказано X —

@@ -1,4 +1,4 @@
-package io.github.youndie.zavarnik
+package io.github.youndie.zavarnik.runner
 
 import java.io.File
 import java.security.MessageDigest

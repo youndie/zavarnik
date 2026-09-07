@@ -34,15 +34,14 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (3)
+## Open (2)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
-| [B-25](docs/backlog/B-25-train-and-verify-without-gradle.md) `[ ]` | Тренировка и проверка без Gradle: раннер в lib/, чтобы JRE-стадия образа тренировала кэш сама | P1 | M | - |
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
-## Closed (22)
+## Closed (23)
 
 **Стенд**
 
@@ -65,6 +64,7 @@
 - [B-11](docs/backlog/B-11-aot-report-task.md) `[x]` - aotReport: таблица «холодный / с кэшем» по времени готовности — артефакт для публикации
 - [B-14](docs/backlog/B-14-windows-training.md) `[-]` - Тренировка на Windows: без SIGTERM нужен другой способ закончить прогон
 - [B-24](docs/backlog/B-24-aot-report-warmup-curve.md) `[x]` - aotReport: показывать не только готовность, но и прогрев — работу JIT после старта
+- [B-25](docs/backlog/B-25-train-and-verify-without-gradle.md) `[x]` - Тренировка и проверка без Gradle: раннер в lib/, чтобы JRE-стадия образа тренировала кэш сама
 
 **Выпуск**
 

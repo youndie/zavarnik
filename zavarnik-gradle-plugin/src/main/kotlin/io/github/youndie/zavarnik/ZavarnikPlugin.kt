@@ -29,8 +29,10 @@ import java.time.Duration
  * `aotTrain` trains the cache through the start script, `aotVerify` fails the build when
  * production would not accept it (and runs on `check`), the start scripts pick the cache up when
  * it is there, and `distTar` ships it. `distZip` cannot: zip stores DOS timestamps in local time,
- * and the JVM checks jar mtimes against the cache. What the plugin refuses at configuration time,
- * and why, is in [ConfigurationChecks].
+ * and the JVM checks jar mtimes against the cache. Every distribution also carries the runner —
+ * `lib/zavarnik-runner.jar` with `lib/zavarnik.properties` — which trains and verifies without
+ * Gradle, on the JRE of a runtime image ([RunnerFilesTask]). What the plugin refuses at
+ * configuration time, and why, is in [ConfigurationChecks].
  */
 public class ZavarnikPlugin : Plugin<Project> {
     override fun apply(target: Project) {
@@ -60,6 +62,25 @@ public class ZavarnikPlugin : Plugin<Project> {
         val libFile = { name: String -> installDir.map { it.file("lib/$name") } }
         val scriptName = provider { application.applicationName }
 
+        val runnerFiles =
+            tasks.register(RUNNER_FILES_TASK, RunnerFilesTask::class.java) { task ->
+                task.description = "Writes lib/zavarnik.properties and lib/zavarnik-runner.jar for the distribution."
+                task.cacheFileName.set(extension.cacheFileName)
+                task.readyUrl.set(extension.training.readyWhen.url)
+                task.exitAfter.set(extension.training.exitAfter)
+                task.readyTimeout.set(extension.training.readyTimeout)
+                task.shutdownTimeout.set(extension.training.shutdownTimeout)
+                task.workload.set(extension.training.workload.steps)
+                task.minCachedShare.set(extension.verify.minCachedShare)
+                task.verifyJvmArgs.set(extension.verify.jvmArgs)
+                task.outputDir.set(layout.buildDirectory.dir("zavarnik/runner"))
+            }
+        // Into the distribution's shared content, so installDist, distTar and distZip all carry
+        // them: a runtime image trains from installDist, and `verify` inside it needs the same file.
+        extensions.getByType(DistributionContainer::class.java).named(MAIN_DISTRIBUTION).configure { dist ->
+            dist.contents { contents -> contents.from(runnerFiles) { spec -> spec.into("lib") } }
+        }
+
         val train =
             tasks.register(TRAIN_TASK, AotTrainTask::class.java) { task ->
                 task.group = GROUP
@@ -68,15 +89,9 @@ public class ZavarnikPlugin : Plugin<Project> {
                 task.installDir.set(installDir)
                 task.scriptName.set(scriptName)
                 task.javaLauncher.set(launcher)
-                task.cacheFileName.set(extension.cacheFileName)
                 task.cacheFile.set(extension.cacheFileName.flatMap(libFile))
                 task.manifestFile.set(extension.cacheFileName.flatMap { libFile("$it.jars") })
                 task.logFile.set(layout.buildDirectory.file("zavarnik/aotTrain.log"))
-                task.readyUrl.set(extension.training.readyWhen.url)
-                task.workload.set(extension.training.workload.steps)
-                task.exitAfter.set(extension.training.exitAfter)
-                task.readyTimeout.set(extension.training.readyTimeout)
-                task.shutdownTimeout.set(extension.training.shutdownTimeout)
             }
 
         val verify =
@@ -90,16 +105,8 @@ public class ZavarnikPlugin : Plugin<Project> {
                 task.installDir.set(installDir)
                 task.scriptName.set(scriptName)
                 task.javaLauncher.set(launcher)
-                task.cacheFile.set(train.flatMap { it.cacheFile })
-                task.manifestFile.set(train.flatMap { it.manifestFile })
                 task.logFile.set(layout.buildDirectory.file("zavarnik/aotVerify.log"))
                 task.reportFile.set(layout.buildDirectory.file("zavarnik/aotVerify.txt"))
-                task.readyUrl.set(extension.training.readyWhen.url)
-                task.exitAfter.set(extension.training.exitAfter)
-                task.readyTimeout.set(extension.training.readyTimeout)
-                task.shutdownTimeout.set(extension.training.shutdownTimeout)
-                task.minCachedShare.set(extension.verify.minCachedShare)
-                task.extraJvmArgs.set(extension.verify.jvmArgs)
             }
         tasks.register(REPORT_TASK, AotReportTask::class.java) { task ->
             task.group = GROUP
@@ -205,6 +212,9 @@ public class ZavarnikPlugin : Plugin<Project> {
 
         /** `aotVerify`. */
         public const val VERIFY_TASK: String = "aotVerify"
+
+        /** `zavarnikRunnerFiles`: the runner's configuration and jar for the distribution's `lib/`. */
+        public const val RUNNER_FILES_TASK: String = "zavarnikRunnerFiles"
 
         /** `aotReport`. */
         public const val REPORT_TASK: String = "aotReport"

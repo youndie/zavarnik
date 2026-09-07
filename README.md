@@ -40,7 +40,9 @@ and `id("io.github.youndie.zavarnik") version "0.1.0.<run>"` — the latest is i
   writes no cache. Production on Windows works; training on it does not yet.
 - **The same JDK build in production as in training**, down to the image: the JVM compares the
   build string and the size of `lib/modules`, and the `-jre` package of the same Temurin build
-  has a different one. Train in the image that runs — the sample's Dockerfile shows how.
+  has a different one. Train in the image that runs: every distribution carries
+  `lib/zavarnik-runner.jar`, which trains and verifies on a bare JRE without Gradle, and the
+  sample's Dockerfile shows how.
 - **Ship `installDist` or `distTar`.** A zip cannot carry the cache: DOS timestamps are local time,
   and the JVM checks jar mtimes.
 - Gradle 9 (developed and tested on 9.7.1).
@@ -74,6 +76,30 @@ and `id("io.github.youndie.zavarnik") version "0.1.0.<run>"` — the latest is i
 3. `./gradlew distTar` or `docker build` — the start scripts pick the cache up when it is there,
    the tar carries it, and [`samples/ktor/Dockerfile`](samples/ktor/Dockerfile) trains it on the
    very image that runs it.
+
+### Without Gradle: the runner
+
+The cache has to be trained by the JVM that will use it, and the JVM that will use it usually
+lives in a `-jre` image with no Gradle and no curl. So the distribution's `lib/` carries the
+plugin's own logic as one self-contained jar, next to `zavarnik.properties` with the `zavarnik { }`
+block as the runner reads it:
+
+```dockerfile
+FROM eclipse-temurin:25.0.4_7-jdk AS build
+COPY . /src
+RUN cd /src && ./gradlew installDist --no-daemon
+
+FROM eclipse-temurin:25.0.4_7-jre
+COPY --from=build /src/build/install/app /opt/app
+RUN java -cp /opt/app/lib/zavarnik-runner.jar io.github.youndie.zavarnik.runner.Main train /opt/app \
+ && java -cp /opt/app/lib/zavarnik-runner.jar io.github.youndie.zavarnik.runner.Main verify /opt/app
+CMD ["/opt/app/bin/app"]
+```
+
+`train` is `aotTrain` and `verify` is `aotVerify` — the tasks are wrappers over the same classes,
+read the same file and fail with the same messages; a failed `verify` leaves no image. On the
+sample this takes the image from 647 MB (both stages `-jdk`) to 562 MB, with every application
+class still coming from the cache.
 
 ## The red build
 
@@ -147,6 +173,7 @@ negative result, with numbers, is [`docs/research/research-optimizer.md`](docs/r
 | Directory | What it is |
 |---|---|
 | `zavarnik-gradle-plugin/` | the plugin: tasks, start-script guard, checks, TestKit tests |
+| `zavarnik-runner/` | what the tasks call and what `lib/zavarnik-runner.jar` runs: training, verification, no Gradle |
 | `samples/ktor/` | a Ktor server on the plugin, with the Dockerfile and an in-container check |
 | `bench/` | the benchmark service and the profiling harness |
 | `experiments/` | the experiments the research cites, scripts and logs |

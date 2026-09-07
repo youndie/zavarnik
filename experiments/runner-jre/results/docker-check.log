@@ -1,0 +1,18 @@
+# samples/ktor/docker-check.sh, Linux box (Docker 29.1.3), 07.09.2026, after B-25:
+# build stage eclipse-temurin:25.0.4_7-jdk (installDist only), runtime stage eclipse-temurin:25.0.4_7-jre
+# (java -cp /opt/app/lib/zavarnik-runner.jar io.github.youndie.zavarnik.runner.Main train && … verify).
+image JVM: openjdk version "25.0.4" 2026-07-21 LTS
+ready=yes; classes from the cache: 3818 overall, 20 of 20 in sample.*
+docker-check exit=0
+
+# docker image ls zavarnik-ktor-sample --format "{{.Repository}}:{{.Tag}} {{.Size}}"
+# (the same command gave 647MB for the two-stage -jdk recipe on 06.09.2026)
+zavarnik-ktor-sample:latest 562MB
+
+# docker run --rm zavarnik-ktor-sample sh -c 'ls -la /opt/app/lib | grep -E "aot|zavarnik"; java -version'
+-rw-r--r-- 1 root root 31318016 Sep  7 09:44 app.aot
+-rw-r--r-- 1 root root     2597 Sep  7 09:44 app.aot.jars
+-rw-r--r-- 1 root root  1918669 Jan  2  1970 zavarnik-runner.jar
+-rw-r--r-- 1 root root      517 Sep  7 09:44 zavarnik.properties
+openjdk version "25.0.4" 2026-07-21 LTS
+OpenJDK Runtime Environment Temurin-25.0.4+7 (build 25.0.4+7-LTS)

@@ -1,5 +1,9 @@
 package io.github.youndie.zavarnik
 
+import io.github.youndie.zavarnik.runner.JitStats
+import io.github.youndie.zavarnik.runner.StartScriptRun
+import io.github.youndie.zavarnik.runner.Workload
+import io.github.youndie.zavarnik.runner.WorkloadStep
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty

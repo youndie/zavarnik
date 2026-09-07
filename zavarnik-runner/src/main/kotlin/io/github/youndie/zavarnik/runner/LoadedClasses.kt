@@ -1,4 +1,4 @@
-package io.github.youndie.zavarnik
+package io.github.youndie.zavarnik.runner
 
 import java.io.File
 import java.util.zip.ZipFile
@@ -12,13 +12,13 @@ import java.util.zip.ZipFile
  * numbers.
  */
 public data class LoadedClasses(
-    val total: Int,
-    val fromCache: Int,
-    val applicationTotal: Int,
-    val applicationFromCache: Int,
+    public val total: Int,
+    public val fromCache: Int,
+    public val applicationTotal: Int,
+    public val applicationFromCache: Int,
 ) {
     /** `applicationFromCache / applicationTotal`, or `0.0` when nothing of the application was loaded. */
-    val applicationShare: Double
+    public val applicationShare: Double
         get() = if (applicationTotal == 0) 0.0 else applicationFromCache.toDouble() / applicationTotal
 
     public companion object {

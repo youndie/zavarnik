@@ -1,4 +1,4 @@
-package io.github.youndie.zavarnik
+package io.github.youndie.zavarnik.runner
 
 /**
  * What `-XX:+CITime` prints at JVM exit, reduced to the four numbers the report shows.
@@ -15,11 +15,11 @@ package io.github.youndie.zavarnik
  * the CPU frequency, counts do not — though both grow with how many requests the window served.
  */
 public data class JitStats(
-    val c1Methods: Int,
-    val c1Seconds: Double,
-    val c2Methods: Int,
-    val c2Seconds: Double,
-    val totalSeconds: Double,
+    public val c1Methods: Int,
+    public val c1Seconds: Double,
+    public val c2Methods: Int,
+    public val c2Seconds: Double,
+    public val totalSeconds: Double,
 ) {
     public companion object {
         private val tier =

@@ -35,6 +35,6 @@ stage: stage-3-packaging
 - AC: `aotReport` печатает таблицу компиляций C1/C2 за окно нагрузки для обоих вариантов;
   README образца показывает её рядом с готовностью.
 - Якоря: `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/AotReportTask.kt`,
-  `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/JitStats.kt`,
-  `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/Workload.kt`,
+  `zavarnik-runner/src/main/kotlin/io/github/youndie/zavarnik/runner/JitStats.kt`,
+  `zavarnik-runner/src/main/kotlin/io/github/youndie/zavarnik/runner/Workload.kt`,
   `experiments/jit-warmup/citime.sh`, `docs/research/research-architecture.md` (§1.9).

@@ -9,10 +9,13 @@ A Ktor server on the `application` plugin with zavarnik applied. From the reposi
 samples/ktor/docker-check.sh         # the image, verified by the image's own JVM
 ```
 
-`Dockerfile` is the container recipe: the cache is trained in the build stage on the same Temurin
-build the runtime stage ships, because the JVM accepts a cache only from the JDK build that made
-it. `docker-check.sh` builds the image, starts it with the cache made mandatory and counts, from
-the container's own output, how many classes came from the cache.
+`Dockerfile` is the container recipe: the `-jdk` build stage only installs the distribution; the
+`-jre` runtime stage trains and verifies the cache with `lib/zavarnik-runner.jar` on its own JVM,
+because the JVM accepts a cache only from the JDK build that made it — and the `-jre` package is
+a different build to it. `docker-check.sh` builds the image, starts it with the cache made
+mandatory and counts, from the container's own output, how many classes came from the cache.
+Measured: 562 MB against 647 MB for two `-jdk` stages, every `sample.*` class from the cache
+(`experiments/runner-jre/`).
 
 `build.gradle.kts` is the whole integration: the plugin id, a port in `jvmArgs`, a readiness URL
 and a workload of two `curl` calls. The application itself is the stand measured in

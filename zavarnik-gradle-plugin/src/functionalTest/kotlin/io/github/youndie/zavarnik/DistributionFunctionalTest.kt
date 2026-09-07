@@ -1,5 +1,7 @@
 package io.github.youndie.zavarnik
 
+import io.github.youndie.zavarnik.runner.JarManifest
+import io.github.youndie.zavarnik.runner.Training
 import org.gradle.testkit.runner.GradleRunner
 import java.io.File
 import java.nio.file.Files
@@ -49,7 +51,9 @@ class DistributionFunctionalTest {
         val lib = File(unpacked, "fixture/lib")
         assertTrue(File(lib, "app.aot").length() > 1_000_000)
         assertTrue(File(lib, "app.aot.jars").isFile)
-        assertEquals(AotTrainTask.JAR_MTIME.toMillis(), File(lib, "fixture.jar").lastModified())
+        assertTrue(File(lib, "zavarnik.properties").isFile)
+        assertTrue(File(lib, "zavarnik-runner.jar").length() > 1_000_000)
+        assertEquals(Training.JAR_MTIME.toMillis(), File(lib, "fixture.jar").lastModified())
         assertTrue(JarManifest.differences(lib, File(lib, "app.aot.jars")).isEmpty())
     }
 

@@ -1,6 +1,5 @@
-package io.github.youndie.zavarnik
+package io.github.youndie.zavarnik.runner
 
-import org.gradle.api.GradleException
 import java.io.File
 import java.net.URI
 import java.net.http.HttpClient
@@ -19,7 +18,7 @@ import java.util.concurrent.TimeUnit
  * travel through `JAVA_OPTS`, which the script folds into the command line after its own
  * `DEFAULT_JVM_OPTS`.
  */
-internal class StartScriptRun(
+public class StartScriptRun(
     private val script: File,
     private val javaHome: File,
     private val javaOpts: List<String>,
@@ -30,9 +29,9 @@ internal class StartScriptRun(
     /** Nanoseconds since the process was started. Monotonic on purpose: this measures durations. */
     private var startedAt: Long = 0
 
-    fun start() {
+    public fun start() {
         if (System.getProperty("os.name").startsWith("Windows")) {
-            throw GradleException(
+            throw RunnerException(
                 "zavarnik: training on Windows is not supported yet — the training run is stopped with " +
                     "SIGTERM, which Windows does not have, and a killed JVM writes no cache.",
             )
@@ -50,15 +49,15 @@ internal class StartScriptRun(
     }
 
     /** Milliseconds since [start]. */
-    fun elapsedMillis(): Long = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt)
+    public fun elapsedMillis(): Long = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt)
 
-    val isAlive: Boolean get() = process.isAlive
+    public val isAlive: Boolean get() = process.isAlive
 
     /**
      * Polls [url] until it answers `200`, or [timeout] passes, or the process dies. Returns the
      * milliseconds it took; throws with the log's tail otherwise.
      */
-    fun awaitReady(
+    public fun awaitReady(
         url: String,
         timeout: Duration,
     ): Long {
@@ -72,13 +71,13 @@ internal class StartScriptRun(
         val deadline = System.nanoTime() + timeout.toNanos()
         while (System.nanoTime() < deadline) {
             if (!process.isAlive) {
-                throw GradleException("zavarnik: the application exited before $url answered.\n${logTail()}")
+                throw RunnerException("zavarnik: the application exited before $url answered.\n${logTail()}")
             }
             if (probe(client, request) == HTTP_OK) return elapsedMillis()
             Thread.sleep(POLL_INTERVAL_MILLIS)
         }
         kill()
-        throw GradleException(
+        throw RunnerException(
             "zavarnik: $url did not answer 200 within ${timeout.toSeconds()} s (readyTimeout).\n${logTail()}",
         )
     }
@@ -95,19 +94,19 @@ internal class StartScriptRun(
             -1
         } catch (interrupted: InterruptedException) {
             Thread.currentThread().interrupt()
-            throw GradleException("zavarnik: interrupted while waiting for readiness", interrupted)
+            throw RunnerException("zavarnik: interrupted while waiting for readiness", interrupted)
         }
 
     /**
      * `SIGTERM`, then wait up to [timeout] for the process to exit. A process that does not exit
      * is killed — and the task that asked for this fails, because a killed JVM writes no cache.
      */
-    fun stop(timeout: Duration) {
+    public fun stop(timeout: Duration) {
         if (!process.isAlive) return
         process.destroy()
         if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
             process.destroyForcibly()
-            throw GradleException(
+            throw RunnerException(
                 "zavarnik: the application did not exit within ${timeout.toSeconds()} s of SIGTERM " +
                     "(shutdownTimeout); it was killed with SIGKILL, which writes no cache.\n${logTail()}",
             )
@@ -119,14 +118,14 @@ internal class StartScriptRun(
      * leave no cache behind — a half-trained cache is a half-truth — and a killed JVM writes none,
      * with no assembler child to race the deletion.
      */
-    fun kill() {
+    public fun kill() {
         if (!process.isAlive) return
         process.destroyForcibly()
         process.waitFor(KILL_WAIT_SECONDS, TimeUnit.SECONDS)
     }
 
     /** Last lines of the process log, for an error message. */
-    fun logTail(lines: Int = LOG_TAIL_LINES): String =
+    public fun logTail(lines: Int = LOG_TAIL_LINES): String =
         if (log.exists()) {
             log
                 .readLines()

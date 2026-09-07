@@ -58,8 +58,8 @@ AOTCacheOutput can be specified» (G5), поэтому кэша в момент 
 - AC: `touch` любого jar в `lib/` после `aotTrain` делает `aotVerify` красным (проверка
   [B-06](B-06-aot-verify-task.md)), а повторный `aotTrain` — снова зелёным.
 - Якоря: `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/AotTrainTask.kt`,
-  `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/StartScriptRun.kt`,
-  `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/JarManifest.kt`,
+  `zavarnik-runner/src/main/kotlin/io/github/youndie/zavarnik/runner/StartScriptRun.kt`,
+  `zavarnik-runner/src/main/kotlin/io/github/youndie/zavarnik/runner/JarManifest.kt`,
   `zavarnik-gradle-plugin/src/functionalTest/kotlin/io/github/youndie/zavarnik/AotTrainFunctionalTest.kt`,
   `experiments/aot-validation/run.sh` (E1–E4, D1–D2, M2), `experiments/gradle-start-script/run.sh`
   (G1–G5), `docs/research/research-architecture.md` (§1.3–§1.5, D1–D3).

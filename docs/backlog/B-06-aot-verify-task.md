@@ -45,7 +45,7 @@ blocked_by: [B-05]
   values for property jdk.module.addmods» (R8).
 - AC: `aotVerify` в `check` (умолчание) — сборка библиотеки без `application` не трогается.
 - Якоря: `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/AotVerifyTask.kt`,
-  `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/LoadedClasses.kt`,
+  `zavarnik-runner/src/main/kotlin/io/github/youndie/zavarnik/runner/LoadedClasses.kt`,
   `zavarnik-gradle-plugin/src/functionalTest/kotlin/io/github/youndie/zavarnik/AotVerifyFunctionalTest.kt`,
   `experiments/aot-validation/run.sh` (R8, R9, R13–R16, функция `summ`),
   `experiments/aot-validation/results/2026-09-06-macos-aarch64-openjdk-25.0.2.log` (R14 с

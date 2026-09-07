@@ -21,3 +21,4 @@ plugins {
 }
 
 include(":zavarnik-gradle-plugin")
+include(":zavarnik-runner")

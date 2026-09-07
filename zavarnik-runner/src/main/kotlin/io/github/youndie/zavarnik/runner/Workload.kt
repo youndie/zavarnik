@@ -1,6 +1,5 @@
-package io.github.youndie.zavarnik
+package io.github.youndie.zavarnik.runner
 
-import org.gradle.api.GradleException
 import java.io.File
 import java.io.IOException
 import java.net.URI
@@ -14,13 +13,13 @@ import java.time.Duration
  * client, commands through the process API. Shared by the training run, which runs the steps
  * once, and the report, which loops over them for a while to give the JIT something to do.
  */
-internal class Workload(
+public class Workload(
     private val log: File,
 ) {
     private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(REQUEST_TIMEOUT_SECONDS)).build()
 
     /** Runs one step; a failure is a [GradleException] naming the step and the reason. */
-    fun run(step: WorkloadStep) {
+    public fun run(step: WorkloadStep) {
         if (step.isCommand) runCommand(step.command) else runRequest(step)
     }
 
@@ -32,7 +31,7 @@ internal class Workload(
                     .redirectOutput(ProcessBuilder.Redirect.appendTo(log))
                     .start()
             } catch (notFound: IOException) {
-                throw GradleException(
+                throw RunnerException(
                     "zavarnik: workload command `${command.first()}` cannot be started here (${notFound.message}). " +
                         "Inside a container or on a bare runner prefer `workload { get(…) }` / `post(…)`, " +
                         "which need nothing installed.",
@@ -43,7 +42,7 @@ internal class Workload(
         if (exit !=
             0
         ) {
-            throw GradleException("zavarnik: workload command ${command.joinToString(" ")} exited with $exit.")
+            throw RunnerException("zavarnik: workload command ${command.joinToString(" ")} exited with $exit.")
         }
     }
 
@@ -64,12 +63,12 @@ internal class Workload(
             try {
                 http.send(request, HttpResponse.BodyHandlers.discarding()).statusCode()
             } catch (failed: IOException) {
-                throw GradleException("zavarnik: workload request $step failed: ${failed.message}", failed)
+                throw RunnerException("zavarnik: workload request $step failed: ${failed.message}", failed)
             } catch (interrupted: InterruptedException) {
                 Thread.currentThread().interrupt()
-                throw GradleException("zavarnik: interrupted during the workload", interrupted)
+                throw RunnerException("zavarnik: interrupted during the workload", interrupted)
             }
-        if (status !in HTTP_OK_RANGE) throw GradleException("zavarnik: workload request $step answered $status.")
+        if (status !in HTTP_OK_RANGE) throw RunnerException("zavarnik: workload request $step answered $status.")
     }
 
     private companion object {

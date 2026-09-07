@@ -1,0 +1,9 @@
+# docker run --rm zavarnik-ktor-sample sh -c 'printf x >> /opt/app/lib/ktor-sample.jar; java -cp /opt/app/lib/zavarnik-runner.jar io.github.youndie.zavarnik.runner.Main verify /opt/app; echo exit=$?'
+zavarnik: the jars in lib/ are not the ones app.aot was trained against:
+  - ktor-sample.jar: changed since aotTrain
+Run aotTrain again after every change to the classpath.
+exit=1
+
+# docker run --rm zavarnik-ktor-sample sh -c 'java -cp /opt/app/lib/zavarnik-runner.jar io.github.youndie.zavarnik.runner.Main verify /opt/app; echo exit=$?'
+zavarnik: 2259 of 2259 application classes (100.0%) came from app.aot; 3818 of 3832 loaded classes overall
+exit=0

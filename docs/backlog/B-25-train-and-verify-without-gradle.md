@@ -1,7 +1,7 @@
 ---
 id: B-25
 title: "Тренировка и проверка без Gradle: раннер в lib/, чтобы JRE-стадия образа тренировала кэш сама"
-status: open
+status: done
 priority: P1
 size: M
 stage: stage-3-packaging
@@ -34,7 +34,23 @@ Issue youndie/zavarnik#2: JRE-образ пишет и читает свой к�
   `-XX:AOTMode=on` стартует с 100 % классов `sample.*` из кэша; `docker-check.sh` зелёный;
   размер образа записан рядом с 647 МБ.
 - AC: `runner verify` внутри контейнера падает на подменённом jar с тем же текстом, что `aotVerify`.
-- Якоря: `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/StartScriptRun.kt`,
-  `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/Workload.kt`,
-  `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/AotVerifyTask.kt`,
-  `samples/ktor/Dockerfile`, `docs/research/research-architecture.md` (§1.1 следствие 5).
+- Якоря: `zavarnik-runner/src/main/kotlin/io/github/youndie/zavarnik/runner/Main.kt`,
+  `zavarnik-runner/src/main/kotlin/io/github/youndie/zavarnik/runner/Training.kt`,
+  `zavarnik-runner/src/main/kotlin/io/github/youndie/zavarnik/runner/Verification.kt`,
+  `zavarnik-runner/src/main/kotlin/io/github/youndie/zavarnik/runner/RunnerConfig.kt`,
+  `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/RunnerFilesTask.kt`,
+  `zavarnik-gradle-plugin/src/functionalTest/kotlin/io/github/youndie/zavarnik/RunnerFunctionalTest.kt`,
+  `samples/ktor/Dockerfile`, `experiments/runner-jre/`, `docs/research/research-architecture.md`
+  (§1.1 следствие 5).
+
+**Сделано 07.09.2026.** Модуль `zavarnik-runner` (только Kotlin stdlib, `jvmFloor` 17) — туда
+переехали `StartScriptRun`, `Workload`, `JarManifest`, `LoadedClasses`, `JitStats`, добавлены
+`Training`, `Verification`, `Installation`, `RunnerConfig` и `Main` (`train|verify [<dir>]`,
+каталог по умолчанию — тот, в чьём `lib/` лежит сам jar, JDK — тот, что запустил раннер).
+`aotTrain`/`aotVerify` — обёртки: читают `lib/zavarnik.properties` и зовут те же классы, так
+что задача и раннер идут одним путём. Конфигурация — `Properties`, а не JSON (как в плане):
+раннер без зависимостей. Толстый jar (`fatJar`, со stdlib) едет ресурсом внутри плагина; задача
+`zavarnikRunnerFiles` кладёт его и `zavarnik.properties` в `lib/` через содержимое дистрибутива,
+поэтому они есть и в `installDist`, и в tar, и в zip. Оба AC закрыты, журналы —
+`experiments/runner-jre/results/`: образ **562 МБ** против 647, 20/20 `sample.*` из кэша,
+`verify` в контейнере на подменённом jar — тот же текст, `exit=1`.

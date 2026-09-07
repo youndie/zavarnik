@@ -90,6 +90,9 @@ jobs:
       - uses: youndie/sborka/.github/actions/setup-kotlin@main
       - run: ./gradlew -p samples/ktor check distTar --console=plain
       - run: tar tf samples/ktor/build/distributions/ktor-sample.tar | grep -E "lib/app\.aot(\.jars)?$"
+      # The container recipe: a -jre runtime stage that trains and verifies with the runner, checked
+      # by the image's own JVM.
+      - run: samples/ktor/docker-check.sh
 
   # Separate from the gate, and on a schedule rather than on a pull request, because an anchor rots
   # when somebody refactors a **different** repository. A pull request here is the least likely

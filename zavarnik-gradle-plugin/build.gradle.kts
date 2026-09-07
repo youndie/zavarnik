@@ -31,14 +31,34 @@ gradlePlugin {
 functionalTest.compileClasspath += sourceSets.main.get().output
 functionalTest.runtimeClasspath += sourceSets.main.get().output
 
+// The runner is the implementation: the tasks call it in-process, and the distribution carries
+// it as one self-contained jar so that `train` and `verify` also run where there is no Gradle —
+// the runtime stage of a container image. The fat jar comes from the runner project's own
+// consumable configuration and is embedded as a resource, so the published plugin needs nothing
+// but its ordinary dependency on the runner at build time.
+val runnerJar: Configuration by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+
 dependencies {
+    implementation(project(":zavarnik-runner"))
+    runnerJar(project(mapOf("path" to ":zavarnik-runner", "configuration" to "runnerJar")))
     // The unit tests touch GradleException and Property; `java-gradle-plugin` puts the Gradle API on
     // the main classpath but, with these conventions, not on the unit-test runtime.
     testImplementation(gradleApi())
     testImplementation(kotlin("test"))
+    "functionalTestImplementation"(project(":zavarnik-runner"))
     "functionalTestImplementation"(kotlin("test-junit5"))
     "functionalTestImplementation"(gradleTestKit())
     "functionalTestRuntimeOnly"("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.processResources {
+    from(runnerJar) {
+        into("META-INF/zavarnik")
+        rename { "zavarnik-runner.jar" }
+    }
 }
 
 val functionalTestTask =
