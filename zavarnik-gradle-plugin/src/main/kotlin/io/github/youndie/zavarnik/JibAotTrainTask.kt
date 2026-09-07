@@ -6,6 +6,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
@@ -36,6 +37,10 @@ public abstract class JibAotTrainTask : DefaultTask() {
     @get:Input
     public abstract val cacheFileName: Property<String>
 
+    /** Extra `docker run` arguments — the stand's network and environment ([JibSpec.dockerRunArgs]). */
+    @get:Input
+    public abstract val dockerRunArgs: ListProperty<String>
+
     /** `build/zavarnik/jib/`: the cache and the manifest, for the next Jib build. */
     @get:OutputDirectory
     public abstract val cacheDir: DirectoryProperty
@@ -52,7 +57,7 @@ public abstract class JibAotTrainTask : DefaultTask() {
         val log = logFile.get().asFile
         log.delete()
         DockerCommand.run(
-            JibImage.runnerCommand(image, appRoot.get(), out, "train"),
+            JibImage.runnerCommand(image, appRoot.get(), out, "train", dockerRunArgs.get()),
             log,
             "training inside $image",
         )
@@ -92,25 +97,29 @@ internal object JibImage {
         appRoot: String,
         out: File,
         command: String,
+        dockerRunArgs: List<String> = emptyList(),
+        hostUser: String = DockerCommand.hostUser(),
     ): List<String> =
         listOf(
             "run",
             "--rm",
-            "--user",
-            DockerCommand.hostUser(),
-            "-v",
-            "${out.absolutePath}:$MOUNT",
-            "--entrypoint",
-            "java",
-            image,
-            "-cp",
-            "$appRoot/${Installation.JIB_RUNNER_DIR}/${RunnerFilesTask.RUNNER_JAR_NAME}",
-            RUNNER_MAIN,
-            command,
-            appRoot,
-            "--out",
-            MOUNT,
-        )
+        ) + dockerRunArgs +
+            listOf(
+                "--user",
+                hostUser,
+                "-v",
+                "${out.absolutePath}:$MOUNT",
+                "--entrypoint",
+                "java",
+                image,
+                "-cp",
+                "$appRoot/${Installation.JIB_RUNNER_DIR}/${RunnerFilesTask.RUNNER_JAR_NAME}",
+                RUNNER_MAIN,
+                command,
+                appRoot,
+                "--out",
+                MOUNT,
+            )
 
     private const val MOUNT = "/zavarnik-out"
     private const val RUNNER_MAIN = "io.github.youndie.zavarnik.runner.Main"

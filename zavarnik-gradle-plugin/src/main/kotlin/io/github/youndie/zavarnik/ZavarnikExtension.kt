@@ -72,6 +72,14 @@ public abstract class ZavarnikExtension
         public fun verify(action: Action<in VerifySpec>) {
             action.execute(verify)
         }
+
+        /** The Jib mode's knobs — see [JibSpec]. Ignored unless Jib is applied. */
+        public val jib: JibSpec = objects.newInstance(JibSpec::class.java)
+
+        /** Configures [jib]. */
+        public fun jib(action: Action<in JibSpec>) {
+            action.execute(jib)
+        }
     }
 
 /** The training run. Either [readyWhen] plus [workload], or [exitAfter] for an application without a port. */
@@ -211,6 +219,28 @@ public class RequestSpec {
         path: String,
     ) {
         captures[variable] = path
+    }
+}
+
+/**
+ * The Jib mode: `jibAotTrain` and `jibAotVerify` run the image in a container, and an application
+ * that needs its database or a broker to start needs that container on a network with them and
+ * with their addresses in its environment. [dockerRunArgs] go on the `docker run` command line
+ * after `--rm`, before the image: `--network`, `-e`, `--add-host`, whatever the stand needs.
+ *
+ * ```kotlin
+ * zavarnik {
+ *     jib { dockerRunArgs("--network", "stand_default", "-e", "DB_URL=jdbc:postgresql://postgres:5432/app") }
+ * }
+ * ```
+ */
+public abstract class JibSpec {
+    /** Extra `docker run` arguments for the training and verification containers. Empty by default. */
+    public abstract val dockerRunArgs: ListProperty<String>
+
+    /** Adds to [dockerRunArgs]. */
+    public fun dockerRunArgs(vararg args: String) {
+        dockerRunArgs.addAll(args.toList())
     }
 }
 

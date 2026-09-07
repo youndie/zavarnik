@@ -4,6 +4,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
@@ -35,6 +36,10 @@ public abstract class JibAotVerifyTask : DefaultTask() {
     @get:Input
     public abstract val cacheFileName: Property<String>
 
+    /** Extra `docker run` arguments — the stand's network and environment ([JibSpec.dockerRunArgs]). */
+    @get:Input
+    public abstract val dockerRunArgs: ListProperty<String>
+
     /** Whether the cache existed when Jib was configured — i.e. whether the image built in this invocation carries it. */
     @get:Input
     public abstract val cacheInImage: Property<Boolean>
@@ -65,7 +70,11 @@ public abstract class JibAotVerifyTask : DefaultTask() {
         out.mkdirs()
         val log = logFile.get().asFile
         log.delete()
-        DockerCommand.run(JibImage.runnerCommand(image, appRoot.get(), out, "verify"), log, "verifying inside $image")
+        DockerCommand.run(
+            JibImage.runnerCommand(image, appRoot.get(), out, "verify", dockerRunArgs.get()),
+            log,
+            "verifying inside $image",
+        )
         val summary =
             log.readLines().lastOrNull { it.startsWith("zavarnik: ") && "came from" in it }
                 ?: throw GradleException(

@@ -51,6 +51,7 @@ internal object JibSupport {
                 task.dependsOn(JIB_DOCKER_BUILD_TASK)
                 task.imageJson.set(project.layout.buildDirectory.file("jib-image.json"))
                 task.cacheDir.set(cacheDir)
+                task.dockerRunArgs.set(extension.jib.dockerRunArgs)
                 task.logFile.set(project.layout.buildDirectory.file("zavarnik/jibAotTrain.log"))
             }
         project.tasks.register(VERIFY_TASK, JibAotVerifyTask::class.java) { task ->
@@ -61,6 +62,7 @@ internal object JibSupport {
             task.mustRunAfter(train)
             task.imageJson.set(project.layout.buildDirectory.file("jib-image.json"))
             task.cacheDir.set(cacheDir)
+            task.dockerRunArgs.set(extension.jib.dockerRunArgs)
             task.logFile.set(project.layout.buildDirectory.file("zavarnik/jibAotVerify.log"))
             task.reportFile.set(project.layout.buildDirectory.file("zavarnik/jibAotVerify.txt"))
         }

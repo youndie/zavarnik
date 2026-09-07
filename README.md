@@ -138,7 +138,9 @@ jib { containerizingMode = "packaged" }          // jars only; the plugin refuse
 Jib reads its configuration once per build, so the first training and the first verification
 are two invocations; from then on the cache is a layer of every Jib build and `-XX:AOTCache` is
 in the entrypoint. The runner runs as the host user with `build/zavarnik/jib/` mounted, so the
-cache lands on the host and Jib's file timestamps are never touched. What this mode costs: a
+cache lands on the host and Jib's file timestamps are never touched. An application that needs
+its database to start gets the stand's network and environment through
+`zavarnik { jib { dockerRunArgs("--network", "stand_default", "-e", "DB_URL=…") } }`. What this mode costs: a
 Docker daemon on the build machine — the one thing Jib let a build do without. `jib` straight to
 a registry, with no daemon, builds an image without a cache.
 
