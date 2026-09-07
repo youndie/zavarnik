@@ -321,9 +321,9 @@ RQ6 уезжает в kapkan (sborka) как Gradle-задача над `build/c
 **Открытый вопрос 1.** Заводить ли issue в R8 (B-17) и куда нести находки про Ktor (B-23) —
 владелец.
 
-**Открытый вопрос 2.** Если строить линт: правило в kapkan (ktlint, sborka) или отдельный
-инструмент над байткодом (RQ6 требует class-файлов, ktlint их не видит). Не решать до
-решения по D1.
+**Открытый вопрос 2 — закрыт 07.09.2026.** Линт — в kapkan, задачей над `build/classes`
+(`kapkanMethodSizes`, sborka #30/#31 по issue youndie/sborka#28), без ASM — тем же ридером
+constant pool, что у `kapkanJoins`.
 
 ---
 
