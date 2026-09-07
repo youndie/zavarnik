@@ -1,0 +1,21 @@
+# The steps live in sborka — `.github/workflows/publish-wip.yaml`, called below. What stays here is
+# what is true of zavarnik and not of the other libraries: the plugin's own check set runs first,
+# because it trains real AOT caches, and a publish is the one step that cannot be taken back.
+name: Publish zavarnik wip snapshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  publish:
+    uses: youndie/sborka/.github/workflows/publish-wip.yaml@main
+    with:
+      check: check
+      tasks: publishAllPublicationsToWipRepository
+    # Named one by one rather than `secrets: inherit`: this hands them to a workflow in another
+    # repository, and the two it needs are the two it gets.
+    secrets:
+      REPOSILITE_USER: ${{ secrets.REPOSILITE_USER }}
+      REPOSILITE_SECRET: ${{ secrets.REPOSILITE_SECRET }}
