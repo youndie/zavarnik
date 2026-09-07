@@ -68,6 +68,19 @@ and `id("io.github.youndie.zavarnik") version "0.1.0.<run>"` — the latest is i
    }
    ```
 
+   The workload is what the cache holds, so it should be the hot path. A signed-in hot path
+   needs no curl and no script: a step can send headers and take values out of its JSON answer
+   for the steps after it, as `{{name}}` (dot path, an integer segment indexes an array):
+
+   ```kotlin
+   workload {
+       post("http://127.0.0.1:8080/auth/login", "application/json", """{"user":"demo"}""") {
+           capture("token", "accessToken")
+       }
+       get("http://127.0.0.1:8080/api/home") { header("Authorization", "Bearer {{token}}") }
+   }
+   ```
+
 2. `./gradlew check` — `aotTrain` runs the installed application through its own start script
    with `-XX:AOTCacheOutput`, waits for the readiness URL, runs the workload, stops the JVM and
    waits for the cache to be assembled; `aotVerify` then fails the build unless production would

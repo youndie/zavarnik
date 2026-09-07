@@ -40,6 +40,8 @@ public data class RunnerConfig(
                 props["$key.url"] = step.url
                 step.contentType?.let { props["$key.contentType"] = it }
                 step.body?.let { props["$key.body"] = it }
+                for ((name, value) in step.headers) props["$key.header.$name"] = value
+                for ((variable, path) in step.captures) props["$key.capture.$variable"] = path
             }
         }
         file.parentFile.mkdirs()
@@ -64,6 +66,13 @@ public data class RunnerConfig(
             fun millis(key: String): Duration? = props.getProperty(key)?.let { Duration.ofMillis(it.toLong()) }
 
             fun list(key: String): List<String> = props.getProperty(key, "").split(SEPARATOR).filter { it.isNotEmpty() }
+
+            fun byPrefix(prefix: String): Map<String, String> =
+                props
+                    .stringPropertyNames()
+                    .filter { it.startsWith(prefix) }
+                    .sorted()
+                    .associate { it.removePrefix(prefix) to props.getProperty(it) }
             val steps = ArrayList<WorkloadStep>()
             var i = 0
             while (props.containsKey("workload.$i.command") || props.containsKey("workload.$i.url")) {
@@ -77,6 +86,8 @@ public data class RunnerConfig(
                             props.getProperty("$key.url"),
                             props.getProperty("$key.contentType"),
                             props.getProperty("$key.body"),
+                            headers = byPrefix("$key.header."),
+                            captures = byPrefix("$key.capture."),
                         )
                     }
                 i++

@@ -141,6 +141,15 @@ public abstract class WorkloadSpec {
         steps.add(WorkloadStep.http("GET", url, null, null))
     }
 
+    /** Appends an HTTP `GET` with headers and captures — see [RequestSpec]. */
+    public fun get(
+        url: String,
+        configure: Action<RequestSpec>,
+    ) {
+        val spec = RequestSpec().also(configure::execute)
+        steps.add(WorkloadStep.http("GET", url, null, null, spec.headers, spec.captures))
+    }
+
     /** Appends an HTTP `POST` with a body. */
     public fun post(
         url: String,
@@ -150,9 +159,58 @@ public abstract class WorkloadSpec {
         steps.add(WorkloadStep.http("POST", url, contentType, body))
     }
 
+    /** Appends an HTTP `POST` with a body, headers and captures — see [RequestSpec]. */
+    public fun post(
+        url: String,
+        contentType: String,
+        body: String,
+        configure: Action<RequestSpec>,
+    ) {
+        val spec = RequestSpec().also(configure::execute)
+        steps.add(WorkloadStep.http("POST", url, contentType, body, spec.headers, spec.captures))
+    }
+
     /** Appends an external command. */
     public fun exec(vararg command: String) {
         steps.add(WorkloadStep.command(command.toList()))
+    }
+}
+
+/**
+ * The optional part of a request: headers it sends and values it takes out of its JSON answer.
+ *
+ * A captured value is available to every later step as `{{name}}` in the URL, headers, body and
+ * command words — how a signed-in workload is written without curl and without a script:
+ *
+ * ```kotlin
+ * workload {
+ *     post("http://127.0.0.1:8080/auth/login", "application/json", """{"user":"demo"}""") {
+ *         capture("token", "accessToken")
+ *     }
+ *     get("http://127.0.0.1:8080/api/home") { header("Authorization", "Bearer {{token}}") }
+ * }
+ * ```
+ *
+ * The path is dot-separated, an integer segment indexes an array: `user.id`, `items.0.sku`.
+ */
+public class RequestSpec {
+    internal val headers: MutableMap<String, String> = LinkedHashMap()
+    internal val captures: MutableMap<String, String> = LinkedHashMap()
+
+    /** Sends this header; the value may use `{{name}}` captured earlier. */
+    public fun header(
+        name: String,
+        value: String,
+    ) {
+        headers[name] = value
+    }
+
+    /** Reads [path] out of the JSON response into `{{variable}}`. */
+    public fun capture(
+        variable: String,
+        path: String,
+    ) {
+        captures[variable] = path
     }
 }
 

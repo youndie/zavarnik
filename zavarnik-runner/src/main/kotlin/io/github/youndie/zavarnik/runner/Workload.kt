@@ -7,20 +7,24 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Runs [WorkloadStep]s against a started application: HTTP requests through the plugin's own
  * client, commands through the process API. Shared by the training run, which runs the steps
  * once, and the report, which loops over them for a while to give the JIT something to do.
+ *
+ * Values a step [WorkloadStep.captures] live here for the steps after it, as `{{name}}`.
  */
 public class Workload(
     private val log: File,
 ) {
     private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(REQUEST_TIMEOUT_SECONDS)).build()
+    private val variables = ConcurrentHashMap<String, String>()
 
-    /** Runs one step; a failure is a [GradleException] naming the step and the reason. */
+    /** Runs one step; a failure is a [RunnerException] naming the step and the reason. */
     public fun run(step: WorkloadStep) {
-        if (step.isCommand) runCommand(step.command) else runRequest(step)
+        if (step.isCommand) runCommand(step.command.map { expand(it, step) }) else runRequest(step)
     }
 
     private fun runCommand(command: List<String>) {
@@ -39,9 +43,7 @@ public class Workload(
                 )
             }
         val exit = process.waitFor()
-        if (exit !=
-            0
-        ) {
+        if (exit != 0) {
             throw RunnerException("zavarnik: workload command ${command.joinToString(" ")} exited with $exit.")
         }
     }
@@ -49,30 +51,75 @@ public class Workload(
     private fun runRequest(step: WorkloadStep) {
         val request =
             HttpRequest
-                .newBuilder(URI.create(step.url))
+                .newBuilder(URI.create(expand(step.url, step)))
                 .timeout(Duration.ofSeconds(REQUEST_TIMEOUT_SECONDS))
                 .apply {
+                    for ((name, value) in step.headers) header(name, expand(value, step))
                     if (step.method == "POST") {
                         header("Content-Type", step.contentType ?: "application/octet-stream")
-                        POST(HttpRequest.BodyPublishers.ofString(step.body.orEmpty()))
+                        POST(HttpRequest.BodyPublishers.ofString(expand(step.body.orEmpty(), step)))
                     } else {
                         GET()
                     }
                 }.build()
-        val status =
+        val response =
             try {
-                http.send(request, HttpResponse.BodyHandlers.discarding()).statusCode()
+                http.send(request, HttpResponse.BodyHandlers.ofString())
             } catch (failed: IOException) {
                 throw RunnerException("zavarnik: workload request $step failed: ${failed.message}", failed)
             } catch (interrupted: InterruptedException) {
                 Thread.currentThread().interrupt()
                 throw RunnerException("zavarnik: interrupted during the workload", interrupted)
             }
-        if (status !in HTTP_OK_RANGE) throw RunnerException("zavarnik: workload request $step answered $status.")
+        if (response.statusCode() !in HTTP_OK_RANGE) {
+            throw RunnerException("zavarnik: workload request $step answered ${response.statusCode()}.")
+        }
+        if (step.captures.isNotEmpty()) capture(step, response.body())
     }
+
+    private fun capture(
+        step: WorkloadStep,
+        body: String,
+    ) {
+        val json =
+            try {
+                Json.parse(body)
+            } catch (notJson: RunnerException) {
+                throw RunnerException(
+                    "zavarnik: workload request $step did not answer JSON, nothing to capture: ${notJson.message}",
+                    notJson,
+                )
+            }
+        for ((variable, path) in step.captures) {
+            variables[variable] =
+                try {
+                    Json.extract(json, path)
+                } catch (missing: RunnerException) {
+                    throw RunnerException(
+                        "zavarnik: workload request $step: cannot capture `$variable` — ${missing.message}",
+                        missing,
+                    )
+                }
+        }
+    }
+
+    /** `{{name}}` → the captured value; a name nothing captured is a mistake in the workload, not an empty string. */
+    private fun expand(
+        text: String,
+        step: WorkloadStep,
+    ): String =
+        PLACEHOLDER.replace(text) { match ->
+            val name = match.groupValues[1]
+            variables[name]
+                ?: throw RunnerException(
+                    "zavarnik: workload step $step uses {{$name}}, which no earlier step captured " +
+                        "(captured so far: ${variables.keys.sorted()}).",
+                )
+        }
 
     private companion object {
         const val REQUEST_TIMEOUT_SECONDS = 30L
         val HTTP_OK_RANGE = 200..299
+        val PLACEHOLDER = Regex("""\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*}}""")
     }
 }

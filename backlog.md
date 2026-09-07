@@ -34,14 +34,15 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (2)
+## Open (3)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
+| [B-26](docs/backlog/B-26-jib-and-ktor-plugin-mode.md) `[ ]` | Режим для Jib и Ktor-плагина: тренировка в образе без стартового скрипта, кэш вторым слоем | P2 | M | - |
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
-## Closed (23)
+## Closed (24)
 
 **Стенд**
 
@@ -65,6 +66,7 @@
 - [B-14](docs/backlog/B-14-windows-training.md) `[-]` - Тренировка на Windows: без SIGTERM нужен другой способ закончить прогон
 - [B-24](docs/backlog/B-24-aot-report-warmup-curve.md) `[x]` - aotReport: показывать не только готовность, но и прогрев — работу JIT после старта
 - [B-25](docs/backlog/B-25-train-and-verify-without-gradle.md) `[x]` - Тренировка и проверка без Gradle: раннер в lib/, чтобы JRE-стадия образа тренировала кэш сама
+- [B-27](docs/backlog/B-27-workload-headers-and-captures.md) `[x]` - Workload: заголовки запроса и захват значения из ответа — чтобы тренировать за авторизацией
 
 **Выпуск**
 

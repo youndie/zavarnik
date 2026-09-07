@@ -3,6 +3,7 @@ package io.github.youndie.zavarnik
 import io.github.youndie.zavarnik.runner.JarManifest
 import io.github.youndie.zavarnik.runner.Training
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.TaskOutcome
 import java.io.File
 import java.nio.file.Files
 import java.util.zip.ZipFile
@@ -55,6 +56,25 @@ class DistributionFunctionalTest {
         assertTrue(File(lib, "zavarnik-runner.jar").length() > 1_000_000)
         assertEquals(Training.JAR_MTIME.toMillis(), File(lib, "fixture.jar").lastModified())
         assertTrue(JarManifest.differences(lib, File(lib, "app.aot.jars")).isEmpty())
+    }
+
+    @Test
+    fun `a wildcard classpath in the start script trains and verifies like a listed one`() {
+        Fixture.write(
+            projectDir,
+            extension =
+                extension +
+                    """
+
+                    tasks.named<org.gradle.jvm.application.tasks.CreateStartScripts>("startScripts") {
+                        classpath = files("lib/*")
+                    }
+                    """.trimIndent(),
+        )
+        val result = runner("aotVerify").build()
+        assertContains(File(projectDir, "build/install/fixture/bin/fixture").readText(), "\$APP_HOME/lib/*")
+        assertEquals(TaskOutcome.SUCCESS, result.task(":aotVerify")?.outcome)
+        assertContains(result.output, "application classes (100.0%) came from app.aot")
     }
 
     @Test

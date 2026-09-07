@@ -46,6 +46,49 @@ class AotTrainFunctionalTest {
     }
 
     @Test
+    fun `a captured token signs the next step, and a step without it is a 401 the run reports`() {
+        val signedIn =
+            """
+            zavarnik {
+                training {
+                    readyWhen.url("http://127.0.0.1:${Fixture.PORT}/health")
+                    workload {
+                        post("http://127.0.0.1:${Fixture.PORT}/login", "application/json", "{}") {
+                            capture("token", "accessToken")
+                            capture("user", "user.id")
+                        }
+                        get("http://127.0.0.1:${Fixture.PORT}/private") {
+                            header("Authorization", "Bearer {{token}}")
+                            header("X-User", "{{user}}")
+                        }
+                    }
+                }
+            }
+            """.trimIndent()
+        Fixture.write(projectDir, extension = signedIn)
+        assertEquals(TaskOutcome.SUCCESS, runner("aotTrain").build().task(":aotTrain")?.outcome)
+        val properties = File(projectDir, "build/install/fixture/lib/zavarnik.properties").readText()
+        assertContains(properties, "workload.1.header.Authorization=Bearer {{token}}")
+        assertContains(properties, "workload.0.capture.user=user.id")
+
+        Fixture.write(
+            projectDir,
+            extension =
+                """
+                zavarnik {
+                    training {
+                        readyWhen.url("http://127.0.0.1:${Fixture.PORT}/health")
+                        workload { get("http://127.0.0.1:${Fixture.PORT}/private") }
+                    }
+                }
+                """.trimIndent(),
+        )
+        val unsigned = runner("aotTrain").buildAndFail()
+        assertContains(unsigned.output, "GET http://127.0.0.1:${Fixture.PORT}/private answered 401")
+        assertTrue(!File(projectDir, "build/install/fixture/lib/app.aot").exists())
+    }
+
+    @Test
     fun `exitAfter trains an application without a readiness URL`() {
         Fixture.write(projectDir, extension = "zavarnik { training { exitAfter = Duration.ofSeconds(3) } }")
         val result = runner("aotTrain").build()

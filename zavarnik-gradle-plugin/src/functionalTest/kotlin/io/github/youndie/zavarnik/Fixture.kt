@@ -84,6 +84,21 @@ internal object Fixture {
                         exchange.getResponseBody().write(body);
                         exchange.close();
                     });
+                    server.createContext("/login", exchange -> {
+                        byte[] body = "{\"accessToken\": \"t-123\", \"user\": {\"id\": 7, \"roles\": [\"admin\"]}}".getBytes();
+                        exchange.sendResponseHeaders(200, body.length);
+                        exchange.getResponseBody().write(body);
+                        exchange.close();
+                    });
+                    server.createContext("/private", exchange -> {
+                        String auth = exchange.getRequestHeaders().getFirst("Authorization");
+                        String user = exchange.getRequestHeaders().getFirst("X-User");
+                        boolean ok = "Bearer t-123".equals(auth) && "7".equals(user);
+                        byte[] body = (ok ? "welcome" : "no").getBytes();
+                        exchange.sendResponseHeaders(ok ? 200 : 401, body.length);
+                        exchange.getResponseBody().write(body);
+                        exchange.close();
+                    });
                     Runtime.getRuntime().addShutdownHook(new Thread(() -> server.stop(0)));
                     server.start();
                     Thread.currentThread().join();

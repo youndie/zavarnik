@@ -13,9 +13,10 @@ import java.util.concurrent.TimeUnit
  * none.
  *
  * Before the run, the jars in `lib/` get one fixed modification time, [JAR_MTIME] — the JVM
- * checks jar mtimes against the cache, Docker `COPY` preserves them and Jib rewrites them to
- * exactly this constant by default, so a cache trained here survives both (research D3). After
- * the run, `lib/<cache>.jars` records the SHA-256 of every jar for [Verification].
+ * checks jar mtimes against the cache, Docker `COPY` preserves them and Gradle's reproducible tar
+ * stamps exactly this constant, so a cache trained here survives both (research D3). Jib stamps a
+ * different constant, `1970-01-01T00:00:01Z`, and needs `filesModificationTime` set to this one.
+ * After the run, `lib/<cache>.jars` records the SHA-256 of every jar for [Verification].
  */
 public class Training(
     private val installation: Installation,
