@@ -34,17 +34,16 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (5)
+## Open (4)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P1 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P1 | M | B-12 |
 | [B-17](docs/backlog/B-17-r8-invokespecial-rebinding-upstream.md) `[?]` | R8 ломает invokespecial на default-методы интерфейсов Kotlin — заводить ли issue в r8 | P2 | XS | - |
-| [B-24](docs/backlog/B-24-aot-report-warmup-curve.md) `[ ]` | aotReport: показывать не только готовность, но и прогрев — работу JIT после старта | P2 | S/M | - |
 | [B-14](docs/backlog/B-14-windows-training.md) `[ ]` | Тренировка на Windows: без SIGTERM нужен другой способ закончить прогон | P3 | M | - |
 
-## Closed (19)
+## Closed (20)
 
 **Стенд**
 
@@ -65,6 +64,7 @@
 
 - [B-10](docs/backlog/B-10-docker-and-jib-recipe.md) `[x]` - Docker и Jib: рецепт образа, в котором кэш принимается, и aotVerify внутри контейнера
 - [B-11](docs/backlog/B-11-aot-report-task.md) `[x]` - aotReport: таблица «холодный / с кэшем» по времени готовности — артефакт для публикации
+- [B-24](docs/backlog/B-24-aot-report-warmup-curve.md) `[x]` - aotReport: показывать не только готовность, но и прогрев — работу JIT после старта
 
 **Выпуск**
 

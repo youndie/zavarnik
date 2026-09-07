@@ -1,13 +1,23 @@
 ---
 id: B-24
 title: "aotReport: показывать не только готовность, но и прогрев — работу JIT после старта"
-status: open
+status: done
 priority: P2
 size: S/M
 stage: stage-3-packaging
 ---
 
 # B-24 — `aotReport`: кривая прогрева и работа JIT
+
+> **Сделано 07.09.2026.** `aotReport` после таблицы готовности печатает окно JIT: один прогон
+> каждого варианта под `-XX:+CITime`, N секунд (`-Pzavarnik.loadSeconds`, умолчание 20) шагов
+> `workload` в восемь потоков, после SIGTERM из журнала JVM берутся методы и время C1/C2 и общее
+> время компиляции, рядом — число обслуженных запросов, потому что счётчики растут вместе с ним.
+> В отчёте прямо сказано, что кэш держит классы, кучу и профили, а не код. Образец Ktor: C2 1171
+> метод холодным против 1172 с кэшем при 83 296 против 99 570 запросов. Попутно: исполнение
+> шагов `workload` вынесено в общий `Workload`, вывод команд — в отдельный файл (иначе `curl` без
+> перевода строки склеивался с блоком CITime), парсер терпит выровненные значения
+> (`standard:  0.246 s`). Кривая rps по окнам в отчёт не пошла — на мобильном чипе это шум (§1.9).
 
 Ресёрч §1.9 (07.09.2026): кэш экономит ~10 % компиляций после старта, остальное JIT делает
 заново; `aotReport` меряет только время до первого `200` и создаёт впечатление «тёплого» сервиса,
@@ -25,4 +35,6 @@ stage: stage-3-packaging
 - AC: `aotReport` печатает таблицу компиляций C1/C2 за окно нагрузки для обоих вариантов;
   README образца показывает её рядом с готовностью.
 - Якоря: `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/AotReportTask.kt`,
+  `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/JitStats.kt`,
+  `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/Workload.kt`,
   `experiments/jit-warmup/citime.sh`, `docs/research/research-architecture.md` (§1.9).

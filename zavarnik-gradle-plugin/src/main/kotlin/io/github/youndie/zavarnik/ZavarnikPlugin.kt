@@ -113,6 +113,11 @@ public class ZavarnikPlugin : Plugin<Project> {
             task.readyTimeout.set(extension.training.readyTimeout)
             task.shutdownTimeout.set(extension.training.shutdownTimeout)
             task.runs.set(providers.gradleProperty(RUNS_PROPERTY).map(String::toInt).orElse(DEFAULT_RUNS))
+            task.workload.set(extension.training.workload.steps)
+            task.loadSeconds.set(
+                providers.gradleProperty(LOAD_SECONDS_PROPERTY).map(String::toInt).orElse(DEFAULT_LOAD_SECONDS),
+            )
+            task.loadConcurrency.set(DEFAULT_LOAD_CONCURRENCY)
             task.reportFile.set(layout.buildDirectory.file("reports/zavarnik/aotReport.md"))
         }
         afterEvaluate {
@@ -206,7 +211,12 @@ public class ZavarnikPlugin : Plugin<Project> {
 
         /** `-Pzavarnik.runs=N`: runs per variant in `aotReport`. */
         public const val RUNS_PROPERTY: String = "zavarnik.runs"
+
+        /** `-Pzavarnik.loadSeconds=N`: the JIT window of `aotReport`. */
+        public const val LOAD_SECONDS_PROPERTY: String = "zavarnik.loadSeconds"
         private const val DEFAULT_RUNS = 10
+        private const val DEFAULT_LOAD_SECONDS = 20
+        private const val DEFAULT_LOAD_CONCURRENCY = 8
 
         /** The task group the plugin's tasks show up under. */
         public const val GROUP: String = "zavarnik"

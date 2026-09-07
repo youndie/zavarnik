@@ -17,10 +17,6 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.work.DisableCachingByDefault
 import java.io.File
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.attribute.FileTime
 import java.time.Duration
@@ -161,73 +157,14 @@ public abstract class AotTrainTask : DefaultTask() {
     }
 
     private fun runWorkload(run: StartScriptRun) {
-        val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(REQUEST_TIMEOUT_SECONDS)).build()
-        for (step in workload.get()) {
-            if (step.isCommand) runCommand(run, step.command) else runRequest(run, http, step)
-        }
-    }
-
-    private fun runCommand(
-        run: StartScriptRun,
-        command: List<String>,
-    ) {
-        val process =
+        val workload = Workload(File(logFile.get().asFile.parentFile, "aotTrain.workload.log"))
+        for (step in this.workload.get()) {
             try {
-                ProcessBuilder(command)
-                    .redirectErrorStream(true)
-                    .redirectOutput(ProcessBuilder.Redirect.appendTo(logFile.get().asFile))
-                    .start()
-            } catch (notFound: java.io.IOException) {
-                throw GradleException(
-                    "zavarnik: workload command `${command.first()}` cannot be started here (${notFound.message}). " +
-                        "Inside a container or on a bare runner prefer `workload { get(…) }` / `post(…)`, " +
-                        "which need nothing installed.",
-                    notFound,
-                )
-            }
-        val exit = process.waitFor()
-        if (exit != 0) {
-            run.kill()
-            throw GradleException(
-                "zavarnik: workload command ${command.joinToString(" ")} exited with $exit.\n${run.logTail()}",
-            )
-        }
-    }
-
-    private fun runRequest(
-        run: StartScriptRun,
-        http: HttpClient,
-        step: WorkloadStep,
-    ) {
-        val request =
-            HttpRequest
-                .newBuilder(URI.create(step.url))
-                .timeout(Duration.ofSeconds(REQUEST_TIMEOUT_SECONDS))
-                .apply {
-                    if (step.method == "POST") {
-                        header("Content-Type", step.contentType ?: "application/octet-stream")
-                        POST(HttpRequest.BodyPublishers.ofString(step.body.orEmpty()))
-                    } else {
-                        GET()
-                    }
-                }.build()
-        val status =
-            try {
-                http.send(request, HttpResponse.BodyHandlers.discarding()).statusCode()
-            } catch (failed: java.io.IOException) {
+                workload.run(step)
+            } catch (failed: GradleException) {
                 run.kill()
-                throw GradleException(
-                    "zavarnik: workload request $step failed: ${failed.message}\n${run.logTail()}",
-                    failed,
-                )
-            } catch (interrupted: InterruptedException) {
-                Thread.currentThread().interrupt()
-                run.kill()
-                throw GradleException("zavarnik: interrupted during the workload", interrupted)
+                throw GradleException("${failed.message}\n${run.logTail()}", failed)
             }
-        if (status !in HTTP_OK_RANGE) {
-            run.kill()
-            throw GradleException("zavarnik: workload request $step answered $status.\n${run.logTail()}")
         }
     }
 
@@ -284,8 +221,6 @@ public abstract class AotTrainTask : DefaultTask() {
         private const val ASSEMBLING = "to assemble AOT cache"
         private const val ERROR_MARKER = "Error"
         private const val POLL_MILLIS = 100L
-        private const val REQUEST_TIMEOUT_SECONDS = 30L
-        private val HTTP_OK_RANGE = 200..299
         private const val KIB = 1024
     }
 }

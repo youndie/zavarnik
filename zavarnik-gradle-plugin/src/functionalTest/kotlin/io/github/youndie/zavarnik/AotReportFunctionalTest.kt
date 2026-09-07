@@ -26,14 +26,14 @@ class AotReportFunctionalTest {
                 }
                 """.trimIndent(),
         )
-        val result = runner("aotReport", "-Pzavarnik.runs=2").build()
+        val result = runner("aotReport", "-Pzavarnik.runs=2", "-Pzavarnik.loadSeconds=3").build()
         assertEquals(TaskOutcome.SUCCESS, result.task(":aotReport")?.outcome)
         assertContains(result.output, "readiness median")
         val report = File(projectDir, "build/reports/zavarnik/aotReport.md").readText()
         assertContains(report, "2 runs per variant")
-        val rows = report.lines().filter { it.startsWith("| with") }
+        val rows = report.lines().takeWhile { !it.startsWith("## What the JIT") }.filter { it.startsWith("| with") }
         assertEquals(2, rows.size, report)
-        for (row in rows) {
+        for (row in rows.take(2)) {
             val runs =
                 row
                     .split("|")[3]
@@ -42,6 +42,14 @@ class AotReportFunctionalTest {
                     .map(String::toLong)
             assertEquals(2, runs.size, row)
             assertTrue(runs == runs.sorted(), row)
+        }
+        assertContains(report, "What the JIT still does after the start")
+        val jit = report.lines().dropWhile { !it.startsWith("## What the JIT") }.filter { it.startsWith("| with") }
+        assertEquals(2, jit.size, report)
+        for (row in jit) {
+            val cells = row.split("|").map(String::trim)
+            assertTrue(cells[2].toLong() > 0, "requests served: $row")
+            assertTrue(cells[3].toInt() > 0 && cells[4].toInt() > 0, "C1/C2 methods: $row")
         }
     }
 
