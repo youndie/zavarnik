@@ -10,8 +10,23 @@ the environment differs. This plugin turns that silence into a red build.
 
 *zavarnik* is a teapot: you brew the cache once and pour it into every start.
 
-**Status:** works end to end, tested against real JDKs; **not yet on the Plugin Portal**, so the
-plugin id below does not resolve from a fresh build until the first release. Watch this repository.
+**Status:** works end to end, tested against real JDKs. Not yet on the Plugin Portal; every push
+to `main` publishes a snapshot to the portfolio's repository, so the plugin id below resolves with
+one extra block in `settings.gradle.kts`:
+
+```kotlin
+pluginManagement {
+    repositories {
+        maven("https://reposilite.kotlin.website/snapshots") {
+            content { includeGroupByRegex("io\\.github\\.youndie.*") }
+        }
+        gradlePluginPortal()
+    }
+}
+```
+
+and `id("io.github.youndie.zavarnik") version "0.1.0.<run>"` — the latest is in the repository's
+[`maven-metadata.xml`](https://reposilite.kotlin.website/snapshots/io/github/youndie/zavarnik/io.github.youndie.zavarnik.gradle.plugin/maven-metadata.xml).
 
 ## Requirements
 
