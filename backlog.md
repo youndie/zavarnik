@@ -41,7 +41,7 @@
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
-## Closed (27)
+## Closed (28)
 
 **Стенд**
 
@@ -69,6 +69,7 @@
 - [B-27](docs/backlog/B-27-workload-headers-and-captures.md) `[x]` - Workload: заголовки запроса и захват значения из ответа — чтобы тренировать за авторизацией
 - [B-28](docs/backlog/B-28-pin-jar-mtimes-in-installdist.md) `[x]` - Пинить mtime jar-ов уже в installDist, а не только в aotTrain — образ, обученный в контейнере, иначе отвергает кэш
 - [B-29](docs/backlog/B-29-jib-docker-run-args.md) `[x]` - Jib-режим: сеть и окружение стенда для контейнера тренировки — zavarnik { jib { dockerRunArgs() } }
+- [B-30](docs/backlog/B-30-assemble-without-training.md) `[x]` - training { onAssemble = false }: assemble и build не тренируют, если приложению негде стартовать
 
 **Выпуск**
 

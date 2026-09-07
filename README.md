@@ -90,6 +90,11 @@ and `id("io.github.youndie.zavarnik") version "0.1.0.<run>"` — the latest is i
    the tar carries it, and [`samples/ktor/Dockerfile`](samples/ktor/Dockerfile) trains it on the
    very image that runs it.
 
+An application that cannot start on the build machine — no database, no broker — sets
+`training { onAssemble = false }`: `assemble` and `build` then pack no cache instead of failing
+in `aotTrain`, `distTar` still ships a cache a training run has left in `installDist`, and the
+training happens where the application can run, through the runner below.
+
 ### Without Gradle: the runner
 
 The cache has to be trained by the JVM that will use it, and the JVM that will use it usually

@@ -4,6 +4,7 @@ import io.github.youndie.zavarnik.runner.Training
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.distribution.DistributionContainer
+import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaApplication
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
@@ -153,7 +154,13 @@ public class ZavarnikPlugin : Plugin<Project> {
         }
 
         guardStartScripts(extension.cacheFileName)
-        shipInArchives(train, application)
+        shipInArchives(
+            train,
+            application,
+            extension,
+            extension.cacheFileName.flatMap(libFile),
+            extension.cacheFileName.flatMap { libFile("$it.jars") },
+        )
     }
 
     /**
@@ -187,6 +194,9 @@ public class ZavarnikPlugin : Plugin<Project> {
     private fun Project.shipInArchives(
         train: TaskProvider<AotTrainTask>,
         application: JavaApplication,
+        extension: ZavarnikExtension,
+        cacheInInstall: Provider<RegularFile>,
+        manifestInInstall: Provider<RegularFile>,
     ) {
         val distributions = extensions.getByType(DistributionContainer::class.java)
         val libInArchive =
@@ -195,8 +205,21 @@ public class ZavarnikPlugin : Plugin<Project> {
                 (if (version == UNSPECIFIED_VERSION) base else "$base-$version") + "/lib"
             }
         tasks.named(DIST_TAR_TASK, Tar::class.java).configure { tar ->
-            tar.from(train.flatMap { it.cacheFile }) { spec -> spec.into(libInArchive) }
-            tar.from(train.flatMap { it.manifestFile }) { spec -> spec.into(libInArchive) }
+            // Through aotTrain's outputs when the tar trains — the task dependency rides on the
+            // provider — and through the plain files in installDist when it does not
+            // (`training.onAssemble = false`): a cache a training run left there still ships, and
+            // `assemble` on a machine where the application cannot start still assembles.
+            val onAssemble = extension.training.onAssemble
+            val cache = onAssemble.flatMap { trains -> if (trains) train.flatMap { it.cacheFile } else cacheInInstall }
+            val manifest =
+                onAssemble.flatMap { trains ->
+                    if (trains) train.flatMap { it.manifestFile } else manifestInInstall
+                }
+            tar.from(cache) { spec -> spec.into(libInArchive) }
+            tar.from(manifest) { spec -> spec.into(libInArchive) }
+            // Ordering without obligation: when both run in one invocation the tar packs what the
+            // training just wrote, and Gradle's check for an undeclared producer is answered.
+            tar.mustRunAfter(train)
         }
         tasks.named(DIST_ZIP_TASK, Zip::class.java).configure { zip ->
             zip.doFirst("zavarnikZipWarning") {
@@ -214,6 +237,7 @@ public class ZavarnikPlugin : Plugin<Project> {
         portability.convention(true)
         cacheFileName.convention(DEFAULT_CACHE_FILE_NAME)
         training.readyTimeout.convention(Duration.ofMinutes(2))
+        training.onAssemble.convention(true)
         training.shutdownTimeout.convention(Duration.ofMinutes(5))
         verify.minCachedShare.convention(DEFAULT_MIN_CACHED_SHARE)
         verify.onCheck.convention(true)

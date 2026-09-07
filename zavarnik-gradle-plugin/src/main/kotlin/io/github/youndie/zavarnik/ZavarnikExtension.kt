@@ -114,6 +114,15 @@ public abstract class TrainingSpec
         public abstract val readyTimeout: Property<Duration>
 
         /**
+         * Whether `distTar` — and with it `assemble` and `build` — trains the cache. `true` by
+         * default: the tar ships what `aotTrain` made. `false` for an application that cannot start
+         * on the build machine (no database, no broker): `assemble` then packs no cache, `distTar`
+         * still carries one when a training run has left it in `installDist`, and the training
+         * happens where the application can run — on a stand, inside the image, through the runner.
+         */
+        public abstract val onAssemble: Property<Boolean>
+
+        /**
          * How long to wait, after `SIGTERM`, for the launcher to exit and the cache to be assembled.
          * The one-step workflow starts a second JVM to write the cache after the first one has exited,
          * so this covers both. Five minutes by default. When it expires the process is killed, which

@@ -87,6 +87,39 @@ class DistributionFunctionalTest {
     }
 
     @Test
+    fun `with onAssemble off, assemble does not train, and distTar still ships a cache that is there`() {
+        Fixture.write(
+            projectDir,
+            extension =
+                """
+                zavarnik {
+                    training {
+                        exitAfter = Duration.ofSeconds(3)
+                        onAssemble = false
+                    }
+                }
+                """.trimIndent(),
+        )
+        val assemble = runner("assemble").build()
+        assertEquals(null, assemble.task(":aotTrain"))
+        assertTrue(!File(projectDir, "build/install/fixture/lib/app.aot").exists())
+        ZipFile(File(projectDir, "build/distributions/fixture.zip")).use { zip ->
+            assertFalse(zip.entries().asSequence().any { it.name.endsWith("app.aot") })
+        }
+
+        runner("aotTrain", "distTar").build()
+        val listing =
+            ProcessBuilder("tar", "tf", File(projectDir, "build/distributions/fixture.tar").absolutePath)
+                .redirectErrorStream(true)
+                .start()
+                .inputStream
+                .bufferedReader()
+                .readText()
+        assertContains(listing, "fixture/lib/app.aot")
+        assertContains(listing, "fixture/lib/app.aot.jars")
+    }
+
+    @Test
     fun `distZip ships no cache and says why`() {
         Fixture.write(projectDir, extension = extension)
         val result = runner("distZip").build()
