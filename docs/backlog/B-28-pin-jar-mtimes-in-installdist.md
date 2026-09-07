@@ -24,7 +24,8 @@ stage: stage-3-packaging
 - AC: `installDist` без тренировки даёт `lib/*.jar` с `JAR_MTIME`, кэша при этом нет.
   **Automated:** `DistributionFunctionalTest`.
 - AC: в konekt строка `touch` из `scripts/measure/aot-coldstart.sh` убрана, кэш во втором образе
-  проходит `verify` под `-XX:AOTMode=on`.
+  проходит `verify` под `-XX:AOTMode=on`. **Проверено 07.09.2026 на `0.1.0.11`:** jar-ы из
+  `installDist` несут `86400`, `verify` в образе с кэшем — 5217 из 5220 классов приложения из кэша.
 - Якоря: `zavarnik-gradle-plugin/src/main/kotlin/io/github/youndie/zavarnik/ZavarnikPlugin.kt`,
   `zavarnik-runner/src/main/kotlin/io/github/youndie/zavarnik/runner/Training.kt`,
   `docs/research/research-architecture.md` (D3).
