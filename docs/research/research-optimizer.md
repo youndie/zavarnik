@@ -65,7 +65,7 @@ slf4j, `-assumenosideeffects` на `Intrinsics.check*`. R8 9.4.17 отрабат
 | 9.5.10-dev, полный classpath | та же ошибка |
 | 9.4.17, coroutines как `--classpath`, `-keep class kotlin.** { *; }` | та же ошибка в другом классе (см. ниже) |
 
-Прецедент: ту же ошибку верификатора порождал сам компилятор Kotlin до 1.5.0 — KT-42753 «VerifyError: Bad invokespecial instruction: interface method reference is in an indirect superinterface» при `-Xjvm-default=all`, исправлено в 1.5.0. Правило JVM известно и давно учтено в kotlinc; R8 при member rebinding его нарушает. Почему никто не заметил: в DEX такого ограничения нет, classfile-бэкенд R8 — второстепенный. Трекер — issuetracker.google.com, компонент R8; заводить или нет — владелец (B-17).
+Прецедент: ту же ошибку верификатора порождал сам компилятор Kotlin до 1.5.0 — KT-42753 «VerifyError: Bad invokespecial instruction: interface method reference is in an indirect superinterface» при `-Xjvm-default=all`, исправлено в 1.5.0. Правило JVM известно и давно учтено в kotlinc; R8 при member rebinding его нарушает. Почему никто не заметил: в DEX такого ограничения нет, classfile-бэкенд R8 — второстепенный. Трекер — issuetracker.google.com, компонент R8; issue заведена 08.09.2026 — 558351430 (B-17).
 
 **Механизм — по `javap`.** В оригинальном `CompletableDeferred.class` (coroutines 1.11.0, class
 version 52) синтетический аксессор `access$cancel$jd` делает `invokespecial
@@ -318,9 +318,13 @@ RQ6 уезжает в kapkan (sborka) как Gradle-задача над `build/c
 `taskset`, под `-XX:ActiveProcessorCount=8` и без ограничений (§1.4, B-23). Это свойство CIO
 под такой нагрузкой; доля CPU пользовательского кода остаётся 1,7–2,0 %.
 
-**Открытый вопрос 1 — закрыт 07.09.2026: внешние репорты не пишем** (решение владельца, B-17
-снята). Материал — `javap`-разбор R8 с прецедентом KT-42753 (§1.3) и стеки `KClassImpl.toString`
-(`bench/profile/results/ktor-typeinfo-stacks.txt`) — остаётся в репозитории.
+**Открытый вопрос 1 — закрыт 07.09.2026 «не пишем», переоткрыт и закрыт иначе 08.09.2026.**
+Владелец завёл issue по багу R8: <https://issuetracker.google.com/issues/558351430> (B-17). Тело
+issue — `javap`-разбор §1.3 с прецедентом KT-42753 и цепочкой `CompletableDeferred → Deferred →
+Job`, приложение — дамп входа R8 (`-Dcom.android.tools.r8.dumpinputtofile=`, 66 МБ), где
+`build.properties` называет бэкенд сам: `backend=CF`. Трекер читается только после входа, так
+что содержимое issue снаружи не подтверждается. Стеки `KClassImpl.toString`
+(`bench/profile/results/ktor-typeinfo-stacks.txt`) в трекер Ktor по-прежнему не уходили.
 
 **Открытый вопрос 2 — закрыт 07.09.2026.** Линт — в kapkan, задачей над `build/classes`
 (`kapkanMethodSizes`, sborka #30/#31 по issue youndie/sborka#28), без ASM — тем же ридером
@@ -334,10 +338,10 @@ constant pool, что у `kapkanJoins`.
 
 - диагностика размеров методов (RQ6) — задача в kapkan, issue в sborka: youndie/sborka#28;
   B-18 закрыта переездом, B-19–B-21 сняты;
-- две находки с внешней ценностью ждут решения владельца о репортах: баг R8
-  ([B-17](../backlog/B-17-r8-invokespecial-rebinding-upstream.md)) и `KClassImpl.toString` на
-  каждый `receive<T>()` в Ktor плюс спин диспетчера CIO
-  ([B-23](../backlog/B-23-dispatcher-spin-hypothesis.md)) — материал готов, во внешние трекеры
-  без согласия ничего не уходит;
+- баг R8 ушёл наружу 08.09.2026: [B-17](../backlog/B-17-r8-invokespecial-rebinding-upstream.md),
+  issue [558351430](https://issuetracker.google.com/issues/558351430) с дампом входа. Вторая
+  находка — `KClassImpl.toString` на каждый `receive<T>()` в Ktor плюс спин диспетчера CIO
+  ([B-23](../backlog/B-23-dispatcher-spin-hypothesis.md)) — ждёт решения владельца: материал
+  готов, во внешние трекеры без согласия ничего не уходит;
 - стенд `bench/` и методика атрибуции (`run.sh`, `ab.sh`, `konekt.sh`, `attribute.py`) остаются
   как стенд первой фазы и переносимый инструмент.
