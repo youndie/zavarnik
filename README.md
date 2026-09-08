@@ -45,6 +45,11 @@ and `id("io.github.youndie.zavarnik") version "0.1.0.<run>"` — the latest is i
   sample's Dockerfile shows how.
 - **Ship `installDist` or `distTar`.** A zip cannot carry the cache: DOS timestamps are local time,
   and the JVM checks jar mtimes.
+- **No wildcard on the start script's classpath.** The JVM records the classpath string and
+  compares it at the next start, and it expands `lib/*` in whatever order the filesystem answers —
+  Docker's overlay2 on a CI runner and containerd on a k0s node answered differently, and the
+  first cache to reach a cluster was refused there, silently. `aotVerify` cannot see this: it runs
+  where the training ran. The plugin refuses a wildcard at `installDist`; list the jars instead.
 - Gradle 9 (developed and tested on 9.7.1).
 
 ## Quickstart
@@ -224,6 +229,8 @@ On a service not written for it — [konekt](https://github.com/youndie/konekt),
 Exposed and Postgres under a one-core limit — the cache trained inside the image took `docker start`
 to `/health` from 4.4 s to 2.0 s and the first request from 510 ms to 240 ms at the median of ten
 restarts each; the record is in that repository's `docs/research/measurements-2026-09-07/aot/`.
+In its cluster, with the cache trained in the release pipeline and the readiness probe retuned to
+ask every second, the pod is Ready 3 s after its container starts, against 11 s before.
 
 Two write-ups: [OpenJDK 25.0.0–25.0.3 uses a stale AOT cache without saying so](https://kotlin.website/blog/stale-aot-cache-on-jdk25)
 and [User code is 1–4 % of a Ktor service's CPU](https://kotlin.website/blog/user-code-share-of-a-ktor-service).
