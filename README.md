@@ -10,23 +10,24 @@ the environment differs. This plugin turns that silence into a red build.
 
 *zavarnik* is a teapot: you brew the cache once and pour it into every start.
 
-**Status:** works end to end, tested against real JDKs. Not yet on the Plugin Portal; every push
-to `main` publishes a snapshot to the portfolio's repository, so the plugin id below resolves with
-one extra block in `settings.gradle.kts`:
+**Status:** works end to end, tested against real JDKs, running in one production cluster.
+`0.1.0` is submitted to the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/io.github.youndie.zavarnik)
+— a first version waits for the portal's approval, usually a few days; once it is there, this is
+the whole installation:
 
 ```kotlin
-pluginManagement {
-    repositories {
-        maven("https://reposilite.kotlin.website/snapshots") {
-            content { includeGroupByRegex("io\\.github\\.youndie.*") }
-        }
-        gradlePluginPortal()
-    }
+plugins {
+    application
+    id("io.github.youndie.zavarnik") version "0.1.0"
 }
 ```
 
-and `id("io.github.youndie.zavarnik") version "0.1.0.<run>"` — the latest is in the repository's
+Every push to `main` also publishes a snapshot, `0.1.0.<run>`, to
+`https://reposilite.kotlin.website/snapshots` — add it under `pluginManagement.repositories` in
+`settings.gradle.kts` (with `content { includeGroupByRegex("io\\.github\\.youndie.*") }`) and take
+the version from the repository's
 [`maven-metadata.xml`](https://reposilite.kotlin.website/snapshots/io/github/youndie/zavarnik/io.github.youndie.zavarnik.gradle.plugin/maven-metadata.xml).
+The DSL is 0.x and may still move before 1.0; the changes are in the backlog.
 
 ## Requirements
 

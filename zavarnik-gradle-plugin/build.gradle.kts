@@ -7,6 +7,10 @@ plugins {
     alias(libs.plugins.sborkaJvm)
     alias(libs.plugins.sborkaLint)
     alias(libs.plugins.sborkaPublish)
+    // The Gradle Plugin Portal: what `id("io.github.youndie.zavarnik") version "…"` resolves from
+    // with no repository declared. Applied here, not by the conventions, because the metadata below
+    // is this repository's own; the upload runs from sborka's portal.yaml, where the key lives.
+    alias(libs.plugins.pluginPublish)
 }
 
 // Functional tests run real Gradle builds through TestKit against real JDKs — they train real AOT
@@ -15,14 +19,18 @@ plugins {
 val functionalTest: SourceSet = sourceSets.create("functionalTest")
 
 gradlePlugin {
+    website = "https://github.com/youndie/zavarnik"
+    vcsUrl = "https://github.com/youndie/zavarnik.git"
     plugins {
         create("zavarnik") {
             id = "io.github.youndie.zavarnik"
             implementationClass = "io.github.youndie.zavarnik.ZavarnikPlugin"
             displayName = "zavarnik — Leyden AOT cache for application-plugin apps"
             description =
-                "Trains a Project Leyden AOT cache through the real start script, verifies that the " +
-                "cache will be accepted, and ships it inside the distribution."
+                "Trains a Project Leyden AOT cache (JDK 25+) through the real start script, verifies that the " +
+                "JVM will accept it, and ships it inside the distribution or the container image — for Ktor " +
+                "and any other plain JVM application on the application plugin."
+            tags = listOf("leyden", "aot", "startup", "jvm", "ktor", "docker", "jib")
         }
     }
     testSourceSets(functionalTest)
