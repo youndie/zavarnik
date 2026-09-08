@@ -73,6 +73,30 @@ dependencies {
     "functionalTestRuntimeOnly"("org.junit.platform:junit-platform-launcher")
 }
 
+// What the portal shows next to the version: compatibility with the configuration cache. True,
+// and tested — the distribution tests run with --configuration-cache since a consumer with it on
+// found the zip warning. Gradle 9.7 writes `compatibility.feature.configuration-cache=UNDECLARED`
+// into the plugin descriptor and `PluginDeclaration` has no field to change it, so the value is
+// replaced after Gradle has written it; `DECLARED_SUPPORTED` is what plugin-publish's own
+// descriptor carries and what its validation accepts.
+tasks.pluginDescriptors {
+    val descriptors = outputDirectory
+    doLast {
+        descriptors
+            .get()
+            .asFile
+            .listFiles { file -> file.name.endsWith(".properties") }
+            ?.forEach { file ->
+                file.writeText(
+                    file.readText().replace(
+                        "compatibility.feature.configuration-cache=UNDECLARED",
+                        "compatibility.feature.configuration-cache=DECLARED_SUPPORTED",
+                    ),
+                )
+            }
+    }
+}
+
 tasks.processResources {
     from(runnerJar) {
         into("META-INF/zavarnik")
