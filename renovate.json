@@ -1,0 +1,31 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "The portfolio's configuration, extended by name rather than copied: the schedule, the labels, the Kotlin/kotlinx/sborka groups and the kotlinx-datetime `-compat` guard all live in `github>youndie/sborka`.",
+    "`automerge-harness` is extended second, and the order matters — package rules are concatenated in the order the presets are named and the last match wins, so its rule has to come after the base preset's 'majors get a human'. Its precondition was checked rather than assumed: `.github/workflows/check.yaml` runs on `pull_request`, so a harness bump is built before it merges itself.",
+    "`ignorePaths` is REPLACED by this file rather than added to, which is why the preset's two build directories are repeated below."
+  ],
+
+  "extends": [
+    "github>youndie/sborka",
+    "github>youndie/sborka:automerge-harness"
+  ],
+
+  "ignorePaths": [
+    "**/build/**",
+    "**/.gradle/**",
+    "bench/**",
+    "experiments/**"
+  ],
+
+  "packageRules": [
+    {
+      "description": [
+        "Ktor ships as one release train, and this repository names three of its artifacts — `ktor-server-cio`, `ktor-server-content-negotiation`, `ktor-serialization-kotlinx-json` — at one version in each sample. Ungrouped, one Ktor release arrives as three pull requests that have to be merged together anyway.",
+        "The argument is the preset's own for kotlinx, and it is not there because no other repository in the portfolio depends on Ktor in more than one build."
+      ],
+      "matchPackageNames": ["/^io\\.ktor[:.]/"],
+      "groupName": "ktor"
+    }
+  ]
+}
