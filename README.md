@@ -11,9 +11,8 @@ the environment differs. This plugin turns that silence into a red build.
 *zavarnik* is a teapot: you brew the cache once and pour it into every start.
 
 **Status:** works end to end, tested against real JDKs, running in one production cluster.
-`0.1.0` is submitted to the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/io.github.youndie.zavarnik)
-— a first version waits for the portal's approval, usually a few days; once it is there, this is
-the whole installation:
+`0.1.0` is on the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/io.github.youndie.zavarnik),
+and this is the whole installation:
 
 ```kotlin
 plugins {
