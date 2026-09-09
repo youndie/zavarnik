@@ -1,7 +1,7 @@
 [versions]
 kotlin = "2.4.10"
 # The shared build conventions. One number: every sborka plugin below takes its version from here.
-sborka = "0.3.0.31"
+sborka = "0.4.0.43"
 # Publishes to the Gradle Plugin Portal; applied by the plugin module itself, run from sborka's portal.yaml.
 pluginPublish = "2.1.1"
 
