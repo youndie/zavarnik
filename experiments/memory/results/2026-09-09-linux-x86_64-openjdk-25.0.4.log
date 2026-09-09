@@ -1,0 +1,11 @@
+openjdk version "25.0.4" 2026-07-21; 20 cores; cache 32329728 bytes; 5 runs per variant, kB
+cold ready: VmRSS=87476 RssAnon=64916 RssFile=22560 | after 200 requests: VmRSS=127476 RssAnon=104916 RssFile=22560 
+cached ready: VmRSS=86832 RssAnon=64196 RssFile=22636 | after 200 requests: VmRSS=122512 RssAnon=99876 RssFile=22636 
+cold ready: VmRSS=87128 RssAnon=64408 RssFile=22720 | after 200 requests: VmRSS=125848 RssAnon=103128 RssFile=22720 
+cached ready: VmRSS=85400 RssAnon=62732 RssFile=22668 | after 200 requests: VmRSS=122520 RssAnon=99852 RssFile=22668 
+cold ready: VmRSS=86984 RssAnon=64424 RssFile=22560 | after 200 requests: VmRSS=124264 RssAnon=101704 RssFile=22560 
+cached ready: VmRSS=88716 RssAnon=66080 RssFile=22636 | after 200 requests: VmRSS=133676 RssAnon=110880 RssFile=22796 
+cold ready: VmRSS=85940 RssAnon=63380 RssFile=22560 | after 200 requests: VmRSS=126740 RssAnon=104180 RssFile=22560 
+cached ready: VmRSS=86708 RssAnon=64328 RssFile=22380 | after 200 requests: VmRSS=118068 RssAnon=95528 RssFile=22540 
+cold ready: VmRSS=86408 RssAnon=63688 RssFile=22720 | after 200 requests: VmRSS=123048 RssAnon=100328 RssFile=22720 
+cached ready: VmRSS=85676 RssAnon=63360 RssFile=22316 | after 200 requests: VmRSS=129836 RssAnon=107520 RssFile=22316 

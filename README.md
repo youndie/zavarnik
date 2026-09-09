@@ -232,7 +232,9 @@ restarts each; the record is in that repository's `docs/research/measurements-20
 In its cluster, with the cache trained in the release pipeline and the readiness probe retuned to
 ask every second, the pod is Ready 3 s after its container starts, against 11 s before.
 
-Two write-ups: [OpenJDK 25.0.0–25.0.3 uses a stale AOT cache without saying so](https://kotlin.website/blog/stale-aot-cache-on-jdk25)
+Three write-ups: the how-to,
+[Leyden AOT cache for a plain Kotlin/JVM service](https://kotlin.website/blog/leyden-aot-cache-for-a-plain-kotlin-jvm-service);
+[OpenJDK 25.0.0–25.0.3 uses a stale AOT cache without saying so](https://kotlin.website/blog/stale-aot-cache-on-jdk25);
 and [User code is 1–4 % of a Ktor service's CPU](https://kotlin.website/blog/user-code-share-of-a-ktor-service).
 
 | Directory | What it is |
