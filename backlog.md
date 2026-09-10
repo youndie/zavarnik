@@ -43,7 +43,7 @@
 | [B-32](docs/backlog/B-32-konekt-hikari-exposed-restore.md) `[ ]` | Ворота третьей фазы: konekt (Ktor CIO + HikariCP + Exposed + Postgres) под checkpoint/restore на стенде | P0 | M | - |
 | [B-37](docs/backlog/B-37-three-engines-under-one-protocol.md) `[~]` | CIO против Netty и Jetty: профиль, пропускная способность и цена запроса под одним протоколом | P0 | M | B-36 |
 | [B-33](docs/backlog/B-33-random-after-restore.md) `[ ]` | Одинаковые Random во всех репликах после restore: что затронуто в Kotlin-сервисе и как это ловить | P1 | S | - |
-| [B-34](docs/backlog/B-34-crac-plugin-form.md) `[ ]` | Форма плагина для CRaC: cracCheckpoint / cracVerify / слой снимка поверх того же образа | P1 | L | B-32 |
+| [B-34](docs/backlog/B-34-crac-plugin-form.md) `[~]` | Форма плагина для CRaC: cracCheckpoint / cracVerify / слой снимка поверх того же образа | P1 | L | B-32 |
 | [B-36](docs/backlog/B-36-engine-stand-and-honest-pinning.md) `[~]` | Стенд на три движка: один процесс, один -D, честное закрепление ядер и цена запроса в абсолюте | P1 | S | - |
 | [B-38](docs/backlog/B-38-io-parallelism-lever.md) `[ ]` | Рычаг kotlinx.coroutines.io.parallelism: если очередь стоит трети CPU, что её снимает | P1 | S | B-37 |
 | [B-35](docs/backlog/B-35-crac-cpu-features.md) `[ ]` | Снимок привязан к CPU тренировки: цена и семантика -XX:CPUFeatures на checkpoint | P2 | S | B-32 |
