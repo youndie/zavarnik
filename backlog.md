@@ -28,6 +28,7 @@
 | `stage-4-release` | Выпуск | Имя, координаты, публикация, четыре недели наблюдения. |
 | `stage-5-optimizer` | Вторая фаза | Плагин оптимизации байткода ([бриф](docs/research/source-brief-optimizer.md)): ворота RQ0, потом только то, что прошло порог. |
 | `stage-6-crac` | Третья фаза | CRaC — та же тройка задач, снимок прогретого процесса вместо кэша ([бриф](docs/research/source-brief-crac.md), [research-crac](docs/research/research-crac.md)): ворота B-32 на konekt, потом плагин. |
+| `stage-7-engines` | Четвёртая фаза | Диспетчер CIO: три движка Ktor под одним протоколом ([research-engines](docs/research/research-engines.md)). Выросла из [B-23](docs/backlog/B-23-dispatcher-spin-hypothesis.md): вывод «свойство CIO» был сделан на единственном движке. |
 
 ## Отметки
 
@@ -35,13 +36,16 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (6)
+## Open (9)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
 | [B-32](docs/backlog/B-32-konekt-hikari-exposed-restore.md) `[ ]` | Ворота третьей фазы: konekt (Ktor CIO + HikariCP + Exposed + Postgres) под checkpoint/restore на стенде | P0 | M | - |
+| [B-37](docs/backlog/B-37-three-engines-under-one-protocol.md) `[~]` | CIO против Netty и Jetty: профиль, пропускная способность и цена запроса под одним протоколом | P0 | M | B-36 |
 | [B-33](docs/backlog/B-33-random-after-restore.md) `[ ]` | Одинаковые Random во всех репликах после restore: что затронуто в Kotlin-сервисе и как это ловить | P1 | S | - |
 | [B-34](docs/backlog/B-34-crac-plugin-form.md) `[ ]` | Форма плагина для CRaC: cracCheckpoint / cracVerify / слой снимка поверх того же образа | P1 | L | B-32 |
+| [B-36](docs/backlog/B-36-engine-stand-and-honest-pinning.md) `[~]` | Стенд на три движка: один процесс, один -D, честное закрепление ядер и цена запроса в абсолюте | P1 | S | - |
+| [B-38](docs/backlog/B-38-io-parallelism-lever.md) `[ ]` | Рычаг kotlinx.coroutines.io.parallelism: если очередь стоит трети CPU, что её снимает | P1 | S | B-37 |
 | [B-35](docs/backlog/B-35-crac-cpu-features.md) `[ ]` | Снимок привязан к CPU тренировки: цена и семантика -XX:CPUFeatures на checkpoint | P2 | S | B-32 |
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |

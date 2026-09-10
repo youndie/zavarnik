@@ -50,7 +50,7 @@ make check
 файла — красный `coverage_map.py`. Группировка и описания пишутся человеком; машина сторожит
 только состав.
 
-### Research (6)
+### Research (7)
 
 Первая фаза — AOT-кэш:
 - [x] [research-architecture](research/research-architecture.md) — что HotSpot проверяет перед тем, как принять кэш; чем кончается тренировка; кто это уже сделал; решения и риски плагина
@@ -61,4 +61,7 @@ make check
 - [x] [source-brief-optimizer](research/source-brief-optimizer.md) — бриф второй фазы без правок: девять RQ, протокол замера, критерии остановки
 - [x] [research-crac](research/research-crac.md) — третья фаза: checkpoint/restore (CRaC) вместо кэша — что проверено на Ktor CIO, что ломается, ворота на konekt
 - [x] [source-brief-crac](research/source-brief-crac.md) — бриф третьей фазы, как сформулирован 11.09.2026, без правок
+
+Четвёртая фаза — движки Ktor:
+- [x] [research-engines](research/research-engines.md) — CIO против Netty и Jetty на одном сервисе: чья очередь диспетчера, что стоит запрос в микросекундах CPU, где у находки границы
 
