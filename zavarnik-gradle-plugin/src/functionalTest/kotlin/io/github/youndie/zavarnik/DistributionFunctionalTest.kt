@@ -1,6 +1,7 @@
 package io.github.youndie.zavarnik
 
 import io.github.youndie.zavarnik.runner.JarManifest
+import io.github.youndie.zavarnik.runner.RunnerConfig
 import io.github.youndie.zavarnik.runner.Training
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
@@ -34,6 +35,37 @@ class DistributionFunctionalTest {
         assertContains(unix, "-XX:-AOTAdapterCaching")
         val windows = File(projectDir, "build/install/fixture/bin/fixture.bat").readText()
         assertContains(windows, "if exist \"%APP_HOME%\\lib\\app.aot\"")
+    }
+
+    @Test
+    fun `the ports a checkpoint may leave open reach the runner's configuration file`() {
+        Fixture.write(
+            projectDir,
+            extension =
+                """
+                zavarnik {
+                    training { exitAfter = Duration.ofSeconds(3) }
+                    crac {
+                        ignoreRemotePort(9092)
+                        ignoreRemotePort(5432)
+                    }
+                }
+                """.trimIndent(),
+        )
+        runner("installDist").build()
+        val config = RunnerConfig.read(File(projectDir, "build/install/fixture/lib/zavarnik.properties"))
+        // Sorted rather than in the order they were declared: the set is unordered and this is a
+        // task input, so a wandering order would rewrite the file for nothing.
+        assertEquals(listOf(5432, 9092), config.cracIgnoredRemotePorts)
+        assertEquals(RunnerConfig.DEFAULT_CRAC_IMAGE_DIR, config.cracImageDirName)
+    }
+
+    @Test
+    fun `an application that talks to nothing declares no ports`() {
+        Fixture.write(projectDir, extension = extension)
+        runner("installDist").build()
+        val config = RunnerConfig.read(File(projectDir, "build/install/fixture/lib/zavarnik.properties"))
+        assertEquals(emptyList(), config.cracIgnoredRemotePorts)
     }
 
     @Test

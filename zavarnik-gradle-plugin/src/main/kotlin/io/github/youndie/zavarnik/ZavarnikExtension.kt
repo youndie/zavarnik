@@ -5,6 +5,7 @@ import org.gradle.api.Action
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
 import java.time.Duration
 import javax.inject.Inject
 
@@ -74,6 +75,15 @@ public abstract class ZavarnikExtension
         }
 
         /** The Jib mode's knobs — see [JibSpec]. Ignored unless Jib is applied. */
+
+        /** `crac { }` — what a checkpoint of this application has to be told about. */
+        public val crac: CracSpec = objects.newInstance(CracSpec::class.java)
+
+        /** `crac { ignoreRemotePort(5432) }`. */
+        public fun crac(action: Action<in CracSpec>) {
+            action.execute(crac)
+        }
+
         public val jib: JibSpec = objects.newInstance(JibSpec::class.java)
 
         /** Configures [jib]. */
@@ -243,6 +253,39 @@ public class RequestSpec {
  * }
  * ```
  */
+
+/**
+ * A CRaC checkpoint of the warmed-up process, for the images that take one.
+ *
+ * Only one thing about an application cannot be worked out from the build: which of its outgoing
+ * connections a checkpoint may leave open. A JVM refuses to checkpoint while any socket is open,
+ * and the ones a server holds are its listening socket — which the plugin handles by itself — and
+ * whatever it keeps to a database, a broker or a cache, which only the build knows about.
+ *
+ * Naming a port here does **not** close the connection; it leaves it in the snapshot, dead on
+ * restore, for whoever owns it to notice. A pool that validates a connection before handing it out
+ * (HikariCP does) and a client that reconnects both recover; one that does neither will use a dead
+ * connection, which is why the restore is verified with a request that reaches the far side rather
+ * than with a process that started. The alternative — closing them at checkpoint — was measured and
+ * is worse: a pool opens replacements while the checkpoint is being taken and the checkpoint fails
+ * on a socket that did not exist when it started (`docs/research/research-crac.md` §1.7).
+ */
+public abstract class CracSpec {
+    /**
+     * Remote ports whose sockets the checkpoint may leave open: `5432` for Postgres, `9092` for a
+     * broker. Empty by default, which is right for an application that talks to nothing.
+     */
+    public abstract val ignoredRemotePorts: SetProperty<Int>
+
+    /** `crac { ignoreRemotePort(5432, 9092) }`. */
+    public fun ignoreRemotePort(vararg ports: Int) {
+        ignoredRemotePorts.addAll(ports.toList())
+    }
+
+    /** The directory the snapshot is written to, under the output directory. `crac` by default. */
+    public abstract val imageDirName: Property<String>
+}
+
 public abstract class JibSpec {
     /** Extra `docker run` arguments for the training and verification containers. Empty by default. */
     public abstract val dockerRunArgs: ListProperty<String>

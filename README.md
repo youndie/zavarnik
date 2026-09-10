@@ -124,6 +124,38 @@ read the same file and fail with the same messages; a failed `verify` leaves no 
 sample this takes the image from 647 MB (both stages `-jdk`) to 562 MB, with every application
 class still coming from the cache.
 
+### A CRaC checkpoint instead of a cache (research, not released)
+
+An AOT cache saves the class loading and nothing else: the JIT compiles the same methods after the
+start either way. A [CRaC](https://openjdk.org/projects/crac/) checkpoint saves the *process* —
+warmed-up JIT included — and restores it in a fraction of the time. The runner takes one:
+
+```bash
+java -cp lib/zavarnik-runner.jar io.github.youndie.zavarnik.runner.Main checkpoint /opt/app --out /out
+java -cp lib/zavarnik-runner.jar io.github.youndie.zavarnik.runner.Main restore-verify /opt/app --out /out
+```
+
+`checkpoint` warms the application through the same `workload { }` a training run uses and snapshots
+it; `restore-verify` restores the snapshot and puts the restored process through that workload
+again, which is the check that matters — a restore leaves outgoing sockets pointing at `/dev/null`,
+so a process that started proves nothing about the pool behind it. Declare the ports it may leave
+open:
+
+```kotlin
+zavarnik {
+    crac { ignoreRemotePort(5432, 9092) }        // a database, a broker
+}
+```
+
+What it costs, all of it measured in [`docs/research/research-crac.md`](docs/research/research-crac.md):
+a JDK with CRaC, which for 25 means Azul Zulu and no one else; Linux; a snapshot bound to the bytes
+of the image it was taken in and to the CPU that took it; configuration frozen at checkpoint time,
+because whatever the application read at startup is in the snapshot and the restore container's
+environment does not reach it. On a Ktor service with HikariCP, Exposed and Postgres the restore is
+ready in 131 ms against 2 317 and serves its first signed-in screen in 32 ms against 118, with no
+change to the application. Gradle tasks for this do not exist yet — the runner does, and
+[`experiments/crac-ktor/`](experiments/crac-ktor/) is how it is exercised.
+
 ### Jib and the Ktor plugin
 
 `ktor { docker { } }` is Jib underneath, and Jib's default layout puts `/app/classes` and

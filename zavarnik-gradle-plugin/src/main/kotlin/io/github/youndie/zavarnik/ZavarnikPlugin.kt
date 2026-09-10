@@ -1,5 +1,6 @@
 package io.github.youndie.zavarnik
 
+import io.github.youndie.zavarnik.runner.RunnerConfig
 import io.github.youndie.zavarnik.runner.Training
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -93,6 +94,10 @@ public class ZavarnikPlugin : Plugin<Project> {
                 task.minCachedShare.set(extension.verify.minCachedShare)
                 task.verifyJvmArgs.set(extension.verify.jvmArgs)
                 task.launchJvmArgs.convention(emptyList())
+                // Sorted, because the set's iteration order is not the build's to promise and this
+                // value is a task input: an order that wanders would rewrite the file for nothing.
+                task.cracIgnoredRemotePorts.set(extension.crac.ignoredRemotePorts.map { it.sorted() })
+                task.cracImageDirName.set(extension.crac.imageDirName)
                 task.outputDir.set(layout.buildDirectory.dir("zavarnik/runner"))
             }
         // Into the distribution's shared content, so installDist, distTar and distZip all carry
@@ -245,6 +250,8 @@ public class ZavarnikPlugin : Plugin<Project> {
         training.shutdownTimeout.convention(Duration.ofMinutes(5))
         verify.minCachedShare.convention(DEFAULT_MIN_CACHED_SHARE)
         verify.onCheck.convention(true)
+        crac.ignoredRemotePorts.convention(emptySet())
+        crac.imageDirName.convention(RunnerConfig.DEFAULT_CRAC_IMAGE_DIR)
     }
 
     public companion object {
