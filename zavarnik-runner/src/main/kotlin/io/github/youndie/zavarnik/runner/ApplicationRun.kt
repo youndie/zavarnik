@@ -53,7 +53,19 @@ public class ApplicationRun(
         url: String,
         timeout: Duration,
     ): Long {
-        val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1)).build()
+        // Closed when the wait ends, and that is not housekeeping: keep-alive holds the connection
+        // open on the server's side too, and a CRaC checkpoint refuses while any socket is. The
+        // readiness probe was the last socket standing on the Ktor sample.
+        HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1)).build().use { client ->
+            return awaitReady(client, url, timeout)
+        }
+    }
+
+    private fun awaitReady(
+        client: HttpClient,
+        url: String,
+        timeout: Duration,
+    ): Long {
         val request =
             HttpRequest
                 .newBuilder(URI.create(url))
@@ -115,6 +127,16 @@ public class ApplicationRun(
         process.destroyForcibly()
         process.waitFor(KILL_WAIT_SECONDS, TimeUnit.SECONDS)
     }
+
+    /** The process id, for a `jcmd` that has to name it. */
+    public fun pid(): Long = process.pid()
+
+    /**
+     * Waits up to [timeout] for the process to exit on its own, and says whether it did. A CRaC
+     * checkpoint ends the process it was taken of, so this is how a snapshot is known to be
+     * finished — the image directory fills up long before it is complete.
+     */
+    public fun awaitExit(timeout: Duration): Boolean = process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)
 
     /** Last lines of the process log, for an error message. */
     public fun logTail(lines: Int = LOG_TAIL_LINES): String =

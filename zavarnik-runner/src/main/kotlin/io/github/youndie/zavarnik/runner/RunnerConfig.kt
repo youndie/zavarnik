@@ -24,6 +24,13 @@ public data class RunnerConfig(
      * start script carries them itself. Empty for a distribution.
      */
     val launchJvmArgs: List<String> = emptyList(),
+    /**
+     * Remote ports whose sockets a CRaC checkpoint is allowed to leave open — a database, a broker.
+     * They become `action: ignore` rules ([CracPolicies]); the listening socket needs no declaring.
+     */
+    val cracIgnoredRemotePorts: List<Int> = emptyList(),
+    /** The directory the snapshot is written to, under the output directory. */
+    val cracImageDirName: String = DEFAULT_CRAC_IMAGE_DIR,
 ) {
     /** `<cacheFileName>.jars`. */
     val manifestFileName: String get() = "$cacheFileName.jars"
@@ -38,6 +45,8 @@ public data class RunnerConfig(
         props["minCachedShare"] = minCachedShare.toString()
         props["verifyJvmArgs"] = verifyJvmArgs.joinToString(SEPARATOR)
         props["launchJvmArgs"] = launchJvmArgs.joinToString(SEPARATOR)
+        props["cracIgnoredRemotePorts"] = cracIgnoredRemotePorts.joinToString(SEPARATOR)
+        props["cracImageDirName"] = cracImageDirName
         workload.forEachIndexed { i, step ->
             val key = "workload.$i"
             if (step.isCommand) {
@@ -58,6 +67,9 @@ public data class RunnerConfig(
     public companion object {
         /** The file name inside `lib/`. */
         public const val FILE_NAME: String = "zavarnik.properties"
+
+        /** Where a snapshot goes when nothing says otherwise. */
+        public const val DEFAULT_CRAC_IMAGE_DIR: String = "crac"
 
         /** ASCII unit separator: never part of a URL, a flag or a command word, so lists survive it. */
         private const val SEPARATOR = ""
@@ -110,6 +122,8 @@ public data class RunnerConfig(
                 minCachedShare = props.getProperty("minCachedShare", DEFAULT_MIN_CACHED_SHARE).toDouble(),
                 verifyJvmArgs = list("verifyJvmArgs"),
                 launchJvmArgs = list("launchJvmArgs"),
+                cracIgnoredRemotePorts = list("cracIgnoredRemotePorts").map(String::toInt),
+                cracImageDirName = props.getProperty("cracImageDirName", DEFAULT_CRAC_IMAGE_DIR),
             )
         }
 

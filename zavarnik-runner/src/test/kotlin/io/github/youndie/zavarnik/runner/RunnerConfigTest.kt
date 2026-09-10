@@ -11,6 +11,41 @@ class RunnerConfigTest {
     private val dir: File = Files.createTempDirectory("zavarnik-config").toFile()
 
     @Test
+    fun `the CRaC keys survive the round trip, and default to no ignored ports`() {
+        val file = File(dir, "crac.properties")
+        RunnerConfig(
+            cacheFileName = "svc.aot",
+            readyUrl = "http://localhost:8080/health",
+            exitAfter = null,
+            readyTimeout = Duration.ofSeconds(30),
+            shutdownTimeout = Duration.ofSeconds(30),
+            workload = emptyList(),
+            minCachedShare = 0.9,
+            verifyJvmArgs = emptyList(),
+            cracIgnoredRemotePorts = listOf(5432, 9092),
+            cracImageDirName = "snapshot",
+        ).write(file)
+        val read = RunnerConfig.read(file)
+        assertEquals(listOf(5432, 9092), read.cracIgnoredRemotePorts)
+        assertEquals("snapshot", read.cracImageDirName)
+
+        val bare = File(dir, "bare.properties")
+        RunnerConfig(
+            cacheFileName = "svc.aot",
+            readyUrl = null,
+            exitAfter = Duration.ofSeconds(5),
+            readyTimeout = Duration.ofSeconds(30),
+            shutdownTimeout = Duration.ofSeconds(30),
+            workload = emptyList(),
+            minCachedShare = 0.9,
+            verifyJvmArgs = emptyList(),
+        ).write(bare)
+        val defaults = RunnerConfig.read(bare)
+        assertEquals(emptyList(), defaults.cracIgnoredRemotePorts)
+        assertEquals(RunnerConfig.DEFAULT_CRAC_IMAGE_DIR, defaults.cracImageDirName)
+    }
+
+    @Test
     fun `survives the round trip through the properties file, workload order and bodies included`() {
         val config =
             RunnerConfig(

@@ -238,6 +238,38 @@ Hikari на выдаче из пула и переподключение кли�
 окружением restore-контейнера. Значит, снимок — на комбинацию окружения, либо конфигурация
 читается после restore. Для плагина: сказать это в README и в сообщении задачи.
 
+### 1.8 Сторона раннера сделана (11.09.2026, B-34, часть первая)
+
+`zavarnik-runner` получил две команды — `checkpoint` и `restore-verify` — и они работают на
+образце Ktor внутри контейнера CRaC-JDK (`experiments/crac-ktor/runner-check.sh`):
+
+```
+== checkpoint
+zavarnik: application ready after 1164 ms
+zavarnik: workload took 108 ms
+zavarnik: checkpoint took 523 ms
+zavarnik: snapshot in crac is 68984 KiB across 2 files
+== restore-verify
+zavarnik: application ready after 511 ms
+zavarnik: restored and served the workload, ready after 511 ms
+```
+
+| Факт | Где проверено |
+|---|---|
+| **Свои же keep-alive соединения ломают checkpoint.** Проба готовности и workload раннера держат HTTP-клиентов; на стороне сервера это принятые сокеты, и снимок отказывает: «BusySelectorException: Selector … has registered keys from channels: [SocketChannel[connected local=/127.0.0.1:18090 remote=/127.0.0.1:43872]]». Ни политика для слушающего сокета, ни пауза не помогают — соединение живо, пока клиент его держит | прогон 11.09.2026: три итерации `runner-check.sh`, отказ снимался только закрытием клиентов |
+| Лечится закрытием: `HttpClient.close()` (Java 21+) у `Workload` и у пробы готовности в `ApplicationRun`, плюс пауза 2 с, чтобы сервер успел снять принятый конец | `Workload.close()`, `ApplicationRun.awaitReady`, `Crac.SETTLE_MILLIS` |
+| `-jre`-образ Zulu с CRaC несёт `jcmd` (и `warp`) — то, чего у обычного JRE-образа нет; значит, снимок можно снимать в рантайм-образе, а не только в JDK-образе | `docker run --rm azul/zulu-openjdk:25-jre-crac ls $JAVA_HOME/bin` |
+| Checkpoint завершает процесс — это и есть признак готовности снимка; каталог наполняется задолго до конца | `Crac.takeSnapshot` ждёт выхода процесса; прогон |
+
+**Следствие 1 — для D3.** Политику пишет раннер в каталог снимка (`zavarnik-crac-policies.yaml`
+рядом с образом), а не в `lib/`: каталог снимка монтируется с хоста и заведомо доступен на
+запись, а образ приложения может быть только для чтения. Файл едет вместе со снимком.
+
+**Следствие 2 — чего нельзя было предвидеть из документации.** «Закрыть все сокеты перед
+снимком» в документации CRaC означает сокеты **приложения**. Инструмент, который снимает снимок,
+приносит свои — и это первое, обо что он спотыкается. Для статьи это лучший абзац: рецепт
+«прогрей и сними» неверен ровно на одну строчку, и она не в приложении.
+
 ---
 
 ## 2. Решения
