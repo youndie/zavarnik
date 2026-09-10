@@ -1,0 +1,28 @@
+image: OpenJDK Runtime Environment Zulu25.36+205-CRaC-CA (build 25.0.4.1+1-LTS); app: /home/youndie/zavarnik/samples/ktor/build/install/ktor-sample
+== checkpoint attempt with the server up, policies: experiments/crac-ktor/policies.yaml
+129:
+0
+-- container log tail:
+Sep 10, 2026 10:16:29 PM jdk.internal.crac.LoggerContainer warn
+WARNING: Socket sun.nio.ch.ServerSocketChannelImpl[] was not closed by the application.
+Sep 10, 2026 10:16:29 PM jdk.internal.crac.LoggerContainer info
+INFO: To suppress the warning above use 'warn: false' in the resource policy.
+[2.930s][info][crac] Checkpoint ...
+52502.443912: warp: Checkpoint 129 to /cr
+52502.630304: Checkpointing thread wakeup after checkpoint/restore
+52502.632208: Restore open file descriptors
+52502.633378: Waiting for other threads...
+52502.633383: Memory cleanup after checkpoint/restore
+52502.633706: Checkpointing thread checkpoint/restore completed
+52502.633711: warp: Checkpoint successful!
+-- image: 2 files, 82M
+== restore, 5 runs: ms to first 200
+restore 1: 51
+-- functional after restore: 200 on /api/order, 200 on /api/warm
+-- log tail:
+52506.311613: warp: Restore successful!
+restore 2: 45
+restore 3: 50
+restore 4: 50
+restore 5: 52
+scratch: /tmp/crac-ktor.1LpW

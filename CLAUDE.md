@@ -8,7 +8,10 @@ workload для тренировки за авторизацией (B-27), mtime
 режим для Jib и `ktor { docker { } }` — `jibAotTrain`/`jibAotVerify`, образец `samples/ktor-jib`
 (B-26); отложены выпуск (B-13) и воспроизведение SIGILL на паре машин (B-09). Вторая фаза (плагин оптимизации байткода, `bench/`,
 `docs/research/research-optimizer.md`) закрыта 07.09.2026 по критерию остановки: стенд и методика
-остаются, диагностика уехала в kapkan. См. `backlog.md`.
+остаются, диагностика уехала в kapkan. **Третья фаза (CRaC, `docs/research/research-crac.md`,
+`experiments/crac-smoke/`, `experiments/crac-ktor/`) открыта 11.09.2026:** образец Ktor CIO
+восстанавливается за ~50 мс одним правилом для слушающего сокета, движок warp без привилегий;
+ворота — B-32 на konekt (пул, Exposed, Random). См. `backlog.md`.
 
 ## Как начать сессию
 

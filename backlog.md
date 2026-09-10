@@ -27,6 +27,7 @@
 | `stage-3-packaging` | Упаковка | Docker, Jib, переносимость между CPU, отчёт; Windows. |
 | `stage-4-release` | Выпуск | Имя, координаты, публикация, четыре недели наблюдения. |
 | `stage-5-optimizer` | Вторая фаза | Плагин оптимизации байткода ([бриф](docs/research/source-brief-optimizer.md)): ворота RQ0, потом только то, что прошло порог. |
+| `stage-6-crac` | Третья фаза | CRaC — та же тройка задач, снимок прогретого процесса вместо кэша ([бриф](docs/research/source-brief-crac.md), [research-crac](docs/research/research-crac.md)): ворота B-32 на konekt, потом плагин. |
 
 ## Отметки
 
@@ -34,10 +35,14 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (2)
+## Open (6)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
+| [B-32](docs/backlog/B-32-konekt-hikari-exposed-restore.md) `[ ]` | Ворота третьей фазы: konekt (Ktor CIO + HikariCP + Exposed + Postgres) под checkpoint/restore на стенде | P0 | M | - |
+| [B-33](docs/backlog/B-33-random-after-restore.md) `[ ]` | Одинаковые Random во всех репликах после restore: что затронуто в Kotlin-сервисе и как это ловить | P1 | S | - |
+| [B-34](docs/backlog/B-34-crac-plugin-form.md) `[ ]` | Форма плагина для CRaC: cracCheckpoint / cracVerify / слой снимка поверх того же образа | P1 | L | B-32 |
+| [B-35](docs/backlog/B-35-crac-cpu-features.md) `[ ]` | Снимок привязан к CPU тренировки: цена и семантика -XX:CPUFeatures на checkpoint | P2 | S | B-32 |
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 

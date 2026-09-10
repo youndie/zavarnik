@@ -1,0 +1,14 @@
+image: OpenJDK Runtime Environment Zulu25.36+205-CRaC-CA (build 25.0.4.1+1-LTS)
+== checkpoint after 200 warm requests
+checkpoint successful lines: 1
+image: 85M
+plain   1: ready=609ms first_post=27ms mem_ready=69.66MiB mem_after100=97.51MiB compilations_during_100=1563
+restore 1: ready=71ms first_post=11ms mem_ready=36.25MiB mem_after100=62.28MiB compilations_during_100=353
+plain   2: ready=600ms first_post=34ms mem_ready=70.18MiB mem_after100=100.1MiB compilations_during_100=1564
+restore 2: ready=82ms first_post=14ms mem_ready=36.17MiB mem_after100=62.55MiB compilations_during_100=360
+plain   3: ready=639ms first_post=25ms mem_ready=68.35MiB mem_after100=103.9MiB compilations_during_100=1591
+restore 3: ready=84ms first_post=13ms mem_ready=35.6MiB mem_after100=61.95MiB compilations_during_100=343
+plain   4: ready=764ms first_post=44ms mem_ready=69.86MiB mem_after100=101.2MiB compilations_during_100=1587
+restore 4: ready=83ms first_post=12ms mem_ready=36.62MiB mem_after100=62.77MiB compilations_during_100=321
+plain   5: ready=729ms first_post=31ms mem_ready=69.19MiB mem_after100=93.6MiB compilations_during_100=1555
+restore 5: ready=82ms first_post=12ms mem_ready=36.38MiB mem_after100=61.82MiB compilations_during_100=366

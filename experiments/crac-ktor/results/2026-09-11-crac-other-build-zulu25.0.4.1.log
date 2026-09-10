@@ -1,0 +1,14 @@
+== restore the 25.0.4.1 image under azul/zulu-openjdk:25.0.4-jdk-crac
+52573.720209: warp: error: Cannot open /opt/zulu25.36.205-ca-crac-jdk25.0.4.1-linux_x64/bin/java: No such file or directory
+52573.720210: warp: NO READER /opt/zulu25.36.205-ca-crac-jdk25.0.4.1-linux_x64/bin/java
+52573.720211: warp: error: Cannot find build-id in /opt/zulu25.36.205-ca-crac-jdk25.0.4.1-linux_x64/bin/java: validation failed
+52573.720229: warp: error: Cannot open mapped file /opt/zulu25.36.205-ca-crac-jdk25.0.4.1-linux_x64/bin/java: No such file or directory
+52573.720230: warp: error: Cannot open some of the files mapped into memory
+exit=1
+== restore the 25.0.4.1 image under azul/zulu-openjdk:26-jdk-crac
+[0.010s][error][crac] CRaC engine failed to restore from /cr: error -1
+[0.010s][error][crac] Restore failed due to incompatible or missing CPU features, try using -XX:CPUFeatures=0x2b2fce1c05fdfbf7,0xf88 on checkpoint.
+[0.010s][error][crac] Failed to restore from /cr
+Error: Could not create the Java Virtual Machine.
+Error: A fatal exception has occurred. Program will exit.
+exit=1

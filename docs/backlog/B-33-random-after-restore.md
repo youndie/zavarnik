@@ -1,0 +1,33 @@
+---
+id: B-33
+title: "Одинаковые Random во всех репликах после restore: что затронуто в Kotlin-сервисе и как это ловить"
+status: open
+priority: P1
+size: S
+stage: stage-6-crac
+---
+
+# B-33 — Одинаковые случайные числа после restore
+
+Два restore одного снимка дают одну и ту же последовательность `java.util.Random` и
+`ThreadLocalRandom`; `SecureRandom()` переинициализируется, `SecureRandom(seed)`, `Random` и
+`ThreadLocalRandom` — нет ([research-crac](../research/research-crac.md) §1.3, журнал
+`experiments/crac-smoke/results/2026-09-11-crac-twice-*.log`). Для Kotlin-сервиса вопрос —
+что стоит на `kotlin.random.Random.Default` и на `ThreadLocalRandom` внутри библиотек.
+
+- **Решение:** сначала карта, потом сторож. Карта — по исходникам: `kotlin.random.Random.Default`
+  на JVM (гипотеза: `PlatformRandom` над `ThreadLocalRandom.current()`), генераторы в Ktor
+  (`generateNonce`?), kotlinx.coroutines (jitter?), Hikari (`housekeeper` jitter), pgjdbc,
+  Exposed. Каждая строка — путь и версия. Сторож — D4 research-crac: `cracVerify` делает два
+  restore и сравнивает пробу генераторов, снятую раннером внутри процесса; как именно снять —
+  часть задачи (`jcmd`-команда, агент или HTTP-проба, которую даёт приложение).
+- Альтернатива «плагин переинициализирует генераторы через `Resource`» отвергнута: у
+  `ThreadLocalRandom` нет API для переинициализации извне, а чужие `Random` в библиотеках не
+  достать.
+- Не покрывает: починку в JDK (это upstream; issue — только с согласия владельца).
+
+- AC: таблица «генератор — где создаётся — переинициализируется ли — что на нём стоит» в §1.3
+  research-crac с адресами; для konekt — ответ по `MockSmDpPlus` из B-32.
+- AC: прототип пробы: два restore образца дают одинаковые числа → проверка красная с именем
+  генератора; `SecureRandom` — зелёная.
+- Якоря: `experiments/crac-smoke/restore-twice.sh`, `experiments/crac-smoke/Hello.java`.

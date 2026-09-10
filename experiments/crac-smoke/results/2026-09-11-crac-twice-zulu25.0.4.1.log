@@ -1,0 +1,25 @@
+ccstrlist CRaCAllowedOpenFilePrefixes              = /var/lib/sss/mc/                       {pd product} {default}
+     bool CRaCCPUCountInit                         = false                                     {product} {default}
+ccstrlist CRaCCheckpointEngineOptions              =                                           {product} {default}
+    ccstr CRaCCheckpointTo                         =                                   {restore product} {default}
+    ccstr CRaCEngine                               = warp                           {restore pd product} {default}
+ccstrlist CRaCEngineOptions                        =                                   {restore product} {default}
+     bool CRaCHeapErgonomics                       = true                              {restore product} {default}
+     bool CRaCIgnoreRestoreIfUnavailable           = false                             {restore product} {default}
+    ccstr CRaCIgnoredFileDescriptors               =                                   {restore product} {default}
+   size_t CRaCMaxHeapSizeBeforeCheckpoint          = 0                                         {product} {default}
+     uint CRaCMinPid                               = 128                                       {product} {default}
+ccstrlist CRaCRestoreEngineOptions                 =                                   {restore product} {default}
+    ccstr CRaCRestoreFrom                          =                                   {restore product} {default}
+== before checkpoint
+start pid=129 nano+9ms wall=2026-09-10T22:15:35.179748126Z rnd=-1587666647 tlr=1521285169 uuid=03c77b74-ef74-49fe-9282-6cd7de848d5e
+tick 1 nano+1049ms wall=2026-09-10T22:15:36.219285338Z rnd=-1525601131 tlr=-595153664 uuid=3c27ffc9-fee8-4b35-b62e-ca0659851fee
+tick 2 nano+2052ms wall=2026-09-10T22:15:37.222502292Z rnd=-499232589 tlr=1319715529 uuid=946b9362-8520-4f4b-82d0-6b9457d26542
+== restore 1
+tick 3 nano+4744ms wall=2026-09-10T22:15:39.914308949Z rnd=-807420337 tlr=200137914 uuid=a8a320ea-1856-4648-8935-b7b44a7f4d29
+tick 4 nano+5750ms wall=2026-09-10T22:15:40.920227135Z rnd=791030001 tlr=-1290025396 uuid=44e654b7-da70-4db9-8212-0ea22f26f14f
+tick 5 nano+6750ms wall=2026-09-10T22:15:41.921010458Z rnd=68956807 tlr=-180571539 uuid=60d5b410-8b4a-4e53-9795-c4fcab05c24c
+== restore 2
+tick 3 nano+8387ms wall=2026-09-10T22:15:43.557366188Z rnd=-807420337 tlr=200137914 uuid=63180ee7-52d7-405b-89d1-f3520d36e6d0
+tick 4 nano+9394ms wall=2026-09-10T22:15:44.564760803Z rnd=791030001 tlr=-1290025396 uuid=3f3539c1-3bb7-4be8-b2a0-f75b78997851
+tick 5 nano+10395ms wall=2026-09-10T22:15:45.565567812Z rnd=68956807 tlr=-180571539 uuid=fa2743e2-398f-46f2-97df-a41af82ff3dd

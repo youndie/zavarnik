@@ -232,6 +232,13 @@ restarts each; the record is in that repository's `docs/research/measurements-20
 In its cluster, with the cache trained in the release pipeline and the readiness probe retuned to
 ask every second, the pod is Ready 3 s after its container starts, against 11 s before.
 
+A third phase is under research: the same train → verify → package for **CRaC** — a checkpoint
+of the warmed-up process instead of a class cache. On this Ktor sample a restore answers
+`/health` 50 ms after `docker run` against 640 for a plain start, with one file-descriptor
+policy and no code; what breaks with a connection pool underneath is the open question. The
+facts, the logs and the gate are in [`docs/research/research-crac.md`](docs/research/research-crac.md)
+and `experiments/crac-*/`.
+
 Three write-ups: the how-to,
 [Leyden AOT cache for a plain Kotlin/JVM service](https://kotlin.website/blog/leyden-aot-cache-for-a-plain-kotlin-jvm-service);
 [OpenJDK 25.0.0–25.0.3 uses a stale AOT cache without saying so](https://kotlin.website/blog/stale-aot-cache-on-jdk25);

@@ -1,0 +1,57 @@
+host: 6.6.87.2-microsoft-standard-WSL2; ptrace_scope=1; docker 29.1.3
+openjdk version "25.0.4.1" 2026-08-18 LTS
+OpenJDK Runtime Environment Zulu25.36+205-CRaC-CA (build 25.0.4.1+1-LTS)
+-r-sr-xr-x 1 root root 7250272 Aug 11 12:27 /opt/zulu25.36.205-ca-crac-jdk25.0.4.1-linux_x64/lib/criu
+Version: 3.17.1-crac
+== no extra privileges
+129:
+0
+-- checkpoint container:
+52248.751322: Checkpointing thread wakeup after checkpoint/restore
+52248.751469: Restore open file descriptors
+52248.751505: Waiting for other threads...
+52248.751878: Memory cleanup after checkpoint/restore
+52248.751921: Checkpointing thread checkpoint/restore completed
+52248.751923: warp: Checkpoint successful!
+-- image files: 2, 33M
+-- restore:
+52254.070257: warp: Restore successful!
+tick 4 nano+8626ms wall=2026-09-10T22:12:21.153982828Z rnd=-1516332021 tlr=-774656617 uuid=1786ec78-a433-4538-a24f-b08ec5536fb1
+tick 5 nano+9630ms wall=2026-09-10T22:12:22.157775818Z rnd=708574755 tlr=-1740735766 uuid=9187d76a-4277-46b4-bf62-97caa993a9bf
+tick 6 nano+10630ms wall=2026-09-10T22:12:23.158152817Z rnd=304184735 tlr=-1795349219 uuid=ff9f4fd6-f926-4ed6-88a3-d178375cbd55
+tick 7 nano+11630ms wall=2026-09-10T22:12:24.158507634Z rnd=-1301104382 tlr=1302782244 uuid=ca1ac15a-0c59-46d2-808a-9cb669184e5f
+== cap-add CHECKPOINT_RESTORE SYS_PTRACE
+129:
+0
+-- checkpoint container:
+52261.935388: Checkpointing thread wakeup after checkpoint/restore
+52261.935632: Restore open file descriptors
+52261.935833: Waiting for other threads...
+52261.935837: Memory cleanup after checkpoint/restore
+52261.935880: Checkpointing thread checkpoint/restore completed
+52261.935883: warp: Checkpoint successful!
+-- image files: 2, 34M
+-- restore:
+52267.210564: warp: Restore successful!
+tick 4 nano+8585ms wall=2026-09-10T22:12:34.294463706Z rnd=-642798176 tlr=1266118548 uuid=f61f0e15-ccfe-4d56-9ae6-fbde1e17c35e
+tick 5 nano+9589ms wall=2026-09-10T22:12:35.297954099Z rnd=958855119 tlr=869430475 uuid=ac0639ff-ae51-416e-b405-36cbdc2880c3
+tick 6 nano+10589ms wall=2026-09-10T22:12:36.298412053Z rnd=-1485841823 tlr=1370958542 uuid=009f0a00-3c45-434b-88af-4e2a1b1d5b7c
+tick 7 nano+11590ms wall=2026-09-10T22:12:37.298742434Z rnd=-986331039 tlr=194932946 uuid=f1dd90c9-5f76-4711-a695-ace3f5d25c11
+== privileged
+129:
+0
+-- checkpoint container:
+52275.072773: Checkpointing thread wakeup after checkpoint/restore
+52275.072891: Restore open file descriptors
+52275.073076: Waiting for other threads...
+52275.073078: Memory cleanup after checkpoint/restore
+52275.073120: Checkpointing thread checkpoint/restore completed
+52275.073120: warp: Checkpoint successful!
+-- image files: 2, 34M
+-- restore:
+52280.364982: warp: Restore successful!
+tick 4 nano+8626ms wall=2026-09-10T22:12:47.448648197Z rnd=-63811722 tlr=-999141458 uuid=fb522dc2-106a-4a1f-8ce4-5f4c6fb812a3
+tick 5 nano+9631ms wall=2026-09-10T22:12:48.453189579Z rnd=1608072006 tlr=948787507 uuid=90b28bf1-4968-478f-bb6c-f6273a448581
+tick 6 nano+10631ms wall=2026-09-10T22:12:49.453613380Z rnd=-790219061 tlr=-612722154 uuid=61bbcd91-22f1-4984-b2a1-b05380aa4462
+tick 7 nano+11631ms wall=2026-09-10T22:12:50.453961717Z rnd=1950160512 tlr=-510387556 uuid=eb38d1cf-fb96-4fd2-81be-d9c97402fdde
+scratch: /tmp/crac-smoke.2Y1f

@@ -1,0 +1,5 @@
+# CRaC file-descriptor policy for the Ktor CIO sample: the listening socket is closed at checkpoint
+# and reopened on the same local address at restore, so the server needs no code of its own.
+type: SOCKET
+listening: true
+action: reopen

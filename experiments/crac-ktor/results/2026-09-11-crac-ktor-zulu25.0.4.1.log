@@ -1,0 +1,38 @@
+image: OpenJDK Runtime Environment Zulu25.36+205-CRaC-CA (build 25.0.4.1+1-LTS); app: /home/youndie/zavarnik/samples/ktor/build/install/ktor-sample
+== plain start, 5 runs: ms to first 200
+plain 1: 953
+plain 2: 717
+plain 3: 543
+plain 4: 605
+plain 5: 642
+== checkpoint attempt with the server up
+	Suppressed: jdk.internal.crac.mirror.impl.CheckpointOpenSocketException: EPoll Event FD 31 left open in sun.nio.ch.EPollSelectorImpl@6fdd3812 with registered keys.
+		at java.base/sun.nio.ch.SelectorCRaCSupport.lambda$claimFileDescriptor$0(SelectorCRaCSupport.java:163)
+		at java.base/jdk.internal.crac.mirror.Core.checkpointRestore1(Core.java:195)
+		at java.base/jdk.internal.crac.mirror.Core.checkpointRestore(Core.java:291)
+		at java.base/jdk.internal.crac.mirror.Core.checkpointRestoreInternal(Core.java:327)
+	Suppressed: jdk.internal.crac.mirror.impl.CheckpointOpenSocketException: EPoll FD 30 left open in sun.nio.ch.EPollSelectorImpl@6fdd3812 with registered keys.
+		at java.base/sun.nio.ch.SelectorCRaCSupport.lambda$claimFileDescriptor$0(SelectorCRaCSupport.java:163)
+		at java.base/jdk.internal.crac.mirror.Core.checkpointRestore1(Core.java:195)
+		at java.base/jdk.internal.crac.mirror.Core.checkpointRestore(Core.java:291)
+		at java.base/jdk.internal.crac.mirror.Core.checkpointRestoreInternal(Core.java:327)
+	Suppressed: jdk.internal.crac.mirror.impl.CheckpointOpenSocketException: sun.nio.ch.ServerSocketChannelImpl[]
+		at java.base/jdk.internal.crac.JDKSocketResourceBase.lambda$beforeCheckpoint$0(JDKSocketResourceBase.java:69)
+		at java.base/jdk.internal.crac.mirror.Core.checkpointRestore1(Core.java:195)
+		at java.base/jdk.internal.crac.mirror.Core.checkpointRestore(Core.java:291)
+		at java.base/jdk.internal.crac.mirror.Core.checkpointRestoreInternal(Core.java:327)
+-- container log tail:
+Sep 10, 2026 10:14:47 PM jdk.internal.crac.LoggerContainer info
+INFO: /app/lib/kotlinx-serialization-json-io-jvm-1.11.0.jar is recorded as always available on restore
+Sep 10, 2026 10:14:47 PM jdk.internal.crac.LoggerContainer info
+INFO: /app/lib/ktor-serialization-kotlinx-json-jvm-3.5.2.jar is recorded as always available on restore
+Sep 10, 2026 10:14:47 PM jdk.internal.crac.LoggerContainer info
+INFO: /app/lib/ktor-server-content-negotiation-jvm-3.5.2.jar is recorded as always available on restore
+Sep 10, 2026 10:14:47 PM jdk.internal.crac.LoggerContainer info
+INFO: /app/lib/ktor-server-cio-jvm-3.5.2.jar is recorded as always available on restore
+Sep 10, 2026 10:14:47 PM jdk.internal.crac.LoggerContainer info
+INFO: /app/lib/ktor-sample.jar is recorded as always available on restore
+Sep 10, 2026 10:14:47 PM jdk.internal.crac.LoggerContainer info
+INFO: Use -Djdk.crac.collect-fd-stacktraces=true to find the source.
+-- image: 0 files, 4.0K
+scratch: /tmp/crac-ktor.Pv3D
