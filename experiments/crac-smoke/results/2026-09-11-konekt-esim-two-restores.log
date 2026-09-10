@@ -1,0 +1,26 @@
+== restore 1
+{
+  "subscriber": "+15557170287",
+  "steps": [
+    "esim-wizard",
+    "esim-wizard",
+    "esim-wizard"
+  ],
+  "iccid": null,
+  "activation": "LPA:1$rsp.konekt.io$B6E58ADE"
+}
+== restore 2
+{
+  "subscriber": "+15551025431",
+  "steps": [
+    "esim-wizard",
+    "esim-wizard",
+    "esim-wizard"
+  ],
+  "iccid": null,
+  "activation": "LPA:1$rsp.konekt.io$484E9618"
+}
+---- with SIMULATE_TRAFFIC=false, three restores (same image, same box, 00:55)
+== restore 1: LPA:1$rsp.konekt.io$E48B1B37
+== restore 2: LPA:1$rsp.konekt.io$E252B19E
+== restore 3: LPA:1$rsp.konekt.io$F98506BF

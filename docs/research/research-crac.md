@@ -76,14 +76,36 @@ wall-время, `java.util.Random`, `ThreadLocalRandom` и `UUID.randomUUID()`.
 | **Два restore одного снимка дают одинаковые `java.util.Random` и `ThreadLocalRandom`**: `rnd=-807420337 tlr=200137914` в обоих; UUID (SecureRandom) — разные | `results/2026-09-11-crac-twice-*.log` |
 | `SecureRandom()` **переинициализируется** после restore (`@crac Instances created by this constructor are automatically reseeded after restore from a checkpoint`); `SecureRandom(byte[] seed)` — **нет**; `java.util.Random` и `ThreadLocalRandom` — ни строчки про CRaC | `openjdk/crac`, `java/security/SecureRandom.java` строки 219 и 265; `java/util/Random.java`, `ThreadLocalRandom.java` — grep `crac` пуст |
 
-**Следствие.** Бриф назвал Random среди того, «что ломается», и это верно, но не там, где
-ждёшь: не в приложении, а в JDK. Каждая реплика, поднятая из одного снимка, тянет одну и ту же
-последовательность из любого `Random`, созданного до checkpoint, и из `ThreadLocalRandom`
-потоков, живших в момент снимка. Что на этом стоит в сервисе: идентификаторы, jitter у
-ретраев и таймаутов, случайный выбор реплики, `kotlin.random.Random.Default` (на JVM — обёртка
-над `ThreadLocalRandom`; **гипотеза**, проверить по исходнику stdlib — [B-33](../backlog/B-33-random-after-restore.md)).
-Токены и OTP на `SecureRandom()` — в порядке. Плагин этого не починит; что он может — поймать:
-проверка «два restore одного снимка отвечают по-разному там, где должны» (→ D4).
+**Уточнено 11.09.2026 (`experiments/crac-smoke/randoms.sh`, `Randoms.java`).** Пять генераторов,
+считанных **после** restore, два restore одного снимка:
+
+| Генератор | Совпадает у двух restore? |
+|---|---|
+| `Random`, созданный **до** checkpoint | **да** |
+| `ThreadLocalRandom` на потоке, жившем **до** checkpoint | **да** |
+| `ThreadLocalRandom` на потоке, созданном **после** restore | **да** — сеятель `ThreadLocalRandom` тоже в снимке |
+| `new Random()`, созданный **после** restore | нет (в затравке `System.nanoTime`) |
+| `SecureRandom()` | нет (JDK переинициализирует) |
+
+**Следствие 1.** Бриф назвал Random среди того, «что ломается», и это верно, но не там, где
+ждёшь: не в приложении, а в JDK. Каждая реплика из одного снимка тянет одну и ту же
+последовательность из `ThreadLocalRandom` — включая потоки, созданные уже после restore, — и из
+любого `Random`, созданного до снимка. Токены и OTP на `SecureRandom()` — в порядке.
+
+**Следствие 2 — почему на настоящем сервисе это не воспроизводится по требованию.** У konekt
+мастер eSIM выдаёт код активации из `kotlin.random.Random.Default` (на JVM — `ThreadLocalRandom`
+вызывающего потока), и пять restore одного снимка дали **пять разных** кодов: `B6E58ADE`,
+`484E9618` и, с выключенным симулятором трафика, `E48B1B37`, `E252B19E`, `F98506BF`
+(`results/2026-09-11-konekt-esim-two-restores.log`). Поток тот же, поток — из пула, и между
+restore и выдачей профиля из того же `ThreadLocalRandom` черпают вход, выдача токена, экраны,
+Exposed и Hikari — сколько раз, зависит от того, какой воркер что обслужил. **Последовательности
+одинаковые, потребление — нет.** Столкновение остаётся возможным (тем вероятнее, чем раньше после
+restore сервис рисует свой первый идентификатор), но детерминированным не является.
+
+**Следствие 3 — для D4.** Проверка «два restore и сравнить идентификатор приложения» была бы
+шаткой ровно по этой причине: она зелёная не потому, что всё хорошо, а потому что воркеры
+разошлись ([[tests-check-my-answer-not-what-survives]] в чистом виде). Проверять надо сами
+генераторы — пробой уровня JDK, как в `Randoms.java`, — и это меняет D4.
 
 ### 1.4 Ktor CIO: что ломается и что чинит одна политика
 
@@ -172,7 +194,7 @@ during CRaC snapshotting» (#13308) **закрыт, не влит**. Адрес 
 | Факт | Где проверено |
 |---|---|
 | Hikari 7.1.0, `maximumPoolSize` 10 (`DB_POOL_SIZE`), Exposed 1.5.0 через `Database.connect(dataSource)`, pgjdbc 42.7.13, Flyway при старте | `konekt/gradle/libs.versions.toml`, `shared/db/src/main/kotlin/io/konekt/db/DatabaseFactory.kt` |
-| Одноразовые коды — `SecureRandom()` (`CodeSecurity.kt`): после restore переинициализируется (§1.3); `MockSmDpPlus` (dev-заглушка eSIM) — `kotlin.random.Random.Default` — кандидат на одинаковые последовательности | `feature/auth-server-data/.../CodeSecurity.kt`, `feature/esim-server-data/.../MockSmDpPlus.kt` |
+| Одноразовые коды — `SecureRandom()` (`CodeSecurity.kt`): после restore переинициализируется (§1.3); `MockSmDpPlus` (dev-заглушка eSIM) — `kotlin.random.Random.Default`: последовательность общая у всех реплик, но выдаваемые коды разошлись — §1.3, следствие 2 | `feature/auth-server-data/.../CodeSecurity.kt`, `feature/esim-server-data/.../MockSmDpPlus.kt` |
 | Готовность в кластере сейчас 3 с с AOT-кэшем против 11 (konekt B-123); базовый образ — `eclipse-temurin:25-jre`, не Zulu | konekt `docs/backlog/B-123-*.md`, `Dockerfile` |
 
 **Проверено прогоном 11.09.2026** — `konekt/scripts/measure/crac-restore.sh`, десять фаз, журналы в
@@ -243,12 +265,16 @@ restore подряд для D4. Упаковка: слой со снимком �
 дописывает правила для своего (пул — см. B-32). Это обход по определению Azul; честная
 альтернатива — `Resource` в Ktor (KTOR-6485), которого нет три года.
 
-### D4. Проверка «реплики различаются»
+### D4. Проверка «реплики различаются» — по генераторам, не по ответам приложения
 
-`cracVerify` восстанавливает снимок дважды и сравнивает то, что обязано различаться:
-как минимум `ThreadLocalRandom` и `Random`, снятые пробой раннера внутри процесса (гипотеза:
-через `jcmd`-диагностику или агент раннера). Плагин не чинит §1.3, но не даёт пройти проверке
-молча — тот же принцип, что у `aotVerify` с долей классов.
+*Правка 11.09.2026 (§1.3, следствие 3).* Первая формулировка — «восстановить дважды и сравнить
+то, что обязано различаться» — на сервисе даёт ложное зелёное: у konekt пять restore дали пять
+разных кодов активации, хотя последовательности `ThreadLocalRandom` во всех пяти одинаковы; их
+развёл пул потоков. Поэтому `cracVerify` сравнивает **сами генераторы**, а не ответы: проба
+уровня JDK (по образцу `experiments/crac-smoke/Randoms.java`) снимает четыре значения —
+`Random` из-до снимка, `ThreadLocalRandom` старого и нового потока, `SecureRandom` — и падает,
+если первые три совпали у двух restore. Плагин не чинит §1.3; он не даёт этому пройти молча,
+как `aotVerify` не даёт пройти кэшу с низкой долей классов.
 
 ---
 
@@ -307,8 +333,8 @@ capabilities на containerd k0s — по §1.2 нет, проверить на 
 Hikari, ни Ktor; хватило файла политик дескрипторов. Restore konekt — 131 мс против 2317, первый
 экран под токеном 32 против 118, весь путь покупки через брокер и те же 12 обновлений по SSE, что
 у обычного старта. Условие D4 остаётся невыполненным как *проверка*: одинаковые случайные числа
-подтверждены на уровне JDK (§1.3), но у konekt мастер eSIM до выдачи ICCID не доведён — это B-33,
-и это не блокирует фазу.
+подтверждены на уровне JDK (§1.3), но у konekt мастер eSIM доведён 11.09.2026 и дал **разные** коды — §1.3, следствие 2;
+что осталось от B-33, это перенести пробу генераторов в `cracVerify` (D4).
 
 Порядок: ~~B-32 (ворота)~~ **сделана 11.09.2026** →
 [B-33](../backlog/B-33-random-after-restore.md) → [B-34](../backlog/B-34-crac-plugin-form.md) →

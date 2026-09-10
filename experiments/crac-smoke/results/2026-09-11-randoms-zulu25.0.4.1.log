@@ -1,0 +1,3 @@
+before checkpoint: ready
+restore 1: old-random=296054235 old-tlr=110395966 new-tlr=433266186 new-random=-1001239789 securerandom=-1709930991
+restore 2: old-random=296054235 old-tlr=110395966 new-tlr=433266186 new-random=1111673215 securerandom=1872501426
