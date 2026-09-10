@@ -74,8 +74,6 @@ public abstract class ZavarnikExtension
             action.execute(verify)
         }
 
-        /** The Jib mode's knobs — see [JibSpec]. Ignored unless Jib is applied. */
-
         /** `crac { }` — what a checkpoint of this application has to be told about. */
         public val crac: CracSpec = objects.newInstance(CracSpec::class.java)
 
@@ -84,6 +82,7 @@ public abstract class ZavarnikExtension
             action.execute(crac)
         }
 
+        /** The Jib mode's knobs — see [JibSpec]. Ignored unless Jib is applied. */
         public val jib: JibSpec = objects.newInstance(JibSpec::class.java)
 
         /** Configures [jib]. */
@@ -242,19 +241,6 @@ public class RequestSpec {
 }
 
 /**
- * The Jib mode: `jibAotTrain` and `jibAotVerify` run the image in a container, and an application
- * that needs its database or a broker to start needs that container on a network with them and
- * with their addresses in its environment. [dockerRunArgs] go on the `docker run` command line
- * after `--rm`, before the image: `--network`, `-e`, `--add-host`, whatever the stand needs.
- *
- * ```kotlin
- * zavarnik {
- *     jib { dockerRunArgs("--network", "stand_default", "-e", "DB_URL=jdbc:postgresql://postgres:5432/app") }
- * }
- * ```
- */
-
-/**
  * A CRaC checkpoint of the warmed-up process, for the images that take one.
  *
  * Only one thing about an application cannot be worked out from the build: which of its outgoing
@@ -286,6 +272,18 @@ public abstract class CracSpec {
     public abstract val imageDirName: Property<String>
 }
 
+/**
+ * The Jib mode: `jibAotTrain` and `jibAotVerify` run the image in a container, and an application
+ * that needs its database or a broker to start needs that container on a network with them and
+ * with their addresses in its environment. [dockerRunArgs] go on the `docker run` command line
+ * after `--rm`, before the image: `--network`, `-e`, `--add-host`, whatever the stand needs.
+ *
+ * ```kotlin
+ * zavarnik {
+ *     jib { dockerRunArgs("--network", "stand_default", "-e", "DB_URL=jdbc:postgresql://postgres:5432/app") }
+ * }
+ * ```
+ */
 public abstract class JibSpec {
     /** Extra `docker run` arguments for the training and verification containers. Empty by default. */
     public abstract val dockerRunArgs: ListProperty<String>
