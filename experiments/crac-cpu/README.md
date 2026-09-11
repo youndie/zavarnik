@@ -26,6 +26,8 @@ one:
 | narrow | `generic` | wide | **restored** |
 | narrow | none | wide | **refused**, exit 1, same message |
 | wide | `generic` | wide (itself) | restored — the control that says the flag did not break the snapshot |
+| wide | `generic`, **CRIU engine** | narrow | **SIGSEGV**, exit 139, no message — `results/2026-09-11-cross-criuengine.log` |
+| wide | `generic`, CRIU engine | wide (itself) | restored — the same control for the other engine |
 
 Two things follow, and the second is the one worth remembering.
 
@@ -40,6 +42,11 @@ with no JVM message and no `hs_err` file. So following the JVM's own advice (`tr
 -XX:CPUFeatures=0x… on checkpoint`, which is what it prints on the refusal) replaces a loud refusal
 with a segmentation fault. The flag is also `not restore-settable`, which the JVM says plainly if
 you try.
+
+**It is not the engine.** The same `generic` snapshot taken with `-XX:CRaCEngine=criuengine` — the
+older CRIU-based engine, which needs `CHECKPOINT_RESTORE` and `SYS_PTRACE` — restores on the
+machine that took it and crashes the same silent way on the other. Two engines, one crash: the
+fault is on the JVM's side of the flag, which is where a report about it belongs.
 
 **The practical rule:** take the snapshot on the narrowest CPU it will ever be restored on, with
 `-XX:CPUFeatures=generic`. Anything else either refuses or crashes.

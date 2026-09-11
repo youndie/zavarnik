@@ -1,0 +1,31 @@
+# The same cross-CPU case with the older CRIU engine, to learn whether the silent crash belongs
+# to warp. Commands run over ssh from the operator's machine; output copied verbatim.
+#
+# checkpoint on the wide machine (EPYC-Genoa), root inside the container, both capabilities:
+#   docker run -d --cap-add CHECKPOINT_RESTORE --cap-add SYS_PTRACE -v /tmp/x5:/work -w /work <digest> \
+#     java -XX:CRaCEngine=criuengine -XX:CPUFeatures=generic -XX:CRaCCheckpointTo=/work/cr Probe
+#   docker exec x5 jcmd Probe JDK.checkpoint
+before checkpoint: 2026-09-11T16:03:34.776308218Z
+INFO: Starting checkpoint
+[3.353s][info][crac] Checkpoint ...
+-- image: core-129.img core-130.img core-131.img core-132.img core-133.img criuengine   (19M)
+
+# restore on the narrow machine (Core Ultra 7) WITHOUT naming the engine: the default is warp,
+# and the mismatch is what fails — the CPU lines after it are noise from that, not a verdict:
+[0.042s][error][crac] Image format does not match; saved image with engine criuengine, restoring with warp
+[0.042s][error][crac] CRaC engine failed to restore from /work/cr: error -1
+[0.042s][error][crac] Restore failed due to wrong or missing CPU architecture (current architecture is amd64)
+[0.042s][error][crac] Restore failed due to incompatible or missing CPU features.
+exit=1
+
+# restore on the narrow machine WITH -XX:CRaCEngine=criuengine, capabilities:
+(no output at all)
+exit=139
+
+# the same, --privileged:
+(no output at all)
+exit=139
+
+# control: the same snapshot restored on the machine that took it, criuengine, capabilities:
+after restore: 2026-09-11T16:05:28.509507861Z on amd64
+exit=0
