@@ -15,8 +15,12 @@ stage: stage-6-crac
 `experiments/crac-smoke/results/2026-09-11-crac-twice-*.log`). Для Kotlin-сервиса вопрос —
 что стоит на `kotlin.random.Random.Default` и на `ThreadLocalRandom` внутри библиотек.
 
-- **Решение:** сначала карта, потом сторож. Карта — по исходникам: `kotlin.random.Random.Default`
-  на JVM (гипотеза: `PlatformRandom` над `ThreadLocalRandom.current()`), генераторы в Ktor
+- **Первая строка карты закрыта 11.09.2026:** `kotlin.random.Random.Default` на stdlib 2.4.10 и
+  JDK 25 — это `kotlin.random.jdk8.PlatformThreadLocalRandom` над `java.util.concurrent.ThreadLocalRandom`
+  (спрошено рефлексией у живой JVM; платформенная реализация выбирается в рантайме, поэтому чтение
+  исходника здесь недостаточно). Значит, весь Kotlin-код на `Random.Default` — в общей у реплик
+  последовательности.
+- **Решение:** сначала карта, потом сторож. Карта — по исходникам: остальные генераторы, генераторы в Ktor
   (`generateNonce`?), kotlinx.coroutines (jitter?), Hikari (`housekeeper` jitter), pgjdbc,
   Exposed. Каждая строка — путь и версия. Сторож — D4 research-crac: `cracVerify` делает два
   restore и сравнивает пробу генераторов, снятую раннером внутри процесса; как именно снять —
