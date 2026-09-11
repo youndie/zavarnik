@@ -45,6 +45,17 @@ class CracTest {
         return home
     }
 
+    /** A `java` whose flag list has CRaC in it, so the checkpoint gets past the JDK check. */
+    private fun javaWithCrac(dir: File): File {
+        val home = File(dir, "crac-jdk")
+        File(home, "bin").mkdirs()
+        File(home, "bin/java").apply {
+            writeText("#!/bin/sh\necho '    ccstr CRaCCheckpointTo = {product} {default}'\nexit 0\n")
+            setExecutable(true)
+        }
+        return home
+    }
+
     private fun crac(
         dir: File,
         javaHome: File,
@@ -81,13 +92,30 @@ class CracTest {
     }
 
     @Test
-    fun `the policy file alone does not count as a snapshot`(
+    fun `the policy file is written inside the installation, not into the snapshot`(
+        @TempDir dir: File,
+    ) {
+        // A JDK that passes the CRaC check, so the run gets as far as writing the policy; it then
+        // fails for want of jcmd, which is fine — the location of the file is what this asserts,
+        // and the location is the whole point: a restore reads the recorded path again, and a
+        // mounted output directory does not exist by then.
+        val image = File(dir, "crac")
+        val failure = assertFailsWith<RunnerException> { crac(dir, javaWithCrac(dir), image).checkpoint() }
+        assertTrue("jcmd" in failure.message.orEmpty(), failure.message.orEmpty())
+        assertTrue(
+            File(dir, "lib/${CracPolicies.FILE_NAME}").isFile,
+            "not in lib/: ${File(dir, "lib").list()?.toList()}",
+        )
+        assertFalse(File(image, CracPolicies.FILE_NAME).exists(), "the snapshot directory must not hold it")
+    }
+
+    @Test
+    fun `a snapshot directory with nothing in it is not a snapshot`(
         @TempDir dir: File,
     ) {
         val image = File(dir, "crac").apply { mkdirs() }
-        CracPolicies.write(File(image, CracPolicies.FILE_NAME), emptyList())
         // The JDK check runs first, so the fake one has to be the one without CRaC; what this case
-        // is really about is that `imageFiles()` does not count the policy file as a snapshot.
+        // is really about is that an empty directory does not pass for a snapshot.
         val failure = assertFailsWith<RunnerException> { crac(dir, javaWithoutCrac(dir), image).restoreVerify() }
         assertTrue("has no CRaC" in failure.message.orEmpty(), failure.message.orEmpty())
     }

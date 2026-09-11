@@ -34,7 +34,7 @@ public class Crac(
         }
         imageDir.deleteRecursively()
         imageDir.mkdirs()
-        val policies = CracPolicies.write(File(imageDir, CracPolicies.FILE_NAME), config.cracIgnoredRemotePorts)
+        val policies = policyFile()
         if (config.cracIgnoredRemotePorts.isNotEmpty()) report(CracPolicies.WARNING)
         val run =
             ApplicationRun(
@@ -151,9 +151,32 @@ public class Crac(
         report("zavarnik: checkpoint took ${TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)} ms")
     }
 
-    /** The snapshot's own files, which is everything in the directory except the policy file. */
-    private fun imageFiles(): List<File> =
-        imageDir.listFiles().orEmpty().filter { it.isFile && it.name != CracPolicies.FILE_NAME }
+    /**
+     * The policy file, **inside the installation** and never in the snapshot directory.
+     *
+     * The JVM records `jdk.crac.resource-policies` as it was given and reads the file again on
+     * restore. A path under the mounted output directory therefore restores into
+     * `ConfigurationException: File … does not exist` the moment the snapshot is used anywhere but
+     * the container that took it — which is the whole point of taking it. Inside the installation
+     * the path is the same in both processes, because it is the same image.
+     */
+    private fun policyFile(): File {
+        val file = File(installation.runnerDir, CracPolicies.FILE_NAME)
+        if (file.isFile) return file
+        return try {
+            CracPolicies.write(file, config.cracIgnoredRemotePorts)
+        } catch (denied: java.io.IOException) {
+            throw RunnerException(
+                "zavarnik: cannot write ${file.path}, and the policy file has to live inside the image — the " +
+                    "JVM reads its path again on restore, where a mounted directory is gone. Build the " +
+                    "distribution with a recent plugin, which writes it, or make ${file.parent} writable.",
+                denied,
+            )
+        }
+    }
+
+    /** The snapshot's own files; the policy file is not among them, it lives in the installation. */
+    private fun imageFiles(): List<File> = imageDir.listFiles().orEmpty().filter { it.isFile }
 
     private fun sizeKib(): Long = imageFiles().sumOf { it.length() } / KIB
 
