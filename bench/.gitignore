@@ -1,5 +1,9 @@
 build/
 .gradle/
 .kotlin/
-profile/results/*/
+# The collapsed profiles are tens of megabytes per run and stay on the machine that
+# ran them; what a reader needs — the summary of every run — is versioned.
+profile/results/*/*
+!profile/results/*/summary.md
 !profile/results/*.md
+__pycache__/
