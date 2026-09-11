@@ -79,13 +79,37 @@ wall-время, `java.util.Random`, `ThreadLocalRandom` и `UUID.randomUUID()`.
 **Уточнено 11.09.2026 (`experiments/crac-smoke/randoms.sh`, `Randoms.java`).** Пять генераторов,
 считанных **после** restore, два restore одного снимка:
 
-| Генератор | Совпадает у двух restore? |
-|---|---|
-| `Random`, созданный **до** checkpoint | **да** |
-| `ThreadLocalRandom` на потоке, жившем **до** checkpoint | **да** |
-| `ThreadLocalRandom` на потоке, созданном **после** restore | **да** — сеятель `ThreadLocalRandom` тоже в снимке |
-| `new Random()`, созданный **после** restore | нет (в затравке `System.nanoTime`) |
-| `SecureRandom()` | нет (JDK переинициализирует) |
+| Генератор | Где создан | Совпадает у двух restore? | Что на нём стоит в сервисе |
+|---|---|---|---|
+| `java.util.Random` | **до** checkpoint | **да** | `flyway-core`, `kotlin-reflect`, `HikariCP`, `ktor-utils` |
+| `ThreadLocalRandom` | поток жил **до** checkpoint | **да** | `HikariCP`, `exposed-jdbc`, и весь Kotlin-код через `Random.Default` |
+| `ThreadLocalRandom` | поток создан **после** restore | **да** — сеятель для новых потоков тоже в снимке | то же |
+| `SplittableRandom` | **до** checkpoint | **да** | прямых потребителей в этих classpath нет |
+| `SplittableRandom` | **после** restore | **да** — тот же механизм сеятеля | — |
+| `Math.random()` | генератор JDK, создан при первом вызове | **да**, если до снимка его кто-нибудь вызвал | что угодно, включая чужой код |
+| `new Random()` | **после** restore | нет (в затравке `System.nanoTime`) | — |
+| `RandomGenerator.getDefault()` | при вызове | нет | — |
+| `UUID.randomUUID()` | `SecureRandom` внутри | нет | `ktor-utils`, идентификаторы приложений |
+| `SecureRandom()` | любой момент | нет (JDK переинициализирует) | `postgresql`, `ktor-utils`, одноразовые коды konekt |
+| `SecureRandom(byte[] seed)` | любой момент | **нет** — вопреки ожиданию от javadoc (см. ниже) | — |
+
+**Карта дополнена 11.09.2026 (B-33, `experiments/crac-smoke/Randoms.java`, журнал
+`results/2026-09-11-generator-map.log`; библиотеки — грепом по константным пулам jar-ов образца и
+konekt).** Две строки таблицы новые и неочевидные: `SplittableRandom`, созданный **после**
+restore, повторяется так же, как `ThreadLocalRandom` — у обоих сеятель для новых экземпляров лежит
+в снимке; и `Math.random()` повторяется, если до снимка его кто-нибудь вызвал, а в работающем
+сервисе его вызвали.
+
+**Одна строка расходится с javadoc, и в пользу безопасности.** `SecureRandom(byte[] seed)`
+документирован как **не** переинициализируемый, то есть должен был дать одинаковые числа —
+а дал разные. Причина не в CRaC: у провайдера по умолчанию на Linux (`NativePRNG`) затравка из
+конструктора только подмешивается к системной энтропии, и вывод от неё не определяется. То есть
+«не переинициализируется» и «повторяется» — разные утверждения, и для этой пары верно только
+первое.
+
+**Сторож (D4) собран как прототип** — `experiments/crac-smoke/generator-guard.sh`: два restore
+одного снимка, сравнение по каждому генератору, красный выход с **именами** совпавших. На образце
+он называет шесть: `old-random old-tlr new-tlr old-splittable new-splittable math-random`.
 
 **Чем `Random.Default` оказался на самом деле (проверено 11.09.2026, рефлексией на живой JVM, не
 чтением исходника: платформенная реализация выбирается в рантайме).** На stdlib 2.4.10 и JDK 25

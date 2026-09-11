@@ -1,0 +1,30 @@
+== the Ktor sample: which jar references which generator (constant pools)
+  kotlin-reflect-2.3.21.jar                       Random
+  kotlin-stdlib-2.4.10.jar                        ThreadLocalRandom SecureRandom Random kotlin.random
+  ktor-server-core-jvm-3.5.2.jar                  kotlin.random
+  ktor-utils-jvm-3.5.2.jar                        SecureRandom Random kotlin.random
+  ktor-websockets-jvm-3.5.2.jar                   kotlin.random
+== konekt: the same, pool, driver and Exposed among them
+  HikariCP-7.1.0.jar                              ThreadLocalRandom Random
+  agent-jvm-0.2.15.jar                            kotlin.random
+  auth-server-data-0.1.0-SNAPSHOT.jar             SecureRandom
+  esim-server-data-0.1.0-SNAPSHOT.jar             kotlin.random
+  exposed-jdbc-1.5.0.jar                          ThreadLocalRandom
+  flyway-core-13.3.0.jar                          Random
+  guava-33.6.0-jre.jar                            Random
+  jackson-databind-2.22.0.jar                     Random
+  jackson-databind-3.1.5.jar                      Random
+  jansi-2.4.3.jar                                 Random
+  kotlin-reflect-2.3.21.jar                       Random
+  kotlin-stdlib-2.4.10.jar                        ThreadLocalRandom SecureRandom Random kotlin.random
+  kotlinx-datetime-jvm-0.8.0.jar                  kotlin.random
+  ktor-client-core-jvm-3.5.2.jar                  kotlin.random
+  ktor-network-tls-jvm-3.5.2.jar                  SecureRandom
+  ktor-server-core-jvm-3.5.2.jar                  kotlin.random
+  ktor-server-sessions-jvm-3.5.2.jar              SecureRandom
+  ktor-utils-jvm-3.5.2.jar                        SecureRandom Random kotlin.random
+  ktor-websockets-jvm-3.5.2.jar                   kotlin.random
+  logback-core-1.6.3.jar                          SecureRandom Random
+  petich-core-jvm-0.1.0.jar                       kotlin.random
+  postgresql-42.7.13.jar                          SecureRandom
+  shared-jvm-0.2.15.jar                           kotlin.random
