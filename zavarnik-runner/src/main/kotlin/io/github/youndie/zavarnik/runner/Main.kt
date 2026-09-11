@@ -21,6 +21,8 @@ import kotlin.system.exitProcess
  * snapshot it, then restore the snapshot and put the restored process through the workload again.
  * The snapshot is a directory rather than a file — `<out>/crac` — and it belongs to the image it
  * was taken in, which is why it goes to `--out` and comes back as a layer over that image.
+ * `--image` names that directory outright, for the verification that reads a snapshot the image
+ * already carries while still writing its log somewhere it may.
  */
 public object Main {
     @JvmStatic
@@ -29,17 +31,19 @@ public object Main {
         if (command !in COMMANDS) usage()
         var dir: File? = null
         var out: File? = null
+        var image: File? = null
         var i = 1
         while (i < args.size) {
             when (args[i]) {
                 "--out" -> out = args.getOrNull(++i)?.let(::File) ?: usage()
+                "--image" -> image = args.getOrNull(++i)?.let(::File) ?: usage()
                 else -> if (dir == null) dir = File(args[i]) else usage()
             }
             i++
         }
         val installDir = dir ?: ownInstallDir()
         try {
-            run(command, installDir, out)
+            run(command, installDir, out, image)
         } catch (failed: RunnerException) {
             System.err.println(failed.message)
             exitProcess(FAILURE)
@@ -50,6 +54,7 @@ public object Main {
         command: String,
         dir: File,
         out: File?,
+        image: File?,
     ) {
         val javaHome = File(System.getProperty("java.home"))
         val jib = File(dir, "jib-classpath-file").isFile
@@ -65,7 +70,10 @@ public object Main {
                 Installation.distribution(dir, javaHome)
             }
         val log = File(out ?: installation.runnerDir, "zavarnik-$command.log")
-        val cracImage = File(out ?: installation.runnerDir, config.cracImageDirName)
+        // `--image` names the snapshot; `--out` stays what it is everywhere else, the writable
+        // place for logs. They are the same directory only by default: a verification inside the
+        // final image reads a snapshot the image carries and still needs somewhere to write.
+        val cracImage = image ?: File(out ?: installation.runnerDir, config.cracImageDirName)
         when (command) {
             TRAIN -> Training(installation, config, log).run()
             VERIFY -> Verification(installation, config, log).run()
@@ -77,7 +85,7 @@ public object Main {
     private fun usage(): Nothing {
         System.err.println(
             "usage: java -cp <runner jar> io.github.youndie.zavarnik.runner.Main " +
-                COMMANDS.joinToString("|") + " [<install dir>] [--out <dir>]",
+                COMMANDS.joinToString("|") + " [<install dir>] [--out <dir>] [--image <snapshot dir>]",
         )
         exitProcess(USAGE)
     }

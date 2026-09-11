@@ -1,5 +1,6 @@
 package io.github.youndie.zavarnik
 
+import io.github.youndie.zavarnik.runner.CracPolicies
 import io.github.youndie.zavarnik.runner.Main
 import io.github.youndie.zavarnik.runner.RunnerConfig
 import io.github.youndie.zavarnik.runner.WorkloadStep
@@ -21,6 +22,8 @@ import java.time.Duration
  * without Gradle — inside the runtime stage of a container image, on a bare JRE:
  *
  * - `zavarnik.properties`, the `zavarnik { }` block as the runner reads it;
+ * - `zavarnik-crac-policies.yaml`, the file-descriptor policy a CRaC checkpoint needs — unused by
+ *   the AOT path and cheap, and it has to be *in the image* because a restore reads its path again;
  * - `zavarnik-runner.jar`, the runner with the Kotlin stdlib inside, taken from the plugin's own
  *   resources — it is the same code the `aotTrain` and `aotVerify` tasks call in-process.
  *
@@ -87,6 +90,10 @@ public abstract class RunnerFilesTask : DefaultTask() {
             cracIgnoredRemotePorts = cracIgnoredRemotePorts.get(),
             cracImageDirName = cracImageDirName.get(),
         ).write(File(dir, RunnerConfig.FILE_NAME))
+        // Beside the properties, and inside the image for the same reason the properties are: a
+        // checkpoint records the path of this file and reads it again on restore, where anything
+        // mounted for the build is long gone.
+        CracPolicies.write(File(dir, CracPolicies.FILE_NAME), cracIgnoredRemotePorts.get())
         val embedded =
             Main::class.java.getResourceAsStream(EMBEDDED_RUNNER)
                 ?: throw GradleException(

@@ -11,10 +11,12 @@ workload для тренировки за авторизацией (B-27), mtime
 остаются, диагностика уехала в kapkan. **Третья фаза (CRaC, `docs/research/research-crac.md`,
 `experiments/crac-smoke/`, `experiments/crac-ktor/`) открыта 11.09.2026:** образец Ktor CIO
 восстанавливается за ~50 мс одним правилом для слушающего сокета, движок warp без привилегий;
-ворота — B-32 на konekt (пул, Exposed, Random). Четвёртая фаза
-(`docs/research/research-engines.md`, B-36…B-38) закрыта 11.09.2026: тот же стенд `bench/` на трёх
-движках Ktor — CIO, Netty, Jetty, движок выбирается `-Dbench.engine`; журналы прогонов —
-`bench/profile/results/engine-*`. См. `backlog.md`.
+**ворота B-32 пройдены на konekt 11.09.2026**, B-34 сделана: раннер (`checkpoint`/`restore-verify`),
+DSL `crac { ignoreRemotePort(...) }`, Jib-режим `jibCracCheckpoint`/`jibCracVerify` со снимком слоем и
+восстановлением вместо точки входа, образец `samples/ktor-jib -Pcrac` в CI; открыта B-35 (CPUFeatures).
+Четвёртая фаза (`docs/research/research-engines.md`, B-36…B-38) закрыта 11.09.2026: тот же стенд
+`bench/` на трёх движках Ktor — CIO, Netty, Jetty, движок выбирается `-Dbench.engine`; журналы
+прогонов — `bench/profile/results/engine-*`. См. `backlog.md`.
 
 ## Как начать сессию
 

@@ -1,7 +1,7 @@
 ---
 id: B-32
 title: "Ворота третьей фазы: konekt (Ktor CIO + HikariCP + Exposed + Postgres) под checkpoint/restore на стенде"
-status: open
+status: done
 priority: P0
 size: M
 stage: stage-6-crac
@@ -36,6 +36,16 @@ stage: stage-6-crac
   7. Таймауты Hikari (`maxLifetime`, `keepaliveTime`) и корутинные таймеры после паузы в час
      между checkpoint и restore (риск 6).
 - Не покрывает: чарт и кластер (открытый вопрос 2), плагин (B-34).
+
+**Сделана 11.09.2026 — ворота зелёные.** Прогон: `konekt/scripts/measure/crac-restore.sh`, десять
+фаз, журналы в konekt `docs/research/measurements-2026-09-11/crac/`, запись — konekt B-125 и
+PR youndie/konekt#24; факты сведены в [research-crac](../research/research-crac.md) §1.7.
+Коротко: чекпоинт отвергает пул и **называет** его (`HikariPool-1:connection-adder` в трассах
+дескрипторов); `action: close` проигрывает гонку с тем же `connection-adder`; `action: ignore`
+работает, потому что Hikari сам проверяет соединения на выдаче, а клиент брокера переподключается.
+Правок в приложении не потребовалось. 131 мс против 2317 до `/health`, 32 против 118 на первом
+экране под токеном, весь путь покупки и те же 12 обновлений по SSE. H5 добавила факт, которого не
+было в плане: окружение restore-контейнера **не** доходит до конфигурации, прочитанной при старте.
 
 - AC: журнал с исходом каждой гипотезы (1–7) и коротким выводом «зелёный/красный» по критерию
   §4 research-crac; §1.8 research-crac заполнен с адресами; если красный — список библиотек,

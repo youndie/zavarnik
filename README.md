@@ -147,14 +147,27 @@ zavarnik {
 }
 ```
 
+On Jib — `ktor { docker { } }` included — two tasks do it, the way the AOT pair does, and the
+`-jre-crac` image of Azul Zulu is the base because Temurin has no CRaC:
+
+```bash
+./gradlew jibCracCheckpoint     # jibDockerBuild, then the checkpoint inside a container of that image
+./gradlew jibCracVerify         # jibDockerBuild again — now with the snapshot — and the restore checked there
+```
+
+The second build lays the snapshot over the image as one more layer and **replaces the
+entrypoint** with `java -XX:CRaCRestoreFrom=…`, because a restore takes neither classpath nor main
+class. On the sample that image answers `/health` 174 ms after `docker run`
+([`samples/ktor-jib/crac-check.sh`](samples/ktor-jib/crac-check.sh), which CI runs).
+
 What it costs, all of it measured in [`docs/research/research-crac.md`](docs/research/research-crac.md):
 a JDK with CRaC, which for 25 means Azul Zulu and no one else; Linux; a snapshot bound to the bytes
 of the image it was taken in and to the CPU that took it; configuration frozen at checkpoint time,
 because whatever the application read at startup is in the snapshot and the restore container's
 environment does not reach it. On a Ktor service with HikariCP, Exposed and Postgres the restore is
 ready in 131 ms against 2 317 and serves its first signed-in screen in 32 ms against 118, with no
-change to the application. Gradle tasks for this do not exist yet — the runner does, and
-[`experiments/crac-ktor/`](experiments/crac-ktor/) is how it is exercised.
+change to the application. On the plain `application` path there are no Gradle tasks for it: the runner is the whole
+interface, and [`experiments/crac-ktor/`](experiments/crac-ktor/) is how it is exercised.
 
 ### Jib and the Ktor plugin
 

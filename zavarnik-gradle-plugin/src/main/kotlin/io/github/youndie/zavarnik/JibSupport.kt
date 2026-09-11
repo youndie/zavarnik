@@ -18,6 +18,10 @@ import java.io.File
  * the cache — one layer more than the image without it, the jars and their mtimes the same.
  * `jibAotVerify` runs the runner's verification in that image.
  *
+ * `jibCracCheckpoint` and `jibCracVerify` are the same shape for a CRaC snapshot, with one
+ * difference that matters: a snapshot replaces the entrypoint instead of adding a flag to it, so
+ * an image carries either the cache's flag or the restore, never both.
+ *
  * Refused at configuration time: the `exploded` layout, Jib's default, whose classpath has two
  * directories on it — the JVM writes no cache for that (research E4).
  *
@@ -30,6 +34,8 @@ internal object JibSupport {
     const val JIB_PLUGIN_ID: String = "com.google.cloud.tools.jib"
     const val TRAIN_TASK: String = "jibAotTrain"
     const val VERIFY_TASK: String = "jibAotVerify"
+    const val CRAC_CHECKPOINT_TASK: String = "jibCracCheckpoint"
+    const val CRAC_VERIFY_TASK: String = "jibCracVerify"
     private const val JIB_EXTENSION = "jib"
     private const val JIB_DOCKER_BUILD_TASK = "jibDockerBuild"
     private const val PACKAGED = "packaged"
@@ -66,6 +72,28 @@ internal object JibSupport {
             task.logFile.set(project.layout.buildDirectory.file("zavarnik/jibAotVerify.log"))
             task.reportFile.set(project.layout.buildDirectory.file("zavarnik/jibAotVerify.txt"))
         }
+        val cracDir = project.layout.buildDirectory.dir("zavarnik/jib-crac")
+        val checkpoint =
+            project.tasks.register(CRAC_CHECKPOINT_TASK, JibCracCheckpointTask::class.java) { task ->
+                task.group = ZavarnikPlugin.GROUP
+                task.description =
+                    "Builds the Jib image, takes a CRaC checkpoint inside a container of it, keeps the snapshot."
+                task.dependsOn(JIB_DOCKER_BUILD_TASK)
+                task.imageJson.set(project.layout.buildDirectory.file("jib-image.json"))
+                task.snapshotDir.set(cracDir)
+                task.dockerRunArgs.set(extension.jib.dockerRunArgs)
+                task.logFile.set(project.layout.buildDirectory.file("zavarnik/jibCracCheckpoint.log"))
+            }
+        project.tasks.register(CRAC_VERIFY_TASK, JibCracVerifyTask::class.java) { task ->
+            task.group = ZavarnikPlugin.GROUP
+            task.description = "Builds the Jib image with the snapshot and restores it in a container of that image."
+            task.dependsOn(JIB_DOCKER_BUILD_TASK)
+            task.mustRunAfter(checkpoint)
+            task.imageJson.set(project.layout.buildDirectory.file("jib-image.json"))
+            task.snapshotDir.set(cracDir)
+            task.dockerRunArgs.set(extension.jib.dockerRunArgs)
+            task.logFile.set(project.layout.buildDirectory.file("zavarnik/jibCracVerify.log"))
+        }
         for (name in listOf(JIB_DOCKER_BUILD_TASK, "jib", "jibBuildTar")) {
             project.tasks.named(name).configure { it.dependsOn(runnerFiles) }
         }
@@ -94,6 +122,22 @@ internal object JibSupport {
             val cacheFlag = if (cache.isFile) listOf("-XX:AOTCache=$runnerDir/${cache.name}") else emptyList()
             container.call("setJvmFlags", List::class.java, launchFlags + cacheFlag)
 
+            // A CRaC snapshot, when there is one, REPLACES the entrypoint rather than adding a flag
+            // to it: a restore is `java -XX:CRaCRestoreFrom=<dir>` and takes neither classpath nor
+            // main class, because the snapshot holds the process that had them. The two modes are
+            // therefore alternatives in one image, and the snapshot wins where it exists — it is
+            // the faster of the two and nothing but this task puts one there.
+            val snapshot = File(cracDir.get().asFile, JibCracCheckpointTask.SNAPSHOT_DIR)
+            val snapshotInImage = snapshot.listFiles().orEmpty().any { it.isFile }
+            if (snapshotInImage) {
+                val snapshotInContainer = "$runnerDir/${JibCracCheckpointTask.SNAPSHOT_DIR}"
+                container.call(
+                    "setEntrypoint",
+                    List::class.java,
+                    listOf("java", "-XX:CRaCRestoreFrom=$snapshotInContainer"),
+                )
+            }
+
             val runnerFilesDir =
                 runnerFiles
                     .get()
@@ -118,6 +162,15 @@ internal object JibSupport {
                             Action<Any> { Reflected(it).into(cacheDir.get().asFile, runnerDir) },
                         )
                     }
+                    if (snapshotInImage) {
+                        paths.call(
+                            "path",
+                            Action::class.java,
+                            Action<Any> {
+                                Reflected(it).into(snapshot, "$runnerDir/${JibCracCheckpointTask.SNAPSHOT_DIR}")
+                            },
+                        )
+                    }
                 },
             )
             train.configure {
@@ -128,6 +181,11 @@ internal object JibSupport {
                 it.appRoot.set(appRoot)
                 it.cacheFileName.set(extension.cacheFileName)
                 it.cacheInImage.set(cache.isFile)
+            }
+            checkpoint.configure { it.appRoot.set(appRoot) }
+            project.tasks.named(CRAC_VERIFY_TASK, JibCracVerifyTask::class.java).configure {
+                it.appRoot.set(appRoot)
+                it.snapshotInImage.set(snapshotInImage)
             }
         }
     }

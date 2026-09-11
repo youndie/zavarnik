@@ -6,6 +6,13 @@
 //     ./gradlew -p samples/ktor-jib jibAotVerify       # jibDockerBuild again, now with the cache, verify
 //
 // `jib-check.sh` does both and then starts the image with the cache made mandatory.
+//
+// The same two steps for a CRaC snapshot, on a base image that has CRaC in it:
+//
+//     ./gradlew -p samples/ktor-jib jibCracCheckpoint -Pcrac
+//     ./gradlew -p samples/ktor-jib jibCracVerify -Pcrac
+//
+// `crac-check.sh` does both and then starts the image, whose entrypoint is the restore.
 plugins {
     kotlin("jvm") version "2.4.10"
     kotlin("plugin.serialization") version "2.4.10"
@@ -31,6 +38,14 @@ ktor {
         localImageName = "zavarnik-ktor-jib-sample"
         imageTag = "latest"
     }
+}
+
+// `-Pcrac` swaps the base image for one that has CRaC in it. A checkpoint is taken by the JVM that
+// will restore it, and Temurin — which the Ktor plugin's `jreVersion` selects — has no CRaC at all;
+// Azul Zulu is the only vendor shipping one for 25, and its `-jre-crac` image carries `jcmd`, which
+// is how a checkpoint is asked for.
+if (providers.gradleProperty("crac").isPresent) {
+    jib { from { image = "azul/zulu-openjdk:25-jre-crac" } }
 }
 
 // Jars, not exploded classes: the JVM writes no AOT cache for a classpath with a directory on it,
