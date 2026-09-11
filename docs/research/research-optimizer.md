@@ -76,7 +76,8 @@ Job.cancel:()V`. Для `invokespecial` верификатор требует, �
 `Deferred`), отсюда «not in a direct superinterface». При нетронутых coroutines то же происходит
 в Ktor: `Routing.access$lineage$jd` → `invokespecial` на не-прямой интерфейс. Это не оптимизация и
 не шринкинг — `-dontoptimize -dontshrink` дают ту же ошибку уже в `CompletableDeferred.cancel()`
-самом; `--no-desugaring` не влияет; 9.5.10-dev — то же.
+самом; `--no-desugaring` не влияет; 9.5.10-dev — то же, и 9.5.11-dev, вышедшая после подачи
+issue, — тоже (матрица трёх версий на входе из дампа — в [B-17](../backlog/B-17-r8-invokespecial-rebinding-upstream.md)).
 
 **Откуда берётся аксессор — не флаг, а умолчание (уточнено 11.09.2026).** В issue выложили
 репродьюсер и указали на режим совместимости Kotlin; проверено своей сборкой той же иерархии из
