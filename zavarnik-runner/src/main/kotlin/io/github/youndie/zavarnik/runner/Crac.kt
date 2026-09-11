@@ -62,7 +62,15 @@ public class Crac(
         // `ServerSocketChannelImpl.finishAccept`. Waiting is cheaper than a policy rule that would
         // close live connections along with dead ones.
         Thread.sleep(SETTLE_MILLIS)
-        takeSnapshot(run)
+        try {
+            takeSnapshot(run)
+        } catch (failed: RunnerException) {
+            // Half a snapshot passes the "is there one?" test the restore starts with, and then
+            // fails somewhere less legible. A training run that ends badly leaves no cache for the
+            // same reason.
+            imageDir.deleteRecursively()
+            throw failed
+        }
         report("zavarnik: snapshot in ${imageDir.name} is ${sizeKib()} KiB across ${imageFiles().size} files")
     }
 
@@ -156,13 +164,19 @@ public class Crac(
      */
     private fun requireCracJdk() {
         val java = File(installation.javaHome, "bin/java")
-        val flags =
+        val process =
             ProcessBuilder(java.absolutePath, "-XX:+PrintFlagsFinal", "-version")
                 .redirectErrorStream(true)
                 .start()
-                .inputStream
-                .bufferedReader()
-                .readText()
+        val flags = process.inputStream.bufferedReader().readText()
+        // A JVM that would not start at all is a different fault, and saying "no CRaC" about it
+        // sends the reader to the wrong page. Its own output is the better message.
+        if (process.waitFor() != 0) {
+            throw RunnerException(
+                "zavarnik: ${java.path} would not answer `-version` (exit ${process.exitValue()}):\n" +
+                    flags.lines().takeLast(FLAG_ERROR_LINES).joinToString("\n"),
+            )
+        }
         if ("CRaCCheckpointTo" !in flags) {
             throw RunnerException(
                 "zavarnik: ${installation.javaHome.path} has no CRaC — `-XX:CRaCCheckpointTo` is not one of its " +
@@ -177,5 +191,8 @@ public class Crac(
 
         /** How long the server is given to drop the connections the workload has just closed. */
         const val SETTLE_MILLIS = 2_000L
+
+        /** Lines of a failed `java -version` worth quoting back. */
+        const val FLAG_ERROR_LINES = 5
     }
 }
