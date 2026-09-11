@@ -1,0 +1,82 @@
+### case 1: no flag, wide (Genoa) -> narrow (Core Ultra)
+== 268901.fornex.cloud — AMD EPYC-Genoa Processor
+   features: avx2 avx512f 
+   checkpoint flag: none
+129:
+0
+before checkpoint: 2026-09-11T08:55:52.774514282Z
+1207904.645235: warp: Checkpoint 129 to /work/cr
+1207904.677923: warp: Checkpoint successful!
+   snapshot: 19M, core.img engine 
+== DESKTOP-85OS64M — Intel(R) Core(TM) Ultra 7 255HX
+   features: avx2 avx_vnni 
+[0.024s][error][crac] Failed to restore from /work/cr
+8430.197818: warp: error: Image constraint 'cpu.features' (bitmap subset) does not match:
+8430.197840: warp: error: 	Required   : f7 fb fd 05 1c ce 2f 2b cc 0f 00 00 00 00 00 00 
+8430.197842: warp: error: 	Image has  : f7 ff fc 9d ff 7f ff 04 cc 0d 00 00 00 00 00 00 
+Error: Could not create the Java Virtual Machine.
+Error: A fatal exception has occurred. Program will exit.
+   refused (exit 1) — a message, which is the good failure
+
+### case 2: -XX:CPUFeatures=generic, wide -> narrow
+== 268901.fornex.cloud — AMD EPYC-Genoa Processor
+   features: avx2 avx512f 
+   checkpoint flag: -XX:CPUFeatures=generic
+129:
+0
+before checkpoint: 2026-09-11T08:56:11.983779021Z
+1207924.015859: warp: Checkpoint 129 to /work/cr
+1207924.061086: warp: Checkpoint successful!
+   snapshot: 19M, core.img engine 
+== DESKTOP-85OS64M — Intel(R) Core(TM) Ultra 7 255HX
+   features: avx2 avx_vnni 
+
+
+
+
+
+
+   CRASHED (exit 139, SIGSEGV) — no message at all
+
+### case 3: -XX:CPUFeatures=generic, narrow (Core Ultra) -> wide (Genoa)
+== DESKTOP-85OS64M — Intel(R) Core(TM) Ultra 7 255HX
+   features: avx2 avx_vnni 
+   checkpoint flag: -XX:CPUFeatures=generic
+129:
+0
+before checkpoint: 2026-09-11T08:56:39.456608574Z
+8462.316782: warp: Checkpoint 129 to /work/cr
+8462.371750: warp: Checkpoint successful!
+   snapshot: 24M, core.img engine 
+== 268901.fornex.cloud — AMD EPYC-Genoa Processor
+   features: avx2 avx512f 
+1207975.911160: warp: Restore successful!
+after restore: 2026-09-11T08:57:07.356960766Z on amd64
+   RESTORED (exit 0)
+
+### case 4: no flag, narrow -> wide
+== DESKTOP-85OS64M — Intel(R) Core(TM) Ultra 7 255HX
+   features: avx2 avx_vnni 
+   checkpoint flag: none
+129:
+0
+before checkpoint: 2026-09-11T08:57:06.529545101Z
+8486.440606: warp: Checkpoint 129 to /work/cr
+8486.497492: warp: Checkpoint successful!
+   snapshot: 24M, core.img engine 
+== 268901.fornex.cloud — AMD EPYC-Genoa Processor
+   features: avx2 avx512f 
+1208001.947377: warp: error: 	Image has  : f7 fb fd 05 1c ce 2f 2b cc 0f 00 00 00 00 00 00 
+[0.032s][error][crac] CRaC engine failed to restore from /work/cr: error -1
+[0.033s][error][crac] Restore failed due to incompatible or missing CPU features, try using -XX:CPUFeatures=0x2f4e1c05fcfbf7,0xdcc on checkpoint.
+Error: Could not create the Java Virtual Machine.
+Error: A fatal exception has occurred. Program will exit.[0.033s][error][crac] Failed to restore from /work/cr
+
+   refused (exit 1) — a message, which is the good failure
+
+### control: the generic snapshot from case 2 restored on the machine that took it
+== 268901.fornex.cloud — AMD EPYC-Genoa Processor
+   features: avx2 avx512f 
+1208003.456420: warp: Restore successful!
+after restore: 2026-09-11T08:57:34.903724408Z on amd64
+   RESTORED (exit 0)

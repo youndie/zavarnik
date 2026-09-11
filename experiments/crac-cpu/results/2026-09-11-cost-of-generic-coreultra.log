@@ -1,0 +1,15 @@
+image: OpenJDK Runtime Environment Zulu25.36+205-CRaC-CA (build 25.0.4.1+1-LTS)
+snapshot sizes: plain 76M, generic 71M
+variant,run,ready_ms,rps_over_10s
+plain,1,43,5711
+generic,1,43,4548
+plain,2,42,5555
+generic,2,46,4231
+plain,3,42,5498
+generic,3,46,4956
+plain,4,42,4425
+generic,4,44,3947
+plain,5,60,5553
+generic,5,56,3660
+plain,6,42,4377
+generic,6,46,2499
