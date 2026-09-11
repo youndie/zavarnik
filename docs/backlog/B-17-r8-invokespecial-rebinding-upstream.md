@@ -16,8 +16,9 @@ stage: stage-5-optimizer
 Ресёрч §1.3: R8 9.4.17 и 9.5.10-dev в режиме `--classfile` переписывают
 `invokespecial CompletableDeferred.cancel` в `invokespecial Job.cancel` (member rebinding), и
 верификатор JDK 25 отвергает класс — «interface method to invoke is not in a direct
-superinterface». Воспроизводится на любом Kotlin-интерфейсе с `-Xjvm-default=all` и
-`$jd`-аксессорами (coroutines, Ktor); `-dontoptimize`, `-dontshrink`, `--no-desugaring` не
+superinterface». Воспроизводится на Kotlin-интерфейсах, собранных в режиме совместимости —
+это умолчание Kotlin 2.4.10 и legacy `-Xjvm-default=all-compatibility`, но **не**
+`-Xjvm-default=all` (§1.3, уточнено 11.09.2026); `-dontoptimize`, `-dontshrink`, `--no-desugaring` не
 помогают. Минимальный репродьюсер — `bench/profile/r8.sh` на `bench/`, `javap` до и после.
 
 **Что ушло в issue 08.09.2026.** Прогон повторён с `-Dcom.android.tools.r8.dumpinputtofile=`,
@@ -30,7 +31,12 @@ cancel:()V` до и `invokespecial #42 // InterfaceMethod kotlinx/coroutines/Job
 подтверждается не словами, а `build.properties` из самого дампа: `backend=CF`.
 
 - Не покрывает: обход внутри этого проекта — его нет, и искать его не задача этой фазы.
-  Реакции R8 на issue тоже нет — на 08.09.2026 она только заведена.
+
+**Реакция 11.09.2026.** В issue ответили: выложили репродьюсер (Java плюс трансформация
+байткода, потому что в Java-исходнике такой `invokespecial` не выражается) и объяснили, что
+аксессор родится в режиме совместимости Kotlin. Это поправило наше же утверждение про
+`-Xjvm-default=all` — см. §1.3 ресёрча и таблицу четырёх режимов там же. Исправления R8 на эту
+дату нет, есть разбор.
 
 - AC (выполнено): ссылка на issue здесь; репродьюсер — `bench/profile/r8.sh` и `r8.pro`, они
   названы в теле issue, отдельного минимального проекта в `experiments/` заводить не стали.
