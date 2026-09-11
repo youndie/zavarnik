@@ -1,7 +1,7 @@
 ---
 id: B-37
 title: "CIO против Netty и Jetty: профиль, пропускная способность и цена запроса под одним протоколом"
-status: wip
+status: done
 priority: P0
 size: M
 stage: stage-7-engines
@@ -9,6 +9,11 @@ blocked_by: [B-36]
 ---
 
 # B-37 — Три движка под одним протоколом
+
+> **Сделано 11.09.2026 — вывод «свойство CIO» уточнён.** `kotlinx.coroutines` владеет 56,9 % CPU
+> на CIO и 8,9 % на Netty при одном сервисе; передача запроса обработчику стоит 33–48 % self CPU
+> у CIO, 25–30 % у Jetty и 1–2 % у Netty. Цена запроса: 166 / 146 / 82 мкс
+> ([research-engines](../research/research-engines.md) §1.3–1.7).
 
 Самая крупная цифра второй фазы — треть CPU `/business` в очереди `LimitedDispatcher`
 ([research-optimizer](../research/research-optimizer.md) §1.4). Вывод «это свойство CIO под такой
