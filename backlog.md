@@ -36,11 +36,12 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (3)
+## Open (4)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
 | [B-33](docs/backlog/B-33-random-after-restore.md) `[ ]` | Одинаковые Random во всех репликах после restore: что затронуто в Kotlin-сервисе и как это ловить | P1 | S | - |
+| [B-39](docs/backlog/B-39-verify-before-filing.md) `[ ]` | Перед issue в Ktor: подтвердить механизм без Ktor и перепроверить прибор, которым меряли CPU | P1 | S | B-37 |
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
