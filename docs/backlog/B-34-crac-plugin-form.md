@@ -1,7 +1,7 @@
 ---
 id: B-34
 title: "Форма плагина для CRaC: cracCheckpoint / cracVerify / слой снимка поверх того же образа"
-status: wip
+status: done
 priority: P1
 size: L
 stage: stage-6-crac
@@ -23,7 +23,12 @@ blocked_by: [B-32]
 ключи `cracIgnoredRemotePorts`/`cracImageDirName` в `RunnerConfig`. Проверено на образце в контейнере
 CRaC-JDK: снимок 67 МиБ, restore обслуживает ту же нагрузку. По дороге закрыт дефект, которого не
 было в плане: раннер ломал свой же checkpoint keep-alive соединениями пробы готовности и workload.
-Осталось: задачи Gradle, DSL, Jib-путь, образец и функциональные тесты.
+**Сделана 11.09.2026 целиком** ([research-crac](../research/research-crac.md) §1.9): `jibCracCheckpoint`
+и `jibCracVerify`, снимок слоем и точка входа `java -XX:CRaCRestoreFrom=…` вместо флага, ключ
+`--image` у раннера, образец `samples/ktor-jib` с `-Pcrac` и `crac-check.sh` в CI. По дороге
+эксперимент `image-layer.sh` нашёл дефект, который иначе выстрелил бы только в кластере: путь к
+файлу политик вморожен в снимок, и файл обязан лежать внутри образа. Не покрыто: чарт и k8s
+(открытый вопрос 2), и `-XX:CPUFeatures` (B-35).
 
 - **Решение:** DSL `zavarnik { crac { … } }` рядом с `training { }`; задачи через тот же Jib-путь
   (`jibDockerBuild` → контейнер → `jcmd`) и через Dockerfile-путь раннером (`Main checkpoint`,

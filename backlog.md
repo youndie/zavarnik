@@ -36,18 +36,16 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (6)
+## Open (4)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
-| [B-32](docs/backlog/B-32-konekt-hikari-exposed-restore.md) `[ ]` | Ворота третьей фазы: konekt (Ktor CIO + HikariCP + Exposed + Postgres) под checkpoint/restore на стенде | P0 | M | - |
 | [B-33](docs/backlog/B-33-random-after-restore.md) `[ ]` | Одинаковые Random во всех репликах после restore: что затронуто в Kotlin-сервисе и как это ловить | P1 | S | - |
-| [B-34](docs/backlog/B-34-crac-plugin-form.md) `[~]` | Форма плагина для CRaC: cracCheckpoint / cracVerify / слой снимка поверх того же образа | P1 | L | B-32 |
 | [B-35](docs/backlog/B-35-crac-cpu-features.md) `[ ]` | Снимок привязан к CPU тренировки: цена и семантика -XX:CPUFeatures на checkpoint | P2 | S | B-32 |
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
-## Closed (32)
+## Closed (34)
 
 **Стенд**
 
@@ -92,6 +90,11 @@
 - [B-21](docs/backlog/B-21-rq4-lazy-logging-lint.md) `[-]` - RQ4 — ленивое логирование: ≤ 1,57 % байт при трёх debug на запрос — линт, не переписывание
 - [B-22](docs/backlog/B-22-rq2-boxing-diagnostic.md) `[-]` - RQ2 — боксинг: 1,26 % байт, ниже красного порога — только диагностика
 - [B-23](docs/backlog/B-23-dispatcher-spin-hypothesis.md) `[x]` - 36 % CPU /business — опрос очереди LimitedDispatcher: артефакт закрепления на 8 ядрах или свойство CIO?
+
+**Третья фаза**
+
+- [B-32](docs/backlog/B-32-konekt-hikari-exposed-restore.md) `[x]` - Ворота третьей фазы: konekt (Ktor CIO + HikariCP + Exposed + Postgres) под checkpoint/restore на стенде
+- [B-34](docs/backlog/B-34-crac-plugin-form.md) `[x]` - Форма плагина для CRaC: cracCheckpoint / cracVerify / слой снимка поверх того же образа
 
 **Четвёртая фаза**
 

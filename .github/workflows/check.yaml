@@ -96,6 +96,10 @@ jobs:
       # The Jib path: two Jib builds through the plugin's tasks, then the image with the cache
       # started with the cache made mandatory.
       - run: samples/ktor-jib/jib-check.sh
+      # The CRaC path: the same two builds for a snapshot, on a Zulu base that has CRaC in it, and
+      # then the image run with nothing added — its entrypoint is the restore. It is here and not
+      # in the `plugin` job because it needs a Docker daemon, and it costs one more image pull.
+      - run: samples/ktor-jib/crac-check.sh
 
   # Separate from the gate, and on a schedule rather than on a pull request, because an anchor rots
   # when somebody refactors a **different** repository. A pull request here is the least likely
