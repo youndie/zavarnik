@@ -87,6 +87,13 @@ wall-время, `java.util.Random`, `ThreadLocalRandom` и `UUID.randomUUID()`.
 | `new Random()`, созданный **после** restore | нет (в затравке `System.nanoTime`) |
 | `SecureRandom()` | нет (JDK переинициализирует) |
 
+**Чем `Random.Default` оказался на самом деле (проверено 11.09.2026, рефлексией на живой JVM, не
+чтением исходника: платформенная реализация выбирается в рантайме).** На stdlib 2.4.10 и JDK 25
+`kotlin.random.Random.Default` → `kotlin.random.jdk8.PlatformThreadLocalRandom`, за которым стоит
+`java.util.concurrent.ThreadLocalRandom`. То есть **любой** код на Kotlin, берущий `Random.Default`,
+попадает в третью строку таблицы — общую у всех реплик. Гипотеза §1.3 из первой редакции («на JVM —
+обёртка над ThreadLocalRandom») подтверждена.
+
 **Следствие 1.** Бриф назвал Random среди того, «что ломается», и это верно, но не там, где
 ждёшь: не в приложении, а в JDK. Каждая реплика из одного снимка тянет одну и ту же
 последовательность из `ThreadLocalRandom` — включая потоки, созданные уже после restore, — и из
