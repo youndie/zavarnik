@@ -1,7 +1,7 @@
 ---
 id: B-33
 title: "Одинаковые Random во всех репликах после restore: что затронуто в Kotlin-сервисе и как это ловить"
-status: open
+status: done
 priority: P1
 size: S
 stage: stage-6-crac
@@ -20,6 +20,17 @@ stage: stage-6-crac
   (спрошено рефлексией у живой JVM; платформенная реализация выбирается в рантайме, поэтому чтение
   исходника здесь недостаточно). Значит, весь Kotlin-код на `Random.Default` — в общей у реплик
   последовательности.
+**Сделана 11.09.2026.** Карта — таблица в §1.3 research-crac (одиннадцать генераторов, где создан,
+повторяется ли, кто на нём стоит), с двумя новыми строками: `SplittableRandom` после restore и
+`Math.random()` повторяются; и одной вопреки javadoc — `SecureRandom(byte[])` документирован как не
+переинициализируемый, а числа даёт разные, потому что провайдер Linux подмешивает системную
+энтропию. Кто стоит на чём — грепом по константным пулам jar-ов образца и konekt
+(`experiments/crac-smoke/results/2026-09-11-generator-users-by-jar.log`): Hikari и `exposed-jdbc` —
+`ThreadLocalRandom`, `flyway-core` и `kotlin-reflect` — `Random`, `postgresql` — `SecureRandom`.
+Сторож — `experiments/crac-smoke/generator-guard.sh`: два restore, красный с именами совпавших;
+на образце называет шесть. Перенос сторожа внутрь `cracVerify` — не здесь: пробе нужен код в
+процессе приложения, а это отдельное решение о форме (агент или jcmd-команда).
+
 - **Решение:** сначала карта, потом сторож. Карта — по исходникам: остальные генераторы, генераторы в Ktor
   (`generateNonce`?), kotlinx.coroutines (jitter?), Hikari (`housekeeper` jitter), pgjdbc,
   Exposed. Каждая строка — путь и версия. Сторож — D4 research-crac: `cracVerify` делает два

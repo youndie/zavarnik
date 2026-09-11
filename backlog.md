@@ -36,15 +36,14 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (3)
+## Open (2)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
-| [B-33](docs/backlog/B-33-random-after-restore.md) `[ ]` | Одинаковые Random во всех репликах после restore: что затронуто в Kotlin-сервисе и как это ловить | P1 | S | - |
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
-## Closed (36)
+## Closed (37)
 
 **Стенд**
 
@@ -93,6 +92,7 @@
 **Третья фаза**
 
 - [B-32](docs/backlog/B-32-konekt-hikari-exposed-restore.md) `[x]` - Ворота третьей фазы: konekt (Ktor CIO + HikariCP + Exposed + Postgres) под checkpoint/restore на стенде
+- [B-33](docs/backlog/B-33-random-after-restore.md) `[x]` - Одинаковые Random во всех репликах после restore: что затронуто в Kotlin-сервисе и как это ловить
 - [B-34](docs/backlog/B-34-crac-plugin-form.md) `[x]` - Форма плагина для CRaC: cracCheckpoint / cracVerify / слой снимка поверх того же образа
 - [B-35](docs/backlog/B-35-crac-cpu-features.md) `[x]` - Снимок привязан к CPU тренировки: цена и семантика -XX:CPUFeatures на checkpoint
 

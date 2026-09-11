@@ -1,0 +1,3 @@
+restore 1: old-random=-1341993353 old-tlr=1104811262 new-tlr=-1096168195 new-random=-800958793 old-splittable=-69983796 new-splittable=81768317 math-random=4581096857949426688 default-rng=-748058063 uuid=2f6fd3aa-dc3c-4a34-a520-0c1a347eff60 securerandom=-915676389 seeded-secure=565032346
+restore 2: old-random=-1341993353 old-tlr=1104811262 new-tlr=-1096168195 new-random=-1136037042 old-splittable=-69983796 new-splittable=81768317 math-random=4581096857949426688 default-rng=1541246087 uuid=911554ab-5ecf-49f4-b610-54aebfa19ff7 securerandom=2001147086 seeded-secure=-1570568958
+guard: FAIL — identical in both replicas: old-random old-tlr new-tlr old-splittable new-splittable math-random
