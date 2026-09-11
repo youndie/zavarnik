@@ -44,7 +44,7 @@
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
-## Closed (35)
+## Closed (36)
 
 **Стенд**
 
@@ -101,6 +101,7 @@
 - [B-36](docs/backlog/B-36-engine-stand-and-honest-pinning.md) `[x]` - Стенд на три движка: один процесс, один -D, честное закрепление ядер и цена запроса в абсолюте
 - [B-37](docs/backlog/B-37-three-engines-under-one-protocol.md) `[x]` - CIO против Netty и Jetty: профиль, пропускная способность и цена запроса под одним протоколом
 - [B-38](docs/backlog/B-38-io-parallelism-lever.md) `[x]` - Рычаг kotlinx.coroutines.io.parallelism: если очередь стоит трети CPU, что её снимает
+- [B-39](docs/backlog/B-39-verify-before-filing.md) `[x]` - Перед issue в Ktor: подтвердить механизм без Ktor и перепроверить прибор, которым меряли CPU
 
 <!-- END INDEX -->
 
