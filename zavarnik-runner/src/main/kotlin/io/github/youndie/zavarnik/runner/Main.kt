@@ -4,7 +4,7 @@ import java.io.File
 import kotlin.system.exitProcess
 
 /**
- * `java -cp <runner jar> io.github.youndie.zavarnik.runner.Main train|verify [<dir>] [--out <dir>]`
+ * `java -cp <runner jar> io.github.youndie.zavarnik.runner.Main train|verify|checkpoint|restore-verify [<dir>] [--out <dir>]`
  *
  * The same training and verification the Gradle tasks do, on a bare JRE: inside the runtime
  * stage of a container image, where there is no Gradle and, in Temurin's images, no curl. `<dir>`
@@ -16,12 +16,17 @@ import kotlin.system.exitProcess
  * `--out` is for a container started with a host directory mounted: the logs go there, and so
  * does the cache a training run writes, so that the host can lay it over the image as a layer.
  * Without it, everything is written beside the runner jar.
+ *
+ * `checkpoint` and `restore-verify` are the same two steps for CRaC: warm the application up and
+ * snapshot it, then restore the snapshot and put the restored process through the workload again.
+ * The snapshot is a directory rather than a file — `<out>/crac` — and it belongs to the image it
+ * was taken in, which is why it goes to `--out` and comes back as a layer over that image.
  */
 public object Main {
     @JvmStatic
     public fun main(args: Array<String>) {
-        val command = args.getOrNull(0)
-        if (command != TRAIN && command != VERIFY) usage()
+        val command = args.getOrNull(0) ?: usage()
+        if (command !in COMMANDS) usage()
         var dir: File? = null
         var out: File? = null
         var i = 1
@@ -60,16 +65,19 @@ public object Main {
                 Installation.distribution(dir, javaHome)
             }
         val log = File(out ?: installation.runnerDir, "zavarnik-$command.log")
-        if (command == TRAIN) {
-            Training(installation, config, log).run()
-        } else {
-            Verification(installation, config, log).run()
+        val cracImage = File(out ?: installation.runnerDir, config.cracImageDirName)
+        when (command) {
+            TRAIN -> Training(installation, config, log).run()
+            VERIFY -> Verification(installation, config, log).run()
+            CHECKPOINT -> Crac(installation, config, log, cracImage).checkpoint()
+            else -> println("zavarnik: ${Crac(installation, config, log, cracImage).restoreVerify()}")
         }
     }
 
     private fun usage(): Nothing {
         System.err.println(
-            "usage: java -cp <runner jar> io.github.youndie.zavarnik.runner.Main $TRAIN|$VERIFY [<install dir>] [--out <dir>]",
+            "usage: java -cp <runner jar> io.github.youndie.zavarnik.runner.Main " +
+                COMMANDS.joinToString("|") + " [<install dir>] [--out <dir>]",
         )
         exitProcess(USAGE)
     }
@@ -85,6 +93,9 @@ public object Main {
 
     private const val TRAIN = "train"
     private const val VERIFY = "verify"
+    private const val CHECKPOINT = "checkpoint"
+    private const val RESTORE_VERIFY = "restore-verify"
+    private val COMMANDS = listOf(TRAIN, VERIFY, CHECKPOINT, RESTORE_VERIFY)
     private const val USAGE = 2
     private const val FAILURE = 1
 }

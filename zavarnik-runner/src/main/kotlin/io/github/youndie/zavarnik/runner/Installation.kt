@@ -22,6 +22,12 @@ public class Installation private constructor(
     public val launch: Launch,
     /** `false` for a Jib image: its mtimes are Jib's constant, and the runner must not touch them. */
     public val pinsJarTimestamps: Boolean,
+    /**
+     * The JDK this installation is exercised with — the one running the runner. Kept because a
+     * CRaC checkpoint is asked for through `jcmd` and a restore is started through `java`, and
+     * both live here rather than on the application's own command line.
+     */
+    public val javaHome: File,
 ) {
     /** `<runnerDir>/zavarnik.properties`, written by the plugin. */
     public val config: File = File(runnerDir, RunnerConfig.FILE_NAME)
@@ -48,7 +54,14 @@ public class Installation private constructor(
                         )
                 }
             val lib = File(dir, "lib")
-            return Installation(dir, lib, listOf(lib), Launch.Script(script, javaHome), pinsJarTimestamps = true)
+            return Installation(
+                dir,
+                lib,
+                listOf(lib),
+                Launch.Script(script, javaHome),
+                pinsJarTimestamps = true,
+                javaHome = javaHome,
+            )
         }
 
         /**
@@ -99,7 +112,14 @@ public class Installation private constructor(
                     mainClass = mainClass,
                     directory = dir,
                 )
-            return Installation(dir, runnerDir, jarDirs.toList(), launch, pinsJarTimestamps = false)
+            return Installation(
+                dir,
+                runnerDir,
+                jarDirs.toList(),
+                launch,
+                pinsJarTimestamps = false,
+                javaHome = javaHome,
+            )
         }
 
         /** Distribution or Jib image, by what is at [dir]. */

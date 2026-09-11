@@ -38,6 +38,22 @@ public sealed interface Launch {
     }
 
     /**
+     * `java -XX:CRaCRestoreFrom=<dir>` — a restore takes no classpath and no main class, because
+     * the snapshot holds the process that had them, and no JVM flags either: the ones it was
+     * checkpointed with are in the image, and adding more here is refused by the JVM.
+     */
+    public class Restore(
+        private val java: File,
+        private val imageDir: File,
+        override val directory: File,
+    ) : Launch {
+        override fun command(jvmArgs: List<String>): List<String> =
+            listOf(java.absolutePath, "-XX:CRaCRestoreFrom=${imageDir.absolutePath}")
+
+        override fun environment(jvmArgs: List<String>): Map<String, String> = emptyMap()
+    }
+
+    /**
      * `java <baseJvmArgs> <jvmArgs> -cp @<classpathFile> <mainClass>` — the shape of a Jib
      * entrypoint. [baseJvmArgs] are the flags the image starts with in production (Jib's
      * `jvmFlags`, the user's `jvmArgs`, the portability flags); a run adds its own after them.

@@ -1,7 +1,7 @@
 ---
 id: B-34
 title: "Форма плагина для CRaC: cracCheckpoint / cracVerify / слой снимка поверх того же образа"
-status: open
+status: wip
 priority: P1
 size: L
 stage: stage-6-crac
@@ -16,6 +16,14 @@ blocked_by: [B-32]
 упаковка = слой снимка поверх образа с тем же digest. Из AOT-фазы переносится раннер, workload
 с заголовками и захватом, `dockerRunArgs`; не переносится `distTar` и стартовый скрипт как
 лаунчер (§1.5, D2).
+
+**Сделана часть первая, 11.09.2026 — сторона раннера** ([research-crac](../research/research-crac.md) §1.8):
+`Main checkpoint|restore-verify`, `Crac`, `CracPolicies` (генерация файла политик), `Launch.Restore`,
+`Exercise` (общий шаг «готовность + нагрузка» для тренировки, снимка и проверки восстановленного),
+ключи `cracIgnoredRemotePorts`/`cracImageDirName` в `RunnerConfig`. Проверено на образце в контейнере
+CRaC-JDK: снимок 67 МиБ, restore обслуживает ту же нагрузку. По дороге закрыт дефект, которого не
+было в плане: раннер ломал свой же checkpoint keep-alive соединениями пробы готовности и workload.
+Осталось: задачи Gradle, DSL, Jib-путь, образец и функциональные тесты.
 
 - **Решение:** DSL `zavarnik { crac { … } }` рядом с `training { }`; задачи через тот же Jib-путь
   (`jibDockerBuild` → контейнер → `jcmd`) и через Dockerfile-путь раннером (`Main checkpoint`,

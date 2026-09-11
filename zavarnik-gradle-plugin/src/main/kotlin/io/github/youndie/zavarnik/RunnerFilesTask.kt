@@ -59,6 +59,14 @@ public abstract class RunnerFilesTask : DefaultTask() {
     @get:Input
     public abstract val launchJvmArgs: ListProperty<String>
 
+    /** Remote ports a CRaC checkpoint may leave open; see `crac { ignoreRemotePort(…) }`. */
+    @get:Input
+    public abstract val cracIgnoredRemotePorts: ListProperty<Int>
+
+    /** The snapshot's directory name under the output directory. */
+    @get:Input
+    public abstract val cracImageDirName: Property<String>
+
     /** `build/zavarnik/runner/`, copied into `lib/` by the distribution. */
     @get:OutputDirectory
     public abstract val outputDir: DirectoryProperty
@@ -76,6 +84,8 @@ public abstract class RunnerFilesTask : DefaultTask() {
             minCachedShare = minCachedShare.get(),
             verifyJvmArgs = verifyJvmArgs.get(),
             launchJvmArgs = launchJvmArgs.get(),
+            cracIgnoredRemotePorts = cracIgnoredRemotePorts.get(),
+            cracImageDirName = cracImageDirName.get(),
         ).write(File(dir, RunnerConfig.FILE_NAME))
         val embedded =
             Main::class.java.getResourceAsStream(EMBEDDED_RUNNER)

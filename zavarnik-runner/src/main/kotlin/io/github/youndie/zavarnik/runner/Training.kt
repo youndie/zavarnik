@@ -3,7 +3,6 @@ package io.github.youndie.zavarnik.runner
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.attribute.FileTime
-import java.util.concurrent.TimeUnit
 
 /**
  * The training run: delete what a previous run left, pin the jar mtimes, start the application
@@ -67,24 +66,7 @@ public class Training(
         run: ApplicationRun,
         cache: File,
     ) {
-        val readyMillis =
-            if (config.readyUrl != null) {
-                run.awaitReady(config.readyUrl, config.readyTimeout)
-            } else {
-                Thread.sleep(config.exitAfter!!.toMillis())
-                run.elapsedMillis()
-            }
-        report("zavarnik: application ready after $readyMillis ms")
-        val workloadStarted = System.nanoTime()
-        val workload = Workload(File(log.parentFile, "${log.nameWithoutExtension}.workload.log"))
-        for (step in config.workload) {
-            try {
-                workload.run(step)
-            } catch (failed: RunnerException) {
-                throw RunnerException("${failed.message}\n${run.logTail()}", failed)
-            }
-        }
-        report("zavarnik: workload took ${TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - workloadStarted)} ms")
+        Exercise.run(run, config, log, report)
         run.stop(config.shutdownTimeout)
         awaitCacheAssembled(run, cache)
     }

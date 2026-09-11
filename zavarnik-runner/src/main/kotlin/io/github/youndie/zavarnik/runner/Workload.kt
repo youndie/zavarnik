@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 public class Workload(
     private val log: File,
-) {
+) : AutoCloseable {
     private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(REQUEST_TIMEOUT_SECONDS)).build()
     private val variables = ConcurrentHashMap<String, String>()
 
@@ -101,6 +101,19 @@ public class Workload(
                     )
                 }
         }
+    }
+
+    /**
+     * Closes the connections this client is keeping alive.
+     *
+     * It matters for one caller and not at all for the rest: a CRaC checkpoint refuses while any
+     * socket is open, and the sockets the *server* accepted from this client are open exactly
+     * because HTTP keep-alive is doing its job. Found on the Ktor sample, where a checkpoint after
+     * a clean workload failed in `ServerSocketChannelImpl.finishAccept` — the accepted end of the
+     * workload's own connection.
+     */
+    override fun close() {
+        http.close()
     }
 
     /** `{{name}}` → the captured value; a name nothing captured is a mistake in the workload, not an empty string. */
