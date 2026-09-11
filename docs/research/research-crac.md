@@ -213,6 +213,15 @@ during CRaC snapshotting» (#13308) **закрыт, не влит**. Адрес 
 `hs_err`. То есть совет, который JVM печатает сама («try using -XX:CPUFeatures=0x… on checkpoint»),
 меняет громкий отказ на segfault. Флаг к тому же `not restore-settable` — задаётся только на снимке.
 
+**Движок ни при чём (проверено 11.09.2026, `results/2026-09-11-cross-criuengine.log`).** Тот же
+`generic`-снимок, снятый с `-XX:CRaCEngine=criuengine` (старый движок на CRIU, с `CHECKPOINT_RESTORE`
+и `SYS_PTRACE`), дома восстанавливается, на другой машине падает тем же молчаливым `SIGSEGV` — и с
+capabilities, и под `--privileged`. Два движка, одно падение: дефект на стороне JVM, в обработке
+`CPUFeatures`, и адрес для сообщения о нём — сам проект CRaC (`openjdk/crac`), не Azul. Попутно:
+движок на restore задаётся, и без `-XX:CRaCEngine=criuengine` образ CRIU отвергается warp-ом с
+сообщением «Image format does not match» — а следом печатаются строки про CPU, которые к делу не
+относятся.
+
 **Правило для README и для плагина:** снимать на самом узком CPU, на котором будут восстанавливать,
 с `-XX:CPUFeatures=generic`. Цена (образец Ktor, шесть restore на вариант попеременно, `oha` 10 с
 на 32 соединениях): готовность не меняется (42 против 46 мс по медиане), пропускная способность
