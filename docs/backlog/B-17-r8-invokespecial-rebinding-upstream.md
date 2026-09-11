@@ -57,6 +57,28 @@ cancel:()V` до и `invokespecial #42 // InterfaceMethod kotlinx/coroutines/Job
 `CompletableDeferred.access$cancel$jd` @1, байты `2ab7 002a b1`, JDK 25.0.4. Прогон 9.4.17 дал
 те же 5416 классов, что и 08.09, — это заодно контроль воспроизводимости самого прогона.
 
+**Баг принят: 11.09.2026 в `r8/main` лёг регрессионный тест** — Søren Gjesse, коммит
+`3701f15e`, `Bug: b/558351430`,
+`src/test/java/com/android/tools/r8/memberrebinding/MemberRebindingInvokeSpecialToIndirectSuperInterfaceTest.java`.
+Прочитан с `r8.googlesource.com`; форма совпадает с нашей по всем четырём признакам:
+
+- три уровня, `K extends J extends I`, default-метод объявлен в `I` — то есть `I` для `K`
+  суперинтерфейс **не прямой**, как `Job` для `CompletableDeferred` через `Deferred`;
+- вызов сидит в **статическом** методе интерфейса, принимающем экземпляр (`static void call(K k)`),
+  как `access$cancel$jd($this)`;
+- трансформером байткода вызов переписан в `invokespecial K.m:()V` с `isInterface=true`, то есть
+  на **текущий** интерфейс — это наш `invokespecial #19 // InterfaceMethod cancel:()V`;
+- проверка утверждает, что после R8 на CF холдер у `invokespecial` стал `I`, и что запуск падает
+  `VerifyError`; на DEX-ранах тот же тест ждёт успеха.
+
+**Фикса пока нет.** Тест написан как характеристика текущего (неверного) поведения с
+`TODO(b/558351430)` над утверждением — он фиксирует поломку, чтобы фикс её перевернул. Пометки
+`@NoVerticalClassMerging` на `J` и `@NeverInline` на `call` там же нужны, чтобы R8 не схлопнул
+иерархию и не спрятал случай; на существо это не влияет.
+
+Следующий наш шаг — прогнать вход из дампа на сборке с фиксом, когда она появится; матрица выше
+для этого и снята.
+
 - AC (выполнено): ссылка на issue здесь; репродьюсер — `bench/profile/r8.sh` и `r8.pro`, они
   названы в теле issue, отдельного минимального проекта в `experiments/` заводить не стали.
 - Якоря: `bench/profile/r8.pro`, `bench/profile/results/r8-attempts/`, `docs/research/research-optimizer.md` (§1.3).
