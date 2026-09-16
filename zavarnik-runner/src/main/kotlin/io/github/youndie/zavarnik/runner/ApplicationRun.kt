@@ -11,11 +11,18 @@ import java.util.concurrent.TimeUnit
 /**
  * One run of the application through its [Launch]: start, wait for readiness, stop with
  * `SIGTERM`, wait for the launcher.
+ *
+ * [environment] is what the caller adds on top of the environment this process was started with —
+ * the variables an application refuses to start without, which on the plain path are the build's
+ * own and nobody else's. [Launch.environment] is applied after it and wins: `JAVA_HOME` and
+ * `JAVA_OPTS` are how the run reaches the JDK and carries its flags, and a value that quietly
+ * replaced them would train a cache the runtime then rejects.
  */
 public class ApplicationRun(
     private val launch: Launch,
     private val jvmArgs: List<String>,
     private val log: File,
+    private val environment: Map<String, String> = emptyMap(),
 ) {
     private lateinit var process: Process
 
@@ -35,6 +42,7 @@ public class ApplicationRun(
                 .directory(launch.directory)
                 .redirectErrorStream(true)
                 .redirectOutput(log)
+        builder.environment().putAll(environment)
         builder.environment().putAll(launch.environment(jvmArgs))
         startedAt = System.nanoTime()
         process = builder.start()

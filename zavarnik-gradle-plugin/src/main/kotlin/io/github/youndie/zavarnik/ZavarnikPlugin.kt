@@ -114,6 +114,7 @@ public class ZavarnikPlugin : Plugin<Project> {
                 task.installDir.set(installDir)
                 task.scriptName.set(scriptName)
                 task.javaLauncher.set(launcher)
+                task.environment.set(extension.training.environment)
                 task.cacheFile.set(extension.cacheFileName.flatMap(libFile))
                 task.manifestFile.set(extension.cacheFileName.flatMap { libFile("$it.jars") })
                 task.logFile.set(layout.buildDirectory.file("zavarnik/aotTrain.log"))
@@ -130,6 +131,7 @@ public class ZavarnikPlugin : Plugin<Project> {
                 task.installDir.set(installDir)
                 task.scriptName.set(scriptName)
                 task.javaLauncher.set(launcher)
+                task.environment.set(extension.training.environment)
                 task.logFile.set(layout.buildDirectory.file("zavarnik/aotVerify.log"))
                 task.reportFile.set(layout.buildDirectory.file("zavarnik/aotVerify.txt"))
             }
@@ -140,6 +142,7 @@ public class ZavarnikPlugin : Plugin<Project> {
             task.installDir.set(installDir)
             task.scriptName.set(scriptName)
             task.javaLauncher.set(launcher)
+            task.environment.set(extension.training.environment)
             task.cacheFile.set(train.flatMap { it.cacheFile })
             task.readyUrl.set(extension.training.readyWhen.url)
             task.readyTimeout.set(extension.training.readyTimeout)
@@ -245,6 +248,7 @@ public class ZavarnikPlugin : Plugin<Project> {
     private fun ZavarnikExtension.applyDefaults() {
         portability.convention(true)
         cacheFileName.convention(DEFAULT_CACHE_FILE_NAME)
+        training.environment.convention(emptyMap())
         training.readyTimeout.convention(Duration.ofMinutes(2))
         training.onAssemble.convention(true)
         training.shutdownTimeout.convention(Duration.ofMinutes(5))

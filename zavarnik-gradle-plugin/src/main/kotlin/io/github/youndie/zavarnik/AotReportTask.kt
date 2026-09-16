@@ -10,6 +10,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
@@ -57,6 +58,10 @@ public abstract class AotReportTask : DefaultTask() {
 
     @get:Input
     public abstract val shutdownTimeout: Property<Duration>
+
+    /** `training { environment(…) }`: both variants are measured with the environment the cache was trained in. */
+    @get:Input
+    public abstract val environment: MapProperty<String, String>
 
     /** Runs per variant. Ten by default; `-Pzavarnik.runs=N` overrides. */
     @get:Input
@@ -198,7 +203,7 @@ public abstract class AotReportTask : DefaultTask() {
             javaLauncher
                 .get()
                 .metadata.installationPath.asFile
-        val run = ApplicationRun(Launch.Script(script, javaHome), javaOpts, log)
+        val run = ApplicationRun(Launch.Script(script, javaHome), javaOpts, log, environment.get())
         run.start()
         return run
     }

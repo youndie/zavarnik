@@ -6,7 +6,8 @@ Gradle-плагин для AOT-кэша Project Leyden в обычных JVM-п�
 для тренировки и проверки без Gradle в JRE-стадии образа (B-25), заголовки и захват значений в
 workload для тренировки за авторизацией (B-27), mtime jar-ов пинуется уже в `installDist` (B-28),
 режим для Jib и `ktor { docker { } }` — `jibAotTrain`/`jibAotVerify`, образец `samples/ktor-jib`
-(B-26); отложены выпуск (B-13) и воспроизведение SIGILL на паре машин (B-09). Вторая фаза (плагин оптимизации байткода, `bench/`,
+(B-26), окружение тренировочного стенда на обычном пути — `training { environment(…) }` (B-40);
+отложены выпуск (B-13) и воспроизведение SIGILL на паре машин (B-09). Вторая фаза (плагин оптимизации байткода, `bench/`,
 `docs/research/research-optimizer.md`) закрыта 07.09.2026 по критерию остановки: стенд и методика
 остаются, диагностика уехала в kapkan. **Третья фаза (CRaC, `docs/research/research-crac.md`,
 `experiments/crac-smoke/`, `experiments/crac-ktor/`) открыта 11.09.2026:** образец Ktor CIO

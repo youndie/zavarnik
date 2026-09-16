@@ -95,7 +95,24 @@ The DSL is 0.x and may still move before 1.0; the changes are in the backlog.
    the tar carries it, and [`samples/ktor/Dockerfile`](samples/ktor/Dockerfile) trains it on the
    very image that runs it.
 
-An application that cannot start on the build machine — no database, no broker — sets
+An application that refuses to start without configuration — a typed schema over the environment,
+where the refusal is the feature — is told where to put its files for the training run:
+
+```kotlin
+training {
+    environment("APP_STORE", layout.buildDirectory.file("tmp/aot-train/store.db").get().asFile.path)
+    readyWhen.url("http://127.0.0.1:8080/health")
+}
+```
+
+These are the build machine's values, and `aotTrain`, `aotVerify` and `aotReport` all run with
+them. They are deliberately not written into `zavarnik.properties`: a path that is right here is
+wrong inside an image, so a container gets its environment from the container —
+`jib { dockerRunArgs("-e", "…") }` below, or the image's own `ENV` for the runner in a build stage.
+`JAVA_HOME` and `JAVA_OPTS` are refused here, because the start script's launch sets both; JVM
+flags go through `zavarnik { jvmArgs(…) }`.
+
+An application that cannot start on the build machine at all — no database, no broker — sets
 `training { onAssemble = false }`: `assemble` and `build` then pack no cache instead of failing
 in `aotTrain`, `distTar` still ships a cache a training run has left in `installDist`, and the
 training happens where the application can run, through the runner below.

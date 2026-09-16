@@ -33,6 +33,20 @@ internal object ConfigurationChecks {
                     "The one-step AOT workflow (-XX:AOTCacheOutput) exists from JDK 25 (JEP 514).",
             )
         }
+        val reserved =
+            extension.training.environment
+                .get()
+                .keys
+                .filter { it in LAUNCH_VARIABLES }
+        if (reserved.isNotEmpty()) {
+            throw GradleException(
+                "zavarnik: `training { environment(…) }` in ${project.displayName} sets " +
+                    "${reserved.joinToString()}, which the start script's launch sets itself and would " +
+                    "overwrite — the value would be silently ignored. JVM flags belong in " +
+                    "`zavarnik { jvmArgs(…) }`, which reaches the training run, aotVerify and production " +
+                    "alike; JAVA_HOME follows the Java toolchain.",
+            )
+        }
         val args = extension.jvmArgs.get()
         if (args.any { it == ZGC_FLAG } && !jdk.supportsZgcWithAotCache) {
             // Measured, not read: a cache trained under ZGC on 25.0.4 is used under ZGC — 767 classes
@@ -74,4 +88,7 @@ internal object ConfigurationChecks {
     }
 
     private const val ZGC_FLAG = "-XX:+UseZGC"
+
+    /** What `Launch.Script` puts in the environment itself; see the refusal above. */
+    private val LAUNCH_VARIABLES = setOf("JAVA_HOME", "JAVA_OPTS")
 }

@@ -4,6 +4,7 @@ import io.github.youndie.zavarnik.runner.WorkloadStep
 import org.gradle.api.Action
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import java.time.Duration
@@ -111,6 +112,46 @@ public abstract class TrainingSpec
         /** Configures [workload]. */
         public fun workload(action: Action<in WorkloadSpec>) {
             action.execute(workload)
+        }
+
+        /**
+         * Environment variables the application is run with on this machine — in `aotTrain`,
+         * `aotVerify` and `aotReport`. Empty by default, which means the runs inherit the build's
+         * own environment and nothing else.
+         *
+         * This is what an application built on a configuration schema needs: it reads its settings
+         * from the environment and refuses to start when a required one is absent — the refusal is
+         * the feature — and without this the training run gets whatever Gradle happened to be
+         * started with, waits for a readiness URL a refused process never serves, and the only way
+         * out is `onAssemble = false`, which gives up the cache on `check`.
+         *
+         * Point it at the build directory, not at production: these values belong to the training
+         * stand on the build machine, and they are deliberately **not** written into
+         * `zavarnik.properties` — a path that is right here is wrong inside an image. The container
+         * paths have their own door: [JibSpec.dockerRunArgs] for `jibAotTrain`, and the image's own
+         * environment for the runner in a `docker build` stage.
+         *
+         * ```kotlin
+         * training { environment("APP_DB_PATH", layout.buildDirectory.file("tmp/aot-train/app.db").get().asFile.path) }
+         * ```
+         *
+         * JVM flags do not belong here: they go through [ZavarnikExtension.jvmArgs], which reaches
+         * the training run, the verification run and production alike. `JAVA_HOME` and `JAVA_OPTS`
+         * are refused for that reason — the start script's launch sets both.
+         */
+        public abstract val environment: MapProperty<String, String>
+
+        /** `training { environment("APP_DB_PATH", "…") }`. */
+        public fun environment(
+            name: String,
+            value: String,
+        ) {
+            environment.put(name, value)
+        }
+
+        /** `training { environment(mapOf("APP_DB_PATH" to "…")) }`. */
+        public fun environment(values: Map<String, String>) {
+            environment.putAll(values)
         }
 
         /**

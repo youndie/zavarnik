@@ -43,7 +43,7 @@
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
-## Closed (37)
+## Closed (38)
 
 **Стенд**
 
@@ -73,6 +73,7 @@
 - [B-29](docs/backlog/B-29-jib-docker-run-args.md) `[x]` - Jib-режим: сеть и окружение стенда для контейнера тренировки — zavarnik { jib { dockerRunArgs() } }
 - [B-30](docs/backlog/B-30-assemble-without-training.md) `[x]` - training { onAssemble = false }: assemble и build не тренируют, если приложению негде стартовать
 - [B-31](docs/backlog/B-31-refuse-wildcard-classpath.md) `[x]` - Wildcard в CLASSPATH стартового скрипта отказывается: порядок раскрытия разный у разных рантаймов
+- [B-40](docs/backlog/B-40-training-environment.md) `[x]` - training { environment(…) }: окружение тренировочного стенда на сборочной машине
 
 **Выпуск**
 

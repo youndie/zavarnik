@@ -19,6 +19,11 @@ public class Verification(
     private val config: RunnerConfig,
     private val log: File,
     private val report: (String) -> Unit = ::println,
+    /**
+     * The same environment the training run was given — an application that refuses to start
+     * without a variable refuses here too, and this check is the one that runs on `check`.
+     */
+    private val environment: Map<String, String> = emptyMap(),
 ) {
     /** Returns the one-line summary of what was measured; throws [RunnerException] otherwise. */
     public fun run(): String {
@@ -57,6 +62,7 @@ public class Verification(
                 installation.launch,
                 cacheFlag + listOf("-XX:AOTMode=on", "-Xlog:class+load=info", "-Xlog:aot=info") + config.verifyJvmArgs,
                 log,
+                environment,
             )
         run.start()
         try {
