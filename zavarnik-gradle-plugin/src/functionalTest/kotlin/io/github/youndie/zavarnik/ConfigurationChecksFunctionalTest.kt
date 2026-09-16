@@ -31,6 +31,14 @@ class ConfigurationChecksFunctionalTest {
     }
 
     @Test
+    fun `refuses a training environment that sets what the launch sets`() {
+        write(toolchain = 25, extension = "zavarnik { training { environment(\"JAVA_OPTS\", \"-Xmx1g\") } }")
+        val result = runner("help").buildAndFail()
+        assertContains(result.output, "which the start script's launch sets itself")
+        assertContains(result.output, "`zavarnik { jvmArgs(…) }`")
+    }
+
+    @Test
     fun `refuses a project without the application plugin`() {
         write(toolchain = 25, application = false)
         val result = runner("help").buildAndFail()

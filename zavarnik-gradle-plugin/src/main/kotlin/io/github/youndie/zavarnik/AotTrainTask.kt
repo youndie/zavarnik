@@ -8,6 +8,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
@@ -44,6 +45,14 @@ public abstract class AotTrainTask : DefaultTask() {
     @get:Nested
     public abstract val javaLauncher: Property<JavaLauncher>
 
+    /**
+     * `training { environment(…) }` — the variables the application is started with on top of the
+     * build's own. An input: a cache trained with one environment and a cache trained with another
+     * are not the same cache, and the task has to run again when it changes.
+     */
+    @get:Input
+    public abstract val environment: MapProperty<String, String>
+
     /** `lib/<cacheFileName>`. */
     @get:OutputFile
     public abstract val cacheFile: RegularFileProperty
@@ -65,7 +74,7 @@ public abstract class AotTrainTask : DefaultTask() {
         val installation = Installation.distribution(installDir.get().asFile, javaHome, scriptName.get())
         val config = RunnerConfig.read(installation.config)
         try {
-            Training(installation, config, logFile.get().asFile, logger::lifecycle).run()
+            Training(installation, config, logFile.get().asFile, logger::lifecycle, environment.get()).run()
         } catch (failed: RunnerException) {
             throw GradleException(failed.message ?: failed.toString(), failed)
         }

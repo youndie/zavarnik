@@ -8,6 +8,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
@@ -43,6 +44,10 @@ public abstract class AotVerifyTask : DefaultTask() {
     @get:Nested
     public abstract val javaLauncher: Property<JavaLauncher>
 
+    /** `training { environment(…) }`: the verification run starts the application the training run did. */
+    @get:Input
+    public abstract val environment: MapProperty<String, String>
+
     /** The application's output, `-Xlog` included: `build/zavarnik/aotVerify.log`. */
     @get:OutputFile
     public abstract val logFile: RegularFileProperty
@@ -61,7 +66,7 @@ public abstract class AotVerifyTask : DefaultTask() {
         val config = RunnerConfig.read(installation.config)
         val summary =
             try {
-                Verification(installation, config, logFile.get().asFile, logger::lifecycle).run()
+                Verification(installation, config, logFile.get().asFile, logger::lifecycle, environment.get()).run()
             } catch (failed: RunnerException) {
                 throw GradleException(failed.message ?: failed.toString(), failed)
             }

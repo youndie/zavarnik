@@ -36,11 +36,17 @@ internal object Fixture {
         return jar
     }
 
+    /**
+     * A TestKit project. [requiredEnv] names an environment variable the application refuses to
+     * start without — what a typed configuration schema does, and the case the training run's
+     * environment exists for.
+     */
     fun write(
         dir: File,
         extension: String = "",
         dependencies: String = "",
         plugins: String = "",
+        requiredEnv: String? = null,
     ) {
         File(dir, "settings.gradle.kts").writeText("rootProject.name = \"fixture\"\n")
         File(dir, "build.gradle.kts").writeText(
@@ -71,6 +77,7 @@ internal object Fixture {
 
             public class App {
                 public static void main(String[] args) throws Exception {
+                    ${requiredEnvGuard(requiredEnv)}
                     HttpServer server = HttpServer.create(new InetSocketAddress($PORT), 0);
                     server.createContext("/health", exchange -> {
                         byte[] body = "ok".getBytes();
@@ -109,4 +116,22 @@ internal object Fixture {
             """.trimIndent(),
         )
     }
+
+    /**
+     * Refuses and exits the way an application that reads a required setting out of the environment
+     * does; the value goes to stdout so a test can read back what the process actually got.
+     */
+    private fun requiredEnvGuard(name: String?): String =
+        if (name == null) {
+            ""
+        } else {
+            """
+            String required = System.getenv("$name");
+                    if (required == null) {
+                        System.err.println("fixture: $name is not set");
+                        System.exit(1);
+                    }
+                    System.out.println("fixture: $name=" + required);
+            """.trimIndent()
+        }
 }

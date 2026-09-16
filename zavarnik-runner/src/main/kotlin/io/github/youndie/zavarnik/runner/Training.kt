@@ -22,6 +22,12 @@ public class Training(
     private val config: RunnerConfig,
     private val log: File,
     private val report: (String) -> Unit = ::println,
+    /**
+     * Environment for the training run on top of this process's own — `training { environment(…) }`
+     * on the Gradle side. Empty for the runner in a container, which already stands in the
+     * environment the image was given.
+     */
+    private val environment: Map<String, String> = emptyMap(),
 ) {
     public fun run() {
         if (config.readyUrl == null && config.exitAfter == null) {
@@ -45,7 +51,7 @@ public class Training(
         manifest.delete()
         cache.parentFile.mkdirs()
         if (installation.pinsJarTimestamps) for (dir in installation.jarDirs) pinJarTimestamps(dir)
-        val run = ApplicationRun(launch, listOf("-XX:AOTCacheOutput=${cache.absolutePath}"), log)
+        val run = ApplicationRun(launch, listOf("-XX:AOTCacheOutput=${cache.absolutePath}"), log, environment)
         run.start()
         try {
             exercise(run, cache)
