@@ -1,3 +1,3 @@
 plugins {
-    alias(libs.plugins.kotlinJvm) apply false
+    alias(wip.plugins.kotlinJvm) apply false
 }
