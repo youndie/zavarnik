@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.kotlinJvm)
+    alias(wip.plugins.kotlinJvm)
     alias(libs.plugins.sborkaJvm)
     alias(libs.plugins.sborkaLint)
 }

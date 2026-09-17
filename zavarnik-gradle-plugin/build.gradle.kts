@@ -2,7 +2,7 @@ import org.gradle.api.file.ArchiveOperations
 import org.gradle.kotlin.dsl.support.serviceOf
 
 plugins {
-    alias(libs.plugins.kotlinJvm)
+    alias(wip.plugins.kotlinJvm)
     `java-gradle-plugin`
     alias(libs.plugins.sborkaJvm)
     alias(libs.plugins.sborkaLint)

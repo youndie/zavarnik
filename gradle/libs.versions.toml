@@ -1,12 +1,12 @@
 [versions]
-kotlin = "2.4.10"
-# The shared build conventions. One number: every sborka plugin below takes its version from here.
-sborka = "0.4.0.43"
+# The shared build conventions. One number: every sborka plugin below takes its version from here,
+# and so does the compiler — the `wip` catalog this release publishes carries `kotlin`, which is why
+# there is no Kotlin version in this file to drift from the rest of the portfolio.
+sborka = "0.4.0.86"
 # Publishes to the Gradle Plugin Portal; applied by the plugin module itself, run from sborka's portal.yaml.
 pluginPublish = "2.1.1"
 
 [plugins]
-kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 sborkaJvm = { id = "io.github.youndie.sborka.jvm", version.ref = "sborka" }
 sborkaLint = { id = "io.github.youndie.sborka.lint", version.ref = "sborka" }
 sborkaPublish = { id = "io.github.youndie.sborka.publish", version.ref = "sborka" }
