@@ -537,6 +537,62 @@ saturation; saturation runs describe the stand.**
 would need the database on a third machine, and this pair has two. The honest statement in the
 write-up is that the real-mode ceiling is the machine, and every real-mode absolute carries it.
 
+### 1.14 JMH: the controls pass, RQ2 gets its number, and two benchmarks of mine were wrong
+
+The phase now has a microbenchmark harness — a build of its own, JMH 1.37, run on the idle half of
+the pair (4 cores, steal 0, nothing else running). The governor cannot be fixed there either, which
+is why every run is three forks rather than one: three JIT histories instead of one.
+
+**The calibration controls pass, so the chain can be believed.** B-44, and by the brief's kill
+criterion 2 nothing below it would have counted otherwise. Each control is a pair — the Kotlin
+construct against the hand-written equivalent it should compile to — and green means the pair is
+within its intervals.
+
+| Pair | Kotlin | equivalent | verdict |
+|---|---|---|---|
+| `inline` with a lambda | 76.05 ± 2.49 ns | hand-written loop 74.90 ± 2.94 | green |
+| `Intrinsics` parameter check | non-null 1.670 ± 0.062 | nullable 1.863 ± 0.397 | green |
+| `when` over a sealed hierarchy | 1999 ± 59 | int switch 1917 ± 160 | green |
+| `for` over a range | 393.5 ± 3.9 | `while` 435.2 ± 38.2 | green |
+| data class `copy` | 5.354 ± 0.119 | plain class 5.593 ± 0.151 | green |
+| **the known-order pair (D8)** | base 179.7 | the same plus one multiply 269.5 | **order correct** |
+
+**RQ2 has its micro number, and it is the brief's own toggle.** One call site, the same work per
+call, only the number of implementing classes behind it changing:
+
+| receivers | ns per call | against monomorphic |
+|---|---|---|
+| 1 | 0.755 | — |
+| 2 | 1.292 | 1.7× |
+| **8** | **6.715** | **8.9×** |
+
+The break is between 2 and 8, which is where `TypeProfileWidth = 2` says it should be (§1.2). The
+service's own resume site carries 580 receivers (§1.6), so the `mega` arm is the one that stands for
+it: **a megamorphic call on this path costs about 6 ns against 0.76 ns monomorphic.** Whether that
+matters is a macro question the microbenchmark cannot answer — 6 ns is 0.004 % of a 166 µs request,
+so it takes hundreds of such calls per request to reach the brief's 2 % line, and how many there are
+is a profile question.
+
+**Two of my own benchmarks were wrong, and both were caught by rules this document already had.**
+
+*RQ3 measured folding, not suspending.* `plainChain` came out at **0.701 ns** — about two cycles,
+which is the blackhole and nothing else. The input was the literal `7`, so the plain chain folded to
+a constant while the suspend chain did not, and the pair compared folding against not-folding. The
+input is now a `@Volatile` field the JIT cannot see through, and RQ3 is **unanswered** until that
+rerun lands rather than answered at 5.6×.
+
+*The "indexed iteration loses vectorisation" claim is dead.* It came out of the controls:
+`handWrittenLoop` summed 1024 ints in 74.9 ns while `forOverRange` took 393.5 — five times longer
+for strictly more work. Isolating it refutes the reading: `direct` 406.7, `indexedOverIndices`
+396.1, `indexedOverSize` 396.9 — indexing changes nothing. What differs is the **multiply**:
+`directTimesTwo` is 77.3 ns, and it is the arm doing *more* work. Reproduced in two independent
+benchmark classes.
+
+By D8's own rule an impossible ordering means the stand is suspect for that pair and the stand is
+what gets fixed, not the number. So this is recorded as an open anomaly rather than a finding, and
+what it needs is the brief's own step 3 — `-prof perfasm` on the generated code. Item
+[B-52](../backlog/B-52-multiply-makes-the-loop-faster.md).
+
 ---
 
 ## 2. Where each research question stands
@@ -753,6 +809,8 @@ stand, deciding nothing about the construct list.
 | measurement | `bench/profile/results/pair-rq4-arms.md` — §1.11, the three arms with every round |
 | measurement | `bench/profile/results/pair-ceiling.md` — §1.12, the ceiling with repeats |
 | measurement | `bench/profile/results/pair-ceiling-mechanism.md` — §1.13, who owns the machine |
+| microbenchmark | `microbench/src/jmh/kotlin/micro/` — §1.14, controls, RQ2, RQ3 |
+| microbenchmark | `microbench/results-controls.md`, `microbench/results-candidates.md` — §1.14 |
 | profile | `bench/profile/results/netty-jit/` — §1.9, the run the join reads |
 | JDK configuration | `openjdk-25.0.2!/lib/jfr/profile.jfc`, `openjdk-25.0.2!/lib/jfr/default.jfc` — §1.3 |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/ResultRow.class` |
