@@ -1,37 +1,41 @@
 ---
 id: B-42
-title: "A warm-up gate on an instrument that reports, and the answer to why JFR's compiler events stop"
+title: "A warm-up gate on an instrument that reports: jdk.Compilation switched on, inlining evidence taken elsewhere"
 status: open
 priority: P1
 size: S
 stage: stage-8-jit-constructs
 ---
 
-# B-42 — The steady-state gate, rebuilt on something that can say no
+# B-42 — The steady-state gate, wired to something that can say no
 
-The brief starts measurement "after JFR shows no C2 compilations for 60 seconds". Measured
+The brief starts measurement "after JFR shows no C2 compilations for 60 seconds" and calls JFR the
+instrument that needs no diagnostic flags. Measured
 ([research-jit-constructs](../research/research-jit-constructs.md) §1.3), a `settings=profile`
-recording of a run with 1258 compilations holds **zero** `jdk.Compilation` events, and so does the
-repeat: the shipped threshold is 100 ms and `jdk.CompilerInlining` ships disabled. The gate as
+recording of a run with **7262** compile tasks over 7.3 seconds holds **zero** `jdk.Compilation`
+events: the shipped threshold is 100 ms and `jdk.CompilerInlining` ships disabled. The gate as
 written cannot fail.
 
-- **The gate becomes a separate run** with `-XX:+PrintCompilation -XX:+PrintInlining`, whose output
-  is a warm-up *duration* for this stand. The timing runs then use that duration and carry no
-  compiler flags, because the flags change what they would be timing (D3).
+Switched on explicitly, the same event is a census — 6025 events against 6058 compile tasks in its
+id range — so the gate is buildable. What is not buildable on JFR is the inlining evidence.
+
+- **The gate is `jdk.Compilation` with `+jdk.Compilation#enabled=true` and `#threshold=0ms`**, and
+  the runs it gates carry the same setting, since it is the same census either way and costs +4.8 %
+  on a microbenchmark that does nothing but compile.
 - **The duration is per data mode and per engine**, not one number: real mode compiles driver and
   pool code that stub mode never loads.
-- **Open question 1 is settled here or recorded as unsettled.** Even forced on, the recording held
-  about 60 events of some 1340 compile tasks, inside a window of roughly twenty milliseconds — a
-  count that repeats between runs while the window moves. Hypothesis: per-thread buffers that the
-  compiler threads stop filling once compilation tails off, so nothing flushes them. Test: the stand
-  under load, where compilation continues for minutes, with `jcmd JFR.dump` taken mid-run rather
-  than at exit. If JFR turns out usable on a live service, the
-  gate can move back to it and say so.
+- **Inlining refusals come from `-XX:+PrintInlining` / `LogCompilation`, in their own runs**, because
+  `jdk.CompilerInlining` stops after a few dozen compilations. That splits a verdict needing both a
+  reason and a time across two runs, and the item's job is to make that split cheap rather than to
+  wish it away.
+- **The first version of this item had it backwards**, and the reason is kept in §1.3: the control
+  was a one-method loop that stopped compiling before the recording was live, so a truncated subject
+  read as a truncated instrument.
 - Does **not** cover: choosing the load level. That is B-41's `cost:` protocol.
 
-- AC: a committed log showing, for each mode, the time after which `-XX:+PrintCompilation` prints
-  no level-4 compilation of application, Ktor, Exposed or serialiser code for 60 s.
-- AC: a committed comparison of `jcmd JFR.dump` mid-run against the same run's exit dump, with the
-  event counts of both, and a written answer — usable, or not, and why.
+- AC: a committed log showing, for each mode, the time after which `jdk.Compilation` reports no
+  level-4 compilation of application, Ktor, Exposed or serialiser code for 60 s, cross-checked once
+  against `-XX:+PrintCompilation` on the same workload.
+- AC: the warm-up duration is a value the harness reads, not a constant re-typed per script.
 - Anchors: `bench/profile/run.sh`, `experiments/jit-warmup/warmup-curve.sh`,
-  `experiments/jfr-compiler-events/run.sh`.
+  `experiments/jfr-compiler-events/long-run.sh`.
