@@ -63,6 +63,16 @@ the 25 largest bodies, class initialisers set aside:
      1714  org/postgresql/jdbc/PgDatabaseMetaData.getFunctionColumns(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/sql/ResultSet;  [postgresql-42.7.13.jar]
      1676  kotlin/jvm/internal/ClassReference$Companion.classFqNameOf(Ljava/lang/String;)Ljava/lang/String;  [kotlin-stdlib-2.4.20.jar]
 
+invokeSuspend implementations on the classpath: 580
+     263  kotlinx-coroutines-core-jvm-1.11.0.jar
+     134  ktor-server-core-jvm-3.5.2.jar
+      68  ktor-io-jvm-3.5.2.jar
+      27  ktor-utils-jvm-3.5.2.jar
+      21  kotlin-stdlib-2.4.20.jar
+      18  ktor-server-netty-jvm-3.5.2.jar
+      15  ktor-http-jvm-3.5.2.jar
+      12  exposed-jdbc-1.4.0.jar
+
 invokeSuspend bodies over the threshold: 52; the 25 largest:
      1847  io/ktor/util/EncodersJvmKt$inflate$1  [ktor-utils-jvm-3.5.2.jar]
      1449  kotlin/io/path/PathTreeWalk$dfsIterator$1  [kotlin-stdlib-2.4.20.jar]

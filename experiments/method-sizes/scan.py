@@ -195,7 +195,17 @@ def main():
     # because a name like `Foo$bar$1.invokeSuspend` says nothing about whether it is on the request
     # path - the class it belongs to does. Printed here so that every number the research quotes
     # lives in the log beside the table it came from.
+    all_susp = [r for r in rows if r["method"] == "invokeSuspend"]
     susp = sorted([r for r in over if r["method"] == "invokeSuspend"], key=lambda r: -r["size"])
+    print()
+    # The count matters as much as the sizes: BaseContinuationImpl.resumeWith is one call site whose
+    # receivers are every one of these, and TypeProfileWidth is 2.
+    print("invokeSuspend implementations on the classpath: %d" % len(all_susp))
+    by = {}
+    for r in all_susp:
+        by[r["artifact"]] = by.get(r["artifact"], 0) + 1
+    for name, n in sorted(by.items(), key=lambda kv: -kv[1])[:8]:
+        print("  %6d  %s" % (n, name))
     print()
     print("invokeSuspend bodies over the threshold: %d; the %d largest:" % (len(susp), min(args.top, len(susp))))
     for r in susp[:args.top]:

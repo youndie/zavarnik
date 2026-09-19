@@ -224,11 +224,18 @@ anywhere near the endpoint it slows down.
 | `BaseContinuationImpl.resumeWith` is `public final` and calls `protected abstract invokeSuspend(Object)` — one call site whose receivers are every `invokeSuspend` in the process | `javap -p` on `org.jetbrains.kotlin:kotlin-stdlib:2.4.20!/kotlin/coroutines/jvm/internal/BaseContinuationImpl.class` |
 | `startCoroutineUninterceptedOrReturn` appears in the Kotlin metadata of `IntrinsicsKt__IntrinsicsJvmKt` but has **no JVM member** there: it is inline-only and compiled into its caller. `createCoroutineUnintercepted` and `intercepted` are ordinary static methods | `javap` and a binary search of `org.jetbrains.kotlin:kotlin-stdlib:2.4.20!/kotlin/coroutines/intrinsics/IntrinsicsKt__IntrinsicsJvmKt.class` |
 | `CoroutineSingletons` is an enum with `COROUTINE_SUSPENDED`, `UNDECIDED`, `RESUMED` | the same jar |
+| **The pinned classpath carries 580 `invokeSuspend` implementations** before a line of application code — coroutines 263, `ktor-server-core` 134, `ktor-io` 68, `ktor-utils` 27, stdlib 21, the Netty engine 18, `ktor-http` 15, `exposed-jdbc` 12 | `experiments/method-sizes/results/`, the scan of §1.8 |
 
-**Consequence.** RQ2's premise holds by construction: the `resumeWith → invokeSuspend` edge is a
-single site with as many receivers as the application has suspend bodies. And the brief's
-benchmark method works — the intrinsic is callable from Kotlin — with the caveat that, being
-inline-only, its machinery lands inside the benchmark method's own bytecode and counts against
+**Consequence — RQ2's site is megamorphic by construction, and nothing the application does can
+change that.** `resumeWith` is one call site; its receivers are those 580 plus every suspend body
+the service adds; `TypeProfileWidth` is 2 (§1.2). There is no configuration, no rewrite and no
+volume of application code under which C2 sees a bimorphic profile there. That makes RQ2 a question
+about what a *known* megamorphic site costs rather than about whether one exists — and it means the
+brief's 1, 2 and 8 receiver arms are a calibration of the microbenchmark, not the measurement. The
+service sits at the far end of that gradient and never moves along it.
+
+The brief's benchmark method works — the intrinsic is callable from Kotlin — with the caveat that,
+being inline-only, its machinery lands inside the benchmark method's own bytecode and counts against
 that method's size.
 
 ### 1.7 What this host cannot deliver, measured
