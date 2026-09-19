@@ -188,19 +188,34 @@ but how many receivers a request actually sees is a runtime question, not a stat
 **Consequence — the setup table pins no version for the data layer**, while the brief's own rule
 is that every version is pinned before the first measurement. "Ktor 3.x" is not a pin either. D7.
 
-### 1.5 "JSON only" does not mean one encoder
+### 1.5 A JSON-only service loads one encoder, and one call anywhere loads three
+
+RQ6's green condition is that the `Encoder` calls in a generated serialiser inline. The jar ships
+six encoder implementations, so whether the call sites are monomorphic is a question about which of
+them the process *loads* — a runtime fact, not a count of classes in an artifact. Measured with a
+program shaped like the brief's list endpoint, compiled by the Kotlin version the stand pins and run
+under `-verbose:class`.
 
 | Fact | Where verified |
 |---|---|
-| `kotlinx-serialization-json-jvm` 1.11.0 ships six encoder implementations — `StreamingJsonEncoder`, `AbstractJsonTreeEncoder`, `JsonTreeEncoder`, `JsonTreeListEncoder`, `JsonTreeMapEncoder`, `JsonPrimitiveEncoder` — and the mirror set of decoders | `unzip -l` on `org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.11.0!/kotlinx/serialization/json/internal/` |
-| `kotlinx-serialization-core-jvm` 1.11.0 adds `AbstractEncoder`, `TaggedEncoder`, `NamedValueEncoder`, `NoOpEncoder` | the corresponding core jar |
+| `kotlinx-serialization-json-jvm` 1.11.0 ships six encoder implementations — `StreamingJsonEncoder`, `AbstractJsonTreeEncoder`, `JsonTreeEncoder`, `JsonTreeListEncoder`, `JsonTreeMapEncoder`, `JsonPrimitiveEncoder` — and the core artifact adds `AbstractEncoder`, `TaggedEncoder`, `NamedValueEncoder`, `NoOpEncoder` | `unzip -l` on `org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.11.0!/kotlinx/serialization/json/internal/` |
+| **Encoding and decoding through strings loads exactly one concrete encoder and one concrete decoder** — `StreamingJsonEncoder` and `StreamingJsonDecoder`. The other thirteen classes named Encoder or Decoder that the JVM loads are the interfaces and abstract supertypes | `experiments/json-encoder-census/results/`, arm `string` |
+| **One `encodeToJsonElement`, anywhere in the process, adds three more concrete encoders** — `JsonTreeEncoder`, `JsonTreeListEncoder` and their `AbstractJsonTreeEncoder` base — plus `TaggedEncoder` and `NamedValueEncoder` in core: 15 loaded classes become 23 | the same log, arm `element`, and the diff it prints |
+| The streaming and the sink paths share the one encoder class: `JsonStreamsKt`, the sink entry point, constructs `StreamingJsonEncoder` like `encodeToString` does | `javap` over `org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.11.0!/kotlinx/serialization/json/internal/JsonStreamsKt.class` |
+| **Ktor does not cross that line itself.** Across `ktor-serialization-kotlinx-jvm` and `ktor-serialization-kotlinx-json-jvm` 3.5.2, **zero** classes reference `JsonElement` or `encodeToJsonElement`; the converter calls `encodeToString`, `encodeToSink`, `decodeFromString` and `decodeFromSource` | constant-pool search and `javap` over both jars |
 
-**Consequence.** RQ6's green condition — "the encoder methods inline into generated serialisers" —
-depends on how many of these classes are *loaded*, which depends on whether anything in the
-service touches `JsonElement` at all. A service that only calls `encodeToString` may well be
-monomorphic; one that uses `JsonTransformingSerializer`, polymorphic serialisation or
-`encodeToJsonElement` anywhere on any path pollutes the profile for every path. That is a
-hypothesis with an address: open question 2.
+**Consequence — RQ6 has two answers and the threshold between them is two.** `TypeProfileWidth` is
+**2** (§1.2): C2 records at most two receiver types per call site and treats a third as megamorphic.
+A service that only encodes and decodes JSON bodies sees **one** receiver at the shared `Encoder`
+sites, which is the best case there is. A service that calls `encodeToJsonElement` once — in a
+health endpoint, in a log line, in a test fixture that runs in the same process — puts **three**
+concrete encoders on those sites and pushes them over the line in one step. The interesting number
+is not the verdict, it is the gap between the two arms, and the study should measure both.
+
+**Consequence — this is the profile pollution RQ7 names, with a name.** The brief lists "profile
+pollution in shared generic code" as an RQ7 suspect and gives no example. Here is one that costs a
+single line of application code and is invisible in review, because the polluting call need not be
+anywhere near the endpoint it slows down.
 
 ### 1.6 The continuation machinery, as compiled
 
@@ -366,8 +381,11 @@ it is not worth knowing here, because the study needs that evidence at a fidelit
 anyway. If it is ever worth reporting upstream, the four repeats in
 `experiments/jfr-compiler-events/results/` are the material.
 
-**Open question 2. How many `Encoder` receivers the list endpoint actually sees (§1.5).** Address:
-`-XX:+PrintInlining` on the stand, counting loaded implementations, before RQ6 is scheduled.
+**Open question 2 — closed 2026-09-19.** A JSON-only process loads one concrete encoder; one
+`encodeToJsonElement` anywhere loads three, and `TypeProfileWidth` is 2 (§1.5). Ktor's own converter
+never touches the tree API, so the polluting call, if there is one, is always application code. What
+is still open is not the census but the price: the receiver counts the compilation log shows at
+those sites under load, which is [B-46](../backlog/B-46-rq6-encoder-receiver-census.md).
 
 **Open question 3. What C2 itself costs on a container-limited service.** At 50 rps under a
 one-core limit, 61 % of self CPU was the JVM's own threads and the frames were C2's (§1.1). The
@@ -388,6 +406,7 @@ stand, deciding nothing about the construct list.
 | stand | `bench/profile/attribute.py` — self/owner attribution of collapsed stacks |
 | experiment | `experiments/jfr-compiler-events/run.sh` — §1.3, the short workload |
 | experiment | `experiments/jfr-compiler-events/long-run.sh` — §1.3, the control that corrected it, and the price of each instrument |
+| experiment | `experiments/json-encoder-census/run.sh`, `experiments/json-encoder-census/Probe.kt` — §1.5 |
 | JDK configuration | `openjdk-25.0.2!/lib/jfr/profile.jfc`, `openjdk-25.0.2!/lib/jfr/default.jfc` — §1.3 |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/ResultRow.class` |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/IColumnType.class` |

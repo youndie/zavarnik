@@ -46,7 +46,7 @@
 | [B-43](docs/backlog/B-43-static-scan-across-owners.md) `[ ]` | Static scan of the whole runtime classpath, not only of application code | P1 | S | - |
 | [B-44](docs/backlog/B-44-calibration-controls-and-the-known-order-pair.md) `[ ]` | Five calibration controls plus a pair whose order the code already decides | P1 | M | B-41, B-42 |
 | [B-45](docs/backlog/B-45-rq4-exposed-read-path-in-three-arms.md) `[ ]` | RQ4: what Exposed's read path costs, in three arms rather than two | P1 | M | B-41, B-44 |
-| [B-46](docs/backlog/B-46-rq6-encoder-receiver-census.md) `[ ]` | RQ6: count the encoders the service actually loads, then judge the call sites | P2 | S | B-44 |
+| [B-46](docs/backlog/B-46-rq6-encoder-receiver-census.md) `[ ]` | RQ6: price the step from one encoder to three, which one line of application code buys | P2 | S | B-44 |
 | [B-47](docs/backlog/B-47-rq2-rq3-continuation-machinery.md) `[ ]` | RQ2 and RQ3: the one call site every suspend body shares, and the fast path that never suspends | P2 | M | B-44 |
 | [B-48](docs/backlog/B-48-rq1-rq5-sizes-and-codegen-patterns.md) `[ ]` | RQ1 and RQ5: the size threshold with the one dial that exists, and the codegen patterns counted across owners | P2 | M | B-43, B-44 |
 | [B-49](docs/backlog/B-49-rq7-steady-state-and-the-compilers-own-cpu.md) `[ ]` | RQ7: is steady state stable — and what the compiler itself costs under a container limit | P2 | M | B-42, B-44 |

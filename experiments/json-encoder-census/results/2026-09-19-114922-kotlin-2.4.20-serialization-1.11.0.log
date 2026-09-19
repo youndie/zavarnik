@@ -1,0 +1,58 @@
+Encoder implementations loaded by a JSON-only program
+  openjdk version "25.0.2" 2026-01-20
+  OpenJDK Runtime Environment (build 25.0.2+10-69)
+  OpenJDK 64-Bit Server VM (build 25.0.2+10-69, mixed mode, sharing)
+  kotlin 2.4.20, kotlinx.serialization 1.11.0
+
+== arm string: 15 loaded classes named Encoder or Decoder
+   kotlinx.serialization.encoding.AbstractDecoder
+   kotlinx.serialization.encoding.AbstractEncoder
+   kotlinx.serialization.encoding.ChunkedDecoder
+   kotlinx.serialization.encoding.CompositeDecoder
+   kotlinx.serialization.encoding.CompositeDecoder$Companion
+   kotlinx.serialization.encoding.CompositeEncoder
+   kotlinx.serialization.encoding.Decoder
+   kotlinx.serialization.encoding.Encoder
+   kotlinx.serialization.json.JsonDecoder
+   kotlinx.serialization.json.JsonEncoder
+   kotlinx.serialization.json.internal.StreamingJsonDecoder
+   kotlinx.serialization.json.internal.StreamingJsonDecoder$DiscriminatorHolder
+   kotlinx.serialization.json.internal.StreamingJsonDecoder$WhenMappings
+   kotlinx.serialization.json.internal.StreamingJsonEncoder
+   kotlinx.serialization.json.internal.StreamingJsonEncoder$WhenMappings
+
+== arm element: 23 loaded classes named Encoder or Decoder
+   kotlinx.serialization.encoding.AbstractDecoder
+   kotlinx.serialization.encoding.AbstractEncoder
+   kotlinx.serialization.encoding.ChunkedDecoder
+   kotlinx.serialization.encoding.CompositeDecoder
+   kotlinx.serialization.encoding.CompositeDecoder$Companion
+   kotlinx.serialization.encoding.CompositeEncoder
+   kotlinx.serialization.encoding.Decoder
+   kotlinx.serialization.encoding.Encoder
+   kotlinx.serialization.internal.NamedValueEncoder
+   kotlinx.serialization.internal.TaggedEncoder
+   kotlinx.serialization.json.JsonDecoder
+   kotlinx.serialization.json.JsonEncoder
+   kotlinx.serialization.json.internal.AbstractJsonTreeEncoder
+   kotlinx.serialization.json.internal.AbstractJsonTreeEncoder$$Lambda
+   kotlinx.serialization.json.internal.JsonTreeEncoder
+   kotlinx.serialization.json.internal.JsonTreeListEncoder
+   kotlinx.serialization.json.internal.StreamingJsonDecoder
+   kotlinx.serialization.json.internal.StreamingJsonDecoder$DiscriminatorHolder
+   kotlinx.serialization.json.internal.StreamingJsonDecoder$WhenMappings
+   kotlinx.serialization.json.internal.StreamingJsonEncoder
+   kotlinx.serialization.json.internal.StreamingJsonEncoder$WhenMappings
+   kotlinx.serialization.json.internal.TreeJsonEncoderKt
+   kotlinx.serialization.json.internal.TreeJsonEncoderKt$$Lambda
+
+== what one encodeToJsonElement adds
+   kotlinx.serialization.internal.NamedValueEncoder
+   kotlinx.serialization.internal.TaggedEncoder
+   kotlinx.serialization.json.internal.AbstractJsonTreeEncoder
+   kotlinx.serialization.json.internal.AbstractJsonTreeEncoder$$Lambda
+   kotlinx.serialization.json.internal.JsonTreeEncoder
+   kotlinx.serialization.json.internal.JsonTreeListEncoder
+   kotlinx.serialization.json.internal.TreeJsonEncoderKt
+   kotlinx.serialization.json.internal.TreeJsonEncoderKt$$Lambda
+
