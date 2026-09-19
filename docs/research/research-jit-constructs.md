@@ -638,6 +638,48 @@ None of the three was visible in the numbers — each produced a plausible table
 asking what else the arms differed in, which is the same discipline §1.9 and §1.12 needed and the
 reason this document keeps its retractions.
 
+### 1.16 RQ6: two receivers is still two, and the profile width is two
+
+§1.5 counted which encoders a process loads and drew a consequence from it. The consequence was
+wrong, and pricing it took three arms to find out — which is the useful part.
+
+**A one-off tree call costs nothing.** `EncoderClean` 25.427 ± 0.972 µs against `EncoderPolluted`
+25.386 ± 1.035, with allocation identical to three decimals — and the manipulation is verified, not
+assumed: under `-verbose:class` the clean arm loads 2 encoder classes and the polluted one 7.
+
+**Because loading a class is not polluting a profile.** A type profile is kept per call site and
+records the receivers that site has *executed with*. One `encodeToJsonElement` in a setup is one
+pass out of millions; C2 treats a receiver at that frequency as an outlier and emits a guard with an
+uncommon trap, not a megamorphic site.
+
+**Sustained mixed traffic does move the profile, and the throughput arm could not show it.**
+`EncoderMixed` is 17 % slower than a double-clean control but allocates **3.4× more** — 67 624 B/op
+against 19 776 — because `encodeToJsonElement` builds a whole `JsonElement` tree. The extra 8.5 µs
+is that tree's work, and no control built out of `encodeToString` can subtract it. That arm is
+recorded as unusable rather than quoted.
+
+**So the question went to the instrument the brief names for it — step 3, the inlining log.** The
+type profiles at the shared sites, read out of `-XX:+PrintInlining`:
+
+| arm | site | receivers |
+|---|---|---|
+| clean | encoder call | `StreamingJsonEncoder` **10618/10618** and **8321/8321** — 100 % |
+| mixed | the same | `StreamingJsonEncoder` **4989/9962**, `JsonTreeEncoder` **4973/9962** — 50/50 |
+| mixed | another | `JsonTreeListEncoder` **5681/11361**, `JsonTreeEncoder` **5680/11361** |
+
+**Verdict: RQ6 is green, and it stays green under sustained mixing.** A JSON-only service is
+monomorphic at these sites. Mixed traffic makes them **bimorphic** — and `TypeProfileWidth` is 2
+(§1.2), so two receivers is exactly what C2 still profiles and can inline behind a two-way guard.
+The brief's red condition — "virtual or interface calls remain at those sites and meet both
+thresholds" — is not reached.
+
+**The correction to §1.5, stated plainly.** That section said one `encodeToJsonElement` anywhere
+"takes every shared `Encoder` site from one receiver to three, crossing the type-profile width in a
+single line". The census behind it is right; the consequence is not. Loading three encoder classes
+does not put three receivers on a site — reaching three requires three of them in *sustained* use,
+and the tree path in practice contributes one (`JsonTreeEncoder`) at a time per site. One line of
+application code buys bimorphism, which C2 handles, not megamorphism, which it does not.
+
 ---
 
 ## 2. Where each research question stands
@@ -655,7 +697,7 @@ knowing what it costs — and the two are kept apart on purpose.
 | **RQ3** escape analysis | **grey** | The continuation survives on the non-suspending path — **16 B/op**, proven not to be the lambda by the hoisted arm — while the boxed primitive is scalar-replaced (§1.15). Micro effect far past the 10 % line; the 2 % macro share is unmeasured |
 | **RQ4** Exposed | **GREEN** | 1.27× on one row, 1.29× on fifty, against the brief's own green line of 1.5× (§1.11). Decomposed: transaction wrapper ~64 µs flat, Exposed fixed ~70 µs, mapping 0.76 µs/row ≈ 0.151 µs/column |
 | **RQ5** codegen patterns | **green by arithmetic, rescoped** | In the brief's scope — application code only — every pattern is green before measurement, because application code is 0.9–4.0 % of a real service's CPU (§1.1). D5 rescopes it to all owners; the per-pattern counts are not done |
-| **RQ6** encoders | **settled, unpriced** | A JSON-only process loads **one** concrete encoder; one `encodeToJsonElement` anywhere loads three, and the type profile is two wide (§1.5). Ktor never crosses that line itself. The price is [B-46](../backlog/B-46-rq6-encoder-receiver-census.md) |
+| **RQ6** encoders | **GREEN** | A JSON-only service is monomorphic at these sites; sustained mixed traffic makes them **bimorphic at 50/50**, read out of the inlining log, and `TypeProfileWidth` is 2 — so C2 still profiles and inlines them (§1.16). A one-off tree call costs nothing measurable |
 | **RQ7** steady state | **partial** | The instrument is settled — `jdk.Compilation` switched on is a census, `jdk.CompilerInlining` is not (§1.3). The exception arm is named: `JobCancellationException` is already stackless, `TimeoutCancellationException` is not (§1.2). Rates not measured |
 
 **By the brief's own kill criterion 4, this study is at its stopping point.** The criterion is "three
@@ -857,6 +899,7 @@ stand, deciding nothing about the construct list.
 | microbenchmark | `microbench/src/jmh/kotlin/micro/` — §1.14, controls, RQ2, RQ3 |
 | microbenchmark | `microbench/results-controls.md`, `microbench/results-candidates.md` — §1.14 |
 | microbenchmark | `microbench/results-rq3.md` — §1.15, allocation on the non-suspending path |
+| microbenchmark | `microbench/results-rq6.md` — §1.16, the three arms and the type profiles |
 | profile | `bench/profile/results/netty-jit/` — §1.9, the run the join reads |
 | JDK configuration | `openjdk-25.0.2!/lib/jfr/profile.jfc`, `openjdk-25.0.2!/lib/jfr/default.jfc` — §1.3 |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/ResultRow.class` |

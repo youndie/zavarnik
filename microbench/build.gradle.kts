@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "2.4.20"
     kotlin("kapt") version "2.4.20"
+    kotlin("plugin.serialization") version "2.4.20"
     id("me.champeau.jmh") version "0.7.3"
 }
 
@@ -10,6 +11,7 @@ dependencies {
     jmh("org.openjdk.jmh:jmh-core:1.37")
     kaptJmh("org.openjdk.jmh:jmh-generator-annprocess:1.37")
     jmh("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+    jmh("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 }
 
 kotlin { jvmToolchain(25) }

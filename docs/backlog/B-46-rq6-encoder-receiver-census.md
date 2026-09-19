@@ -1,14 +1,30 @@
 ---
 id: B-46
 title: "RQ6: price the step from one encoder to three, which one line of application code buys"
-status: open
+status: done
 priority: P2
 size: S
 stage: stage-8-jit-constructs
-blocked_by: [B-44]
 ---
 
-# B-46 — The census is done; what is left is what it costs
+# B-46 — Priced, green, and the census's consequence was wrong
+
+> **Done 2026-09-19.** RQ6 is **green**, and stays green under sustained mixing.
+> [research-jit-constructs](../research/research-jit-constructs.md) §1.16.
+>
+> * a one-off `encodeToJsonElement` costs **nothing measurable** — 25.386 ± 1.035 µs against
+>   25.427 ± 0.972, allocation identical to three decimals, with the class loading verified at 2
+>   classes against 7 so the manipulation is not assumed;
+> * sustained mixing does move the profile, and the inlining log shows how far: the shared sites go
+>   from **100 % `StreamingJsonEncoder`** to **50/50 with `JsonTreeEncoder`**. That is *bimorphic*,
+>   and `TypeProfileWidth` is 2, so C2 still profiles and inlines behind a two-way guard;
+> * the throughput arm for sustained mixing is **unusable and recorded as such**: it allocates 3.4×
+>   what its control does, because the tree path builds a `JsonElement`, and no control made of
+>   `encodeToString` can subtract that.
+>
+> **The census's consequence in §1.5 is corrected.** Loading three encoder classes does not put
+> three receivers on a site. One line of application code buys bimorphism, which C2 handles — not
+> megamorphism, which it does not.
 
 Counted rather than guessed
 ([research-jit-constructs](../research/research-jit-constructs.md) §1.5): a process that only
