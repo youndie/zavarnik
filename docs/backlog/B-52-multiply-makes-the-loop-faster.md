@@ -1,7 +1,7 @@
 ---
 id: B-52
-title: "A loop that multiplies is five times faster than the same loop without the multiply"
-status: open
+title: "A loop that multiplies is five times faster — and it is JDK-8345044"
+status: done
 priority: P2
 size: S
 stage: stage-8-jit-constructs
@@ -77,3 +77,33 @@ should collapse the pair to the same speed.
 
 - AC (revised): both arms measured with and without `-XX:-UseSuperWord`, and a sentence saying
   whether the advantage survives. `perfasm` becomes optional confirmation rather than the only route.
+
+## Closed — 2026-09-20: the advantage is vectorisation, shown by denying it
+
+`-XX:-UseSuperWord` is the differential the perfasm route was for, and it needs no hsdis and no PMU.
+
+| benchmark | SuperWord on | `-XX:-UseSuperWord` |
+|---|---|---|
+| `direct` | 389.731 ± 3.976 | 387.721 ± 5.263 |
+| **`directTimesTwo`** | **71.092 ± 2.285** | **400.701 ± 6.478** |
+| `indexedOverIndices` | 391.233 ± 8.655 | 388.962 ± 4.574 |
+| `indexedOverSize` | 388.973 ± 5.465 | 388.527 ± 4.704 |
+
+**Both halves are needed and both are here.** Denying SuperWord removes the multiply arm's advantage
+*completely* — 71 → 401 ns/op, back in line with the other three — so the advantage was vectorisation
+and nothing else. And the three plain arms **do not move at all** under the same flag, so they were
+never vectorised to begin with. A run where only the first happened would not have distinguished
+"the multiply arm was vectorised" from "the flag slows everything down".
+
+That is exactly the mechanism JDK-8345044 describes and JDK-8340093 fixes in JDK 26: SuperWord in
+JDK 25 refuses a loop whose only vector operation is the reduction, and a multiply gives it one that
+counts. The stand reproduced a known HotSpot behaviour it did not know about, on the release that
+still has it.
+
+**D8's rule worked.** The impossible ordering was treated as a stand fault until shown otherwise, it
+was kept out of every verdict while unexplained, and the answer came back that the stand was right.
+No verdict needs revisiting: `handWrittenLoop` was one half of the inline-lambda control and its
+partner matched it to 1.5 %, both arms being the same shape.
+
+**Anchors:** `microbench/results-b52-superword.md`, `microbench/src/jmh/kotlin/micro/Controls.kt`
+(class `ArrayIteration`).

@@ -1046,7 +1046,7 @@ else.
 | "The pool sets the real-mode ceiling" | Repeats: 16/32/64 give 5286/5069/4595 rps — more pool is monotonically *worse* (§1.12) |
 | "Exposed sets the ceiling" | Hand-written JDBC hits the same wall at 1.67× the throughput (§1.12) |
 | "The `Dispatchers.IO` size sets the ceiling" | It moves the price of a request from 245 to 166 µs and leaves cores at 1.77–2.02 (§1.13) |
-| "Indexed iteration loses vectorisation" | Direct and indexed are within 3 %; the odd arm is the one that *multiplies* (§1.14). What remains is an unexplained anomaly, [B-52](../backlog/B-52-multiply-makes-the-loop-faster.md) |
+| "Indexed iteration loses vectorisation" | Direct and indexed are within 3 %; the odd arm is the one that *multiplies* (§1.14). Now explained: `-XX:-UseSuperWord` takes the multiply arm from 71 to 401 ns/op and leaves the other three untouched, which is JDK-8345044 — SuperWord in JDK 25 refuses a reduction-only loop, and JDK-8340093 fixes it in JDK 26 ([B-52](../backlog/B-52-multiply-makes-the-loop-faster.md), closed) |
 | "A suspend call costs 5.6× a plain one" | The plain side took a literal and constant-folded to 0.701 ns — about two cycles, which is the blackhole and nothing else (§1.15) |
 | "16 B/op is the continuation" — *before it was shown* | The `suspend { }` literal sat inside the benchmark method and was allocated per call. Only the hoisted arm, created once and still allocating 16, made the claim safe (§1.15) |
 | **"The continuation survives escape analysis; the boxed primitive is removed"** — the published RQ3 verdict | Exactly backwards. A continuation here is 32–40 bytes by field layout and cannot be 16; the 16 B/op was the blackhole forcing the fast-path box to escape, and `-XX:-DoEscapeAnalysis` shows the continuations at 168 B/op when EA is denied. Caught by the brief's author doing arithmetic on `javap -p` output (§1.15) |
@@ -1325,12 +1325,11 @@ change:
 2. **RQ4's deciding clause** — above 1.5×, *and* at least a third of the gap from failed inlining,
    dispatch or scalar replacement. The decomposition argues the gap is work; the clause was never
    tested, and it is what holds RQ4 at amber (§1.11).
-3. **[B-52](../backlog/B-52-multiply-makes-the-loop-faster.md)** — the vectorisation anomaly. The
-   upstream citation is now verified, and what is left is the cheap differential that shows *this*
-   arm is the same phenomenon: both arms under `-XX:-UseSuperWord`.
-
-**Done since this list was last written:** the three macro shares (§1.20) and the RQ0 gate
-([B-53](../backlog/B-53-compute-the-rq0-gate.md)), which turned out to have three answers.
+**Done since this list was last written:** the three macro shares (§1.20); the RQ0 gate
+([B-53](../backlog/B-53-compute-the-rq0-gate.md)), which turned out to have three answers; and
+[B-52](../backlog/B-52-multiply-makes-the-loop-faster.md), closed — `-XX:-UseSuperWord` takes the
+multiply arm from 71 to 401 ns/op and leaves the other three untouched, so the advantage is
+vectorisation and the plain arms never had it. The stand reproduced JDK-8345044 without knowing it.
 
 **Open question 3 is still the largest number in the phase and still has no row in the brief.** At
 50 rps under a one-core limit, 61 % of self CPU was the JVM's own threads and the frames were C2's
