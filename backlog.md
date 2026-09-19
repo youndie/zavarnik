@@ -29,7 +29,7 @@
 | `stage-5-optimizer` | Вторая фаза | Плагин оптимизации байткода ([бриф](docs/research/source-brief-optimizer.md)): ворота RQ0, потом только то, что прошло порог. |
 | `stage-6-crac` | Третья фаза | CRaC — та же тройка задач, снимок прогретого процесса вместо кэша ([бриф](docs/research/source-brief-crac.md), [research-crac](docs/research/research-crac.md)): ворота B-32 на konekt, потом плагин. |
 | `stage-7-engines` | Четвёртая фаза | Диспетчер CIO: три движка Ktor под одним протоколом ([research-engines](docs/research/research-engines.md)). Выросла из [B-23](docs/backlog/B-23-dispatcher-spin-hypothesis.md): вывод «свойство CIO» был сделан на единственном движке. |
-| `stage-8-jit-constructs` | Пятая фаза | Что C2 делает с запросом Ktor + Exposed ([бриф](docs/research/source-brief-jit-constructs.md), [research-jit-constructs](docs/research/research-jit-constructs.md)): три посылки брифа не пережили встречу с JDK, которую он же пинует. Документы фазы — по-английски. |
+| `stage-8-jit-constructs` | Пятая фаза | Что C2 делает с запросом Ktor + Exposed ([бриф](docs/research/source-brief-jit-constructs.md), [research-jit-constructs](docs/research/research-jit-constructs.md)): три посылки брифа не пережили встречу с JDK, которую он же пинует; стенд с базой стоит, RQ4 зелёный, потолок оказался самой машиной. По критерию остановки 4 самого брифа фаза стоит у развилки — свести и писать или заводить JMH (§6). Документы фазы — по-английски. |
 
 ## Отметки
 

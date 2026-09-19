@@ -539,7 +539,61 @@ write-up is that the real-mode ceiling is the machine, and every real-mode absol
 
 ---
 
-## 2. Decisions
+## 2. Where each research question stands
+
+The brief's deliverable is one row per construct. This is that table as of 2026-09-19, before any
+JMH exists: what is settled, what is priced, and what has not been touched. A question can be
+*settled* without being *priced* — knowing that a call site is megamorphic by construction is not
+knowing what it costs — and the two are kept apart on purpose.
+
+| RQ | State | What is known, and where |
+|---|---|---|
+| **RQ0** gate | **replaced** | D1. Its bucket is nearly the whole process, so it passes by construction; the split inside it was already measured by two earlier phases (§1.1) |
+| **RQ1** sizes | **half green, half grey** | Nothing on the request path is within a factor of four of the huge-method limit, and the three methods over it are cold (§1.8). Of 638 methods over `FreqInlineSize`, **49 run**; together they own **3.86 %** of self samples and the largest owns 0.56 %, against a 2 % red line (§1.9). Unpriced: the `FreqInlineSize` toggle has not been pulled |
+| **RQ2** megamorphic | **settled, unpriced** | Megamorphic *by construction*: 580 `invokeSuspend` implementations on one call site, with a type profile two wide (§1.6). No configuration moves it. The price needs JMH |
+| **RQ3** escape analysis | **not started** | Needs JMH and a hand-written `Continuation`; nothing measured |
+| **RQ4** Exposed | **GREEN** | 1.27× on one row, 1.29× on fifty, against the brief's own green line of 1.5× (§1.11). Decomposed: transaction wrapper ~64 µs flat, Exposed fixed ~70 µs, mapping 0.76 µs/row ≈ 0.151 µs/column |
+| **RQ5** codegen patterns | **green by arithmetic, rescoped** | In the brief's scope — application code only — every pattern is green before measurement, because application code is 0.9–4.0 % of a real service's CPU (§1.1). D5 rescopes it to all owners; the per-pattern counts are not done |
+| **RQ6** encoders | **settled, unpriced** | A JSON-only process loads **one** concrete encoder; one `encodeToJsonElement` anywhere loads three, and the type profile is two wide (§1.5). Ktor never crosses that line itself. The price is [B-46](../backlog/B-46-rq6-encoder-receiver-census.md) |
+| **RQ7** steady state | **partial** | The instrument is settled — `jdk.Compilation` switched on is a census, `jdk.CompilerInlining` is not (§1.3). The exception arm is named: `JobCancellationException` is already stackless, `TimeoutCancellationException` is not (§1.2). Rates not measured |
+
+**By the brief's own kill criterion 4, this study is at its stopping point.** The criterion is "three
+RQs in a row come out green or grey": RQ4 is green, RQ1 is green-and-grey, RQ5 is green by
+arithmetic. The brief says the remaining questions are then dropped and the write-up says the stack
+is well served by C2. That is a defensible reading of what has been measured, and it is stated here
+rather than left for someone to notice.
+
+### 2.1 What the brief did not ask, and the phase found anyway
+
+These are not construct verdicts and do not belong in the table above. Each is measured with
+repeats, and by the brief's own distinction each is library cost rather than a JIT failure — which
+is exactly why they would have been lost had the study only filled in its own form.
+
+| Finding | Size | Where |
+|---|---|---|
+| **JFR reports no compilation at all on the settings it ships with** — 7268 compile tasks, zero events — so a warm-up gate phrased against it cannot fail | qualitative, and fatal to the brief's protocol | §1.3 |
+| `jdk.CompilerInlining` truncates after the first 8–96 compile ids of a recording, in eight recordings of eight | qualitative | §1.3 |
+| **The default `Dispatchers.IO` size of 64 costs 27 % more CPU per request than 16** on a four-core box | 210 µs against 166 | §1.13 |
+| **Wrapping the same SQL in an explicit transaction costs ~64 µs per request**, flat in row count — as much as everything Exposed adds on a single-row read | 64 µs | §1.11 |
+| One `encodeToJsonElement` anywhere in a process takes every shared `Encoder` site from one receiver to three, crossing the type-profile width in a single line | qualitative | §1.5 |
+| **Nine tenths of a static size shortlist is code that never runs** — 49 of 638, and the miss rate has to be computed over artifacts that could have appeared at all | 89 % | §1.9 |
+| The real-mode ceiling on a four-core box with a co-located database is **the box**: 3.93 of 4 cores, of which the database takes 1.24 and the kernel 0.80 | — | §1.13 |
+
+### 2.2 Four explanations that were offered and withdrawn
+
+Kept because three of them looked convincing on single runs, and because the pattern is the same
+every time: a share measured inside one run survives, a ratio between single runs does not.
+
+| Claim | Why it died |
+|---|---|
+| "JFR's compiler view is not a census" | The test program stopped compiling before the recording was live. On a workload that keeps compiling, coverage is 99.5 % (§1.3) |
+| "The pool sets the real-mode ceiling" | Repeats: 16/32/64 give 5286/5069/4595 rps — more pool is monotonically *worse* (§1.12) |
+| "Exposed sets the ceiling" | Hand-written JDBC hits the same wall at 1.67× the throughput (§1.12) |
+| "The `Dispatchers.IO` size sets the ceiling" | It moves the price of a request from 245 to 166 µs and leaves cores at 1.77–2.02 (§1.13) |
+
+---
+
+## 3. Decisions
 
 ### D1. The gate is not RQ0 as written *(deviation from the brief)*
 
@@ -634,7 +688,7 @@ fires before the spread does.
 
 ---
 
-## 3. Risks and open questions
+## 4. Risks and open questions
 
 **Risk 1. The host cannot fix its own clock (§1.7).** Mitigation: µs of CPU per request as the
 reported unit, variants interleaved, three repeats, and the within-variant spread printed beside
@@ -680,7 +734,7 @@ stand, deciding nothing about the construct list.
 
 ---
 
-## 4. Code anchors
+## 5. Code anchors
 
 | Kind | Code |
 |---|---|
@@ -709,12 +763,33 @@ stand, deciding nothing about the construct list.
 
 ---
 
-## 5. What happens next
+## 6. What happens next
 
 The order of work and its acceptance criteria are in the backlog, stage `stage-8-jit-constructs`.
-The first items are the ones everything else depends on: the stand has to grow a database and the
-brief's four endpoints ([B-41](../backlog/B-41-jit-stand-data-layer-and-endpoints.md)), the
-warm-up gate has to be wired to an instrument that reports ([B-42](../backlog/B-42-warmup-gate-on-printcompilation.md)),
-and the calibration controls have to run through the whole chain before any candidate does
-([B-44](../backlog/B-44-calibration-controls-and-the-known-order-pair.md)). The RQs are scheduled
-after that, in the order §1.1 gives rather than the order the brief numbers them.
+
+**Done.** The stand has a database and the brief's four request shapes, in two modes behind one
+binary ([B-41](../backlog/B-41-jit-stand-data-layer-and-endpoints.md)); the classpath-wide size scan
+and its join with a profile ([B-43](../backlog/B-43-static-scan-across-owners.md), §1.8–1.9); RQ4 in
+three arms with a verdict ([B-45](../backlog/B-45-rq4-exposed-read-path-in-three-arms.md), §1.11);
+and the real-mode ceiling, answered ([B-51](../backlog/B-51-real-mode-ceiling-and-its-ruler.md),
+§1.12–1.13).
+
+**The decision the phase now needs is not a measurement.** §2 says three questions in a row have
+come out green or grey, which is the brief's own criterion 4 for stopping and writing up. Against
+that, three questions are *settled but unpriced* — RQ2, RQ6, and RQ1's size half — and every one of
+them needs the same thing: **JMH, which this phase does not have.** So the fork is:
+
+* **stop and write up**, on the brief's own rule, with §2 as the table and §2.1 as the material the
+  form did not ask for. Nothing further is measured;
+* **or bring JMH in**, which is a day of harness before a single number, and then RQ2, RQ3, RQ6 and
+  RQ1's toggle become answerable in one apparatus. The calibration controls
+  ([B-44](../backlog/B-44-calibration-controls-and-the-known-order-pair.md)) belong to that
+  apparatus and have not run — by kill criterion 2 no candidate verdict is trustworthy until they
+  do, which is an argument for the second branch and against quoting §2 as final.
+
+That second sentence is the honest tension in this document and it is not resolved here: RQ4 has a
+verdict, and the controls that would confirm the chain producing it have not been run.
+
+**What no further work can fix on this stand**: the governor cannot be fixed on any available host
+(§1.7), and the real-mode ceiling is the four-core box (§1.13). Both are stated as properties of the
+stand, and every absolute in real mode carries them.
