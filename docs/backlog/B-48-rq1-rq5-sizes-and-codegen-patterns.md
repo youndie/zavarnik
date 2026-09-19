@@ -1,7 +1,7 @@
 ---
 id: B-48
 title: "RQ1 and RQ5: the size threshold with the one dial that exists, and the codegen patterns counted across owners"
-status: wip
+status: done
 priority: P2
 size: M
 stage: stage-8-jit-constructs
