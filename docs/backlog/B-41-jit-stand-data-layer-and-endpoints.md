@@ -1,13 +1,20 @@
 ---
 id: B-41
 title: "The stand grows a database: Exposed over Postgres in two modes, and the brief's four endpoints"
-status: open
+status: done
 priority: P1
 size: M
 stage: stage-8-jit-constructs
 ---
 
 # B-41 — A stand that has a data layer, and can take it away again
+
+> **Done 2026-09-19.** Both modes behind one binary, verified byte-identical in their responses, on
+> the dedicated pair with the generator off-host. Every measurement from §1.10 onward runs on it.
+> Two things it taught that were not in the plan: the subject cannot build the project at all (no
+> public IPv4, so the settings plugin will not resolve — the distribution is built elsewhere and
+> shipped, which also makes both hosts run one artefact), and the four-core box cannot hold a
+> database and a service at once ([B-51](B-51-real-mode-ceiling-and-its-ruler.md)).
 
 The stand of the second phase has no database: `/items` is an in-memory store and `/business` is a
 quote calculation. The fifth phase's brief is about a request path that goes through Exposed and a

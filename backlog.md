@@ -37,11 +37,10 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (11)
+## Open (10)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
-| [B-41](docs/backlog/B-41-jit-stand-data-layer-and-endpoints.md) `[ ]` | The stand grows a database: Exposed over Postgres in two modes, and the brief's four endpoints | P1 | M | - |
 | [B-42](docs/backlog/B-42-warmup-gate-on-printcompilation.md) `[ ]` | A warm-up gate on an instrument that reports: jdk.Compilation switched on, inlining evidence taken elsewhere | P1 | S | - |
 | [B-44](docs/backlog/B-44-calibration-controls-and-the-known-order-pair.md) `[ ]` | Five calibration controls plus a pair whose order the code already decides | P1 | M | B-41, B-42 |
 | [B-43](docs/backlog/B-43-static-scan-across-owners.md) `[ ]` | Re-run the scan and the join once the stand has a database | P2 | XS | B-41 |
@@ -53,7 +52,7 @@
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
-## Closed (40)
+## Closed (41)
 
 **Стенд**
 
@@ -116,6 +115,7 @@
 
 **Пятая фаза**
 
+- [B-41](docs/backlog/B-41-jit-stand-data-layer-and-endpoints.md) `[x]` - The stand grows a database: Exposed over Postgres in two modes, and the brief's four endpoints
 - [B-45](docs/backlog/B-45-rq4-exposed-read-path-in-three-arms.md) `[x]` - RQ4 answered green; what is left is the microbenchmark arm the service cannot stage
 - [B-51](docs/backlog/B-51-real-mode-ceiling-and-its-ruler.md) `[x]` - The real-mode ceiling is the machine, and pinning the database does not lift it
 
