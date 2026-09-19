@@ -37,7 +37,7 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (12)
+## Open (13)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
@@ -45,6 +45,7 @@
 | [B-42](docs/backlog/B-42-warmup-gate-on-printcompilation.md) `[ ]` | A warm-up gate on an instrument that reports: jdk.Compilation switched on, inlining evidence taken elsewhere | P1 | S | - |
 | [B-44](docs/backlog/B-44-calibration-controls-and-the-known-order-pair.md) `[ ]` | Five calibration controls plus a pair whose order the code already decides | P1 | M | B-41, B-42 |
 | [B-45](docs/backlog/B-45-rq4-exposed-read-path-in-three-arms.md) `[ ]` | RQ4: what Exposed's read path costs, in three arms rather than two | P1 | M | B-41, B-44 |
+| [B-51](docs/backlog/B-51-real-mode-ceiling-and-its-ruler.md) `[ ]` | Explain the real-mode ceiling, or make the stand able to ask the question | P1 | M | B-41 |
 | [B-43](docs/backlog/B-43-static-scan-across-owners.md) `[ ]` | Re-run the scan and the join once the stand has a database | P2 | XS | B-41 |
 | [B-46](docs/backlog/B-46-rq6-encoder-receiver-census.md) `[ ]` | RQ6: price the step from one encoder to three, which one line of application code buys | P2 | S | B-44 |
 | [B-47](docs/backlog/B-47-rq2-rq3-continuation-machinery.md) `[ ]` | RQ2 and RQ3: the one call site every suspend body shares, and the fast path that never suspends | P2 | M | B-44 |

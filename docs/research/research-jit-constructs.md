@@ -261,6 +261,7 @@ separate pinned cores". Three of those four were tried here before.
 | Fact | Where verified |
 |---|---|
 | The Linux box is WSL2 and has neither `intel_pstate` nor `cpufreq` under `/sys`: frequency and turbo belong to the Windows host and cannot be fixed from the guest | [research-optimizer](research-optimizer.md) §1.4 |
+| **Neither does the dedicated pair.** `bench-a`/`bench-b` are KVM guests with no `cpufreq` and no `intel_pstate` either, so the brief's "fixed CPU governor" is unavailable on every host this study can reach. What the pair buys is the generator being off-host, not a steadier clock (§1.10) | `bench/profile/results/pair-stand-notes.md` |
 | `taskset -pc <pid>` moves one thread's affinity, not the process's: 49 of 50 JVM threads stayed on all 20 cores, and every number of the second phase was taken on an unpinned JVM despite a protocol that said otherwise. Pinning on `exec` works | [research-engines](research-engines.md) §1.1, `bench/profile/run.sh` |
 | A load generator on the subject's own machine does not merely add noise — it under-feeds the subject. Same binaries, same limits: on a shared 20-core box with the generator on it, a service looked as though it fitted a 256 MiB limit; on a dedicated pair with the generator off-host it survives **1 run in 6** | sborka, §8 of research-memory-limit — see the note below |
 | Run-to-run spread for one variant on this stand: ±13 % on rps in the engine A/B, ±15 % in the second phase's, against 2–9 % on µs of CPU per request | [research-engines](research-engines.md) §1.5, [research-optimizer](research-optimizer.md) §1.6 |
@@ -356,6 +357,48 @@ driver's 101 and HikariCP's 11 were never given the chance to appear, and RQ4's 
 untouched — the whole point of [B-41](../backlog/B-41-jit-stand-data-layer-and-endpoints.md). The
 89 % is the honest miss rate; the 92.3 % over the whole shortlist is the one that would have
 flattered this section.
+
+### 1.10 The stand with a database, on a dedicated pair — and what its ruler turned out to be
+
+B-41 built the data layer; this measures on it. Subject and generator are separate machines
+(`bench-a`/`bench-b`, 4 cores and 7 GiB each, private link, RTT 0.74 ms), which is the arrangement
+§1.7 says the single-host protocol cannot honestly replace. The service runs the **same
+`installDist` bytes** as the WSL runs: the subject has no public IPv4, so it cannot resolve the
+settings plugin, and building elsewhere and shipping the distribution turned out to be better
+method than a fix — one artefact, two hosts.
+
+| Fact | Where verified |
+|---|---|
+| The pair is genuinely idle: **steal 0** since boot, 99–100 % idle at rest, nothing but sshd listening | `bench/profile/results/pair-stand-notes.md` |
+| **The governor cannot be fixed here either** — these are KVM guests with no `cpufreq` and no `intel_pstate`, exactly like WSL. The pair's advantage is the generator being off-host, not a steadier clock | the same notes |
+| **CPU per request is a function of offered rate, not a constant of the code**: 210 µs at 5k rps, 113 at 10k, 92 at 20k, 67 at 40k, 53 at saturation, with the process burning **0.001 cores at idle** | the rate sweep in the same notes |
+| **The control holds.** `/plaintext` never touches the data layer, so the two modes must agree there, and they do: **83 µs stub against 82 µs real**, saturation 56 739 against 58 194 rps | `results/pair-{stub,real}-plaintext/summary.md` |
+| **The data layer costs about 2.2× the stub at the same offered rate**: `/db/items/{id}` 447 → 995 µs, `/db/items?limit=50` 561 → 1181 µs, `POST /db/items` 647 → 1108 µs | `results/pair-*-{dbitem,dblist,dbpost}/summary.md` |
+| **The database is not the limit.** Postgres alone does **15 631 tps** on this box at 0.256 ms average (`pgbench -S`, 4 clients) while the stand's real mode saturates near 3–4.5k with the JVM at 2.2–2.5 of 4 cores | the same notes |
+| **19.4 % of the request path's wall time is a spin in the connection pool**: `HikariPool.recycle → ConcurrentBag.requite → Thread.yield`, which is what HikariCP does while anyone is waiting for a connection. Acquisition *wait* is 0.16 %, so the pool's capacity is not the issue — the hand-off is | wall-clock profile, 25 s under load, same notes |
+| The database round trip is visible and modest by comparison: `Net.poll` under `VisibleBufferedInputStream.readMore`, 14 % of all wall samples | the same profile |
+
+**The ruler, and it is the most important number here.** Five repeats of one configuration, in one
+process, back to back: 3109, 3389, 3952, 4138, 4292 rps — **30 % spread on the median**, and 462 to
+613 µs per request. Nothing finer than about 1.5× can be claimed in real mode on this stand.
+
+**Consequence — what survives and what does not.** The 2.2× between stub and real is far outside
+that ruler and stands. The `/plaintext` control agreeing to 1 % is inside it, as a control should
+be. But the pool sweep (8/16/32/64 → 3223/3099/4675/4410 rps) and the concurrency arms are **single
+runs each**, and their differences sit inside the ruler: the same configuration measured 4675 rps in
+one sweep and 2641 twenty minutes later. *So the ceiling is not explained.* A first reading of the
+spin said "the pool sets it"; that claim is withdrawn — not refuted, unmeasured. The spin itself is
+a share taken inside one run rather than a ratio between runs, which is why it survives while the
+conclusion drawn from it does not.
+
+**Consequence — the protocol needs one more discard.** The first measured window after a 40-second
+warm-up is still the slowest of the five (609 µs against 462–496 for the middle three). Warm-up did
+not end where the protocol declared it ended.
+
+**What this does not yet say.** Whether the 2.2× is Exposed's mapping, the driver's round trip, the
+`Dispatchers.IO` hop or the hand-off spin is exactly RQ4's question, and it needs the brief's own
+control arm — the same query through hand-written JDBC — which is [B-45](../backlog/B-45-rq4-exposed-read-path-in-three-arms.md).
+The ceiling has an item of its own now: [B-51](../backlog/B-51-real-mode-ceiling-and-its-ruler.md).
 
 ---
 
@@ -513,6 +556,9 @@ stand, deciding nothing about the construct list.
 | experiment | `experiments/json-encoder-census/run.sh`, `experiments/json-encoder-census/Probe.kt` — §1.5 |
 | experiment | `experiments/method-sizes/run.sh`, `experiments/method-sizes/scan.py` — §1.8 |
 | experiment | `experiments/method-sizes/intersect.py` — §1.9, the join with the profile |
+| stand | `bench/profile/jit-pair.sh` — §1.10, the two-host protocol with a shared rate per endpoint |
+| stand | `bench/src/main/kotlin/bench/Data.kt` — §1.10, the two data modes |
+| measurement | `bench/profile/results/pair-stand-notes.md` — §1.10, the stand's ruler and every probe behind it |
 | profile | `bench/profile/results/netty-jit/` — §1.9, the run the join reads |
 | JDK configuration | `openjdk-25.0.2!/lib/jfr/profile.jfc`, `openjdk-25.0.2!/lib/jfr/default.jfc` — §1.3 |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/ResultRow.class` |
