@@ -593,6 +593,51 @@ what gets fixed, not the number. So this is recorded as an open anomaly rather t
 what it needs is the brief's own step 3 — `-prof perfasm` on the generated code. Item
 [B-52](../backlog/B-52-multiply-makes-the-loop-faster.md).
 
+### 1.15 RQ3: the boxed primitive is removed, the continuation is not
+
+The question is whether escape analysis clears the machinery from a suspend function on the path
+where it does not suspend — the common case on a request path. Measured with `-prof gc`, because
+B/op is the proxy: if the continuation were scalar-replaced there would be nothing to see.
+
+| | ns/op | B/op |
+|---|---|---|
+| `plainChain` | 0.943 ± 0.045 | ≈ 0 |
+| `plainReturningInt` | 0.957 ± 0.044 | ≈ 0 |
+| `suspendChainFastPath` (lambda per call) | 3.745 ± 0.058 | **16.000 ± 0.001** |
+| `suspendChainHoisted` (lambda in a field) | 4.327 ± 0.202 | **16.000 ± 0.001** |
+| `suspendReturningInt`, value outside the `Integer` cache | 3.859 ± 0.072 | **16.000 ± 0.001** |
+
+**The continuation survives.** 16 bytes per call, and the hoisted arm is what proves whose they are:
+the lambda there is created once in a field, so the allocation cannot be the lambda. It is the
+state-machine copy `create()` makes on entry. The brief's green condition — "B/op of a
+non-suspending suspend chain within 10 % of the same chain as plain calls" — is missed by
+everything there is, since the plain chain allocates nothing at all.
+
+**The box does not.** `suspendReturningInt` runs a value of 1011, outside the `Integer` cache, so a
+box would have to be allocated if one were allocated at all — and an `Integer` is 16 bytes, so the
+arm would read 32. It reads 16. The primitive is scalar-replaced; only the continuation is not.
+
+**Verdict: RQ3 is grey.** The micro effect is unambiguous and far past the 10 % line. The red
+condition needs the other half — "continuation plus boxing allocations reach 2 % of request CPU" —
+and that is a macro measurement this phase has not made. 16 bytes and 2.8 ns per suspend call, times
+however many suspend calls a request makes, is the arithmetic; the count is a profile question.
+
+**Three versions of this benchmark were wrong before this one, and each looked reasonable.**
+
+1. *It compared folding against not-folding.* The input was a literal, so the plain chain folded to a
+   constant — 0.701 ns, about two cycles, which is the blackhole and nothing else. Fixed with a
+   `@Volatile` field.
+2. *It could not say whose allocation it measured.* The `suspend { }` literal sat inside the
+   benchmark method and captured the receiver, so a fresh lambda was allocated per call. The hoisted
+   arm was added beside it rather than replacing it, and the two agreeing at 16 B/op is what makes
+   the answer safe.
+3. *The boxing arm boxed nothing.* It summed 7 and 11; 18 is inside the `Integer` cache, so every box
+   came back from the cache. Moving the input to 1000 is the whole fix.
+
+None of the three was visible in the numbers — each produced a plausible table. They were caught by
+asking what else the arms differed in, which is the same discipline §1.9 and §1.12 needed and the
+reason this document keeps its retractions.
+
 ---
 
 ## 2. Where each research question stands
@@ -606,8 +651,8 @@ knowing what it costs — and the two are kept apart on purpose.
 |---|---|---|
 | **RQ0** gate | **replaced** | D1. Its bucket is nearly the whole process, so it passes by construction; the split inside it was already measured by two earlier phases (§1.1) |
 | **RQ1** sizes | **half green, half grey** | Nothing on the request path is within a factor of four of the huge-method limit, and the three methods over it are cold (§1.8). Of 638 methods over `FreqInlineSize`, **49 run**; together they own **3.86 %** of self samples and the largest owns 0.56 %, against a 2 % red line (§1.9). Unpriced: the `FreqInlineSize` toggle has not been pulled |
-| **RQ2** megamorphic | **settled, unpriced** | Megamorphic *by construction*: 580 `invokeSuspend` implementations on one call site, with a type profile two wide (§1.6). No configuration moves it. The price needs JMH |
-| **RQ3** escape analysis | **not started** | Needs JMH and a hand-written `Continuation`; nothing measured |
+| **RQ2** megamorphic | **priced, macro open** | Megamorphic *by construction*: 580 `invokeSuspend` implementations on one call site, type profile two wide (§1.6). Priced: **6.715 ns per call against 0.755 monomorphic, 8.9×**, with the break between 2 and 8 receivers (§1.14). How many such calls a request makes is a profile question |
+| **RQ3** escape analysis | **grey** | The continuation survives on the non-suspending path — **16 B/op**, proven not to be the lambda by the hoisted arm — while the boxed primitive is scalar-replaced (§1.15). Micro effect far past the 10 % line; the 2 % macro share is unmeasured |
 | **RQ4** Exposed | **GREEN** | 1.27× on one row, 1.29× on fifty, against the brief's own green line of 1.5× (§1.11). Decomposed: transaction wrapper ~64 µs flat, Exposed fixed ~70 µs, mapping 0.76 µs/row ≈ 0.151 µs/column |
 | **RQ5** codegen patterns | **green by arithmetic, rescoped** | In the brief's scope — application code only — every pattern is green before measurement, because application code is 0.9–4.0 % of a real service's CPU (§1.1). D5 rescopes it to all owners; the per-pattern counts are not done |
 | **RQ6** encoders | **settled, unpriced** | A JSON-only process loads **one** concrete encoder; one `encodeToJsonElement` anywhere loads three, and the type profile is two wide (§1.5). Ktor never crosses that line itself. The price is [B-46](../backlog/B-46-rq6-encoder-receiver-census.md) |
@@ -811,6 +856,7 @@ stand, deciding nothing about the construct list.
 | measurement | `bench/profile/results/pair-ceiling-mechanism.md` — §1.13, who owns the machine |
 | microbenchmark | `microbench/src/jmh/kotlin/micro/` — §1.14, controls, RQ2, RQ3 |
 | microbenchmark | `microbench/results-controls.md`, `microbench/results-candidates.md` — §1.14 |
+| microbenchmark | `microbench/results-rq3.md` — §1.15, allocation on the non-suspending path |
 | profile | `bench/profile/results/netty-jit/` — §1.9, the run the join reads |
 | JDK configuration | `openjdk-25.0.2!/lib/jfr/profile.jfc`, `openjdk-25.0.2!/lib/jfr/default.jfc` — §1.3 |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/ResultRow.class` |

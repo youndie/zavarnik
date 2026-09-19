@@ -41,7 +41,10 @@ open class Continuations {
     // to a constant — 0.701 ns, about two cycles, which is the blackhole and nothing else — while
     // the suspend side did not. The pair measured folding against not-folding rather than suspend
     // against plain. A field the JIT cannot see through fixes it.
-    @Volatile private var seed = 7
+    // Deliberately outside the Integer cache (-128..127). The first version used 7 and 11, whose
+    // sum is 18, so every box the suspend path needed came back from the cache and the arm meant to
+    // measure boxing measured nothing. A value the cache cannot serve is the whole difference.
+    @Volatile private var seed = 1000
 
     private val one = Array<Op>(256) { A() }
     private val two = Array<Op>(256) { if (it % 2 == 0) A() else B() }
@@ -51,9 +54,23 @@ open class Continuations {
 
     // --- RQ3: a suspend chain that never suspends, against the same chain as plain calls ---
 
+    // Two versions on purpose. The first writes the `suspend { }` literal inside the benchmark
+    // method, so the lambda captures the receiver and is allocated on every invocation; the second
+    // hoists the same lambda into a field, created once. Their DIFFERENCE is the lambda, and
+    // whatever the hoisted one still allocates is the machinery — the state-machine copy that
+    // `create()` makes on entry. Measuring only the first, which is what the previous run did,
+    // cannot tell those apart: it reported 16 B/op that could have been either.
     @Benchmark
     fun suspendChainFastPath(bh: Blackhole) {
         val r = suspend { chainSuspend(seed) }.startCoroutineUninterceptedOrReturn(Noop)
+        bh.consume(r)
+    }
+
+    private val hoisted: suspend () -> Int = { chainSuspend(seed) }
+
+    @Benchmark
+    fun suspendChainHoisted(bh: Blackhole) {
+        val r = hoisted.startCoroutineUninterceptedOrReturn(Noop)
         bh.consume(r)
     }
 
