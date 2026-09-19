@@ -1029,11 +1029,40 @@ Brief: run RQ0 first, stop the study if JVM CPU is under 10 % of p50 latency on 
 endpoints.
 
 Decision: keep the measurement, drop its use as a gate, and gate on §1.1's numbers instead — the
-share of the bucket that belongs to each owner. Why: RQ0's bucket is nearly the whole process, so
-it passes by construction and its passing carries no information; the split inside it is already
-measured on this stack twice, and it is the split that decides which RQ can ever be red. The
-price: the study loses the cheap early stop the brief wanted. It is replaced by a cheaper one —
-§1.1 costs nothing to read.
+share of the bucket that belongs to each owner. Why: the split inside RQ0's bucket is already
+measured on this stack twice, and it is the split that decides which RQ can ever be red. The price:
+the study loses the cheap early stop the brief wanted. It is replaced by a cheaper one — §1.1 costs
+nothing to read.
+
+**This decision used to be justified by the claim that RQ0's bucket "is nearly the whole process, so
+it passes by construction".** The brief's author objected that this argues with a different quantity
+than RQ0 defines — RQ0 is CPU per request over p50 latency, not CPU share by owner — and that the
+gate should be computed rather than asserted. Both halves are right, and computing it (B-53, over the
+runs already committed) turns out to matter, because **the gate does not have one answer.**
+
+| attribution rule applied to the profile | dbitem | dblist | dbpost | the brief's verdict |
+|---|---|---|---|---|
+| **narrow** — self samples in `bench.`/`io.ktor.`/`kotlinx.`/`kotlin.` only | 2.5 % | 2.2 % | 4.4 % | **red on all three**, i.e. kill criterion 1 fires and the study never starts |
+| **middle** — the above plus `java.*`/`jdk.*` and Netty, pgjdbc, Hikari | 7.5 % | 6.5 % | 12.0 % | **neither**: one endpoint over 10 %, which is not "two or more" and not "below 10 % on all three" |
+| **broad** — every sample with a named owner on the stack; only native, kernel and JIT stubs excluded | 15.1 % | 11.6 % | 22.8 % | **green on all three** |
+
+Taken from `bench-results/pair-real-db{item,list,post}` at 995/1181/1108 µs of CPU per request
+against p50 of 6.22/9.56/4.55 ms.
+
+**So the gate's answer is decided by a rule the brief does not state.** "CPU time in JVM code of the
+application, Ktor, Exposed, serialisation and the JDBC driver" does not say whether a `HashMap.get`
+sample reached from Exposed belongs to Exposed or to the JDK, and the three defensible readings of
+that one sentence span red, undecidable and green. A second gap sits beside it: green is "at least
+10 % on two or more" and red is "below 10 % on all three", so a run that clears the bar on exactly one
+endpoint satisfies neither. And the author's own note adds a third — the gate is evaluated at no
+stated offered rate, and the ratio moves with it.
+
+**D1 therefore stands, on better grounds than it was first given.** The objection to RQ0 is not that
+it passes by construction; it is that as written it cannot be evaluated without three decisions the
+brief leaves to whoever runs it, and a gate whose verdict is chosen by the person it is meant to
+constrain is not a gate. Had the narrow reading been taken, this study would have stopped at phase 2
+and published "JIT behaviour is not a practical concern for this class of service" — which §1.18 and
+§1.15 now show would have been the right conclusion for the wrong reason.
 
 ### D2. The macro unit is the share by owner and µs of CPU per request, never rps *(deviation)*
 

@@ -37,7 +37,7 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (8)
+## Open (7)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
@@ -46,11 +46,10 @@
 | [B-49](docs/backlog/B-49-rq7-steady-state-and-the-compilers-own-cpu.md) `[ ]` | RQ7: is steady state stable — and what the compiler itself costs under a container limit | P2 | M | B-42, B-44 |
 | [B-50](docs/backlog/B-50-verdict-table-and-write-up.md) `[ ]` | The verdict table and the article, with green, grey and stopped written up like red | P2 | S | B-45, B-46, B-47, B-48, B-49 |
 | [B-52](docs/backlog/B-52-multiply-makes-the-loop-faster.md) `[ ]` | A loop that multiplies is five times faster than the same loop without the multiply | P2 | S | - |
-| [B-53](docs/backlog/B-53-compute-the-rq0-gate.md) `[ ]` | Compute the RQ0 gate instead of arguing it away | P2 | XS | - |
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
-## Closed (45)
+## Closed (46)
 
 **Стенд**
 
@@ -120,6 +119,7 @@
 - [B-47](docs/backlog/B-47-rq2-rq3-continuation-machinery.md) `[x]` - RQ2 and RQ3: the one call site every suspend body shares, and the fast path that never suspends
 - [B-48](docs/backlog/B-48-rq1-rq5-sizes-and-codegen-patterns.md) `[x]` - RQ1 and RQ5: the size threshold with the one dial that exists, and the codegen patterns counted across owners
 - [B-51](docs/backlog/B-51-real-mode-ceiling-and-its-ruler.md) `[x]` - The real-mode ceiling is the machine, and pinning the database does not lift it
+- [B-53](docs/backlog/B-53-compute-the-rq0-gate.md) `[x]` - Compute the RQ0 gate instead of arguing it away
 
 <!-- END INDEX -->
 
