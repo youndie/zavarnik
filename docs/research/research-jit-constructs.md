@@ -1042,6 +1042,78 @@ unstable, and one stackless exception per request that costs a tenth of a per ce
 | `jdk.JavaExceptionThrow` is throttled at 300/s; `jdk.ExceptionStatistics` is not | `openjdk-25.0.4!/lib/jfr/profile.jfc` |
 | One exception per request, and its CPU share | `rq7-exception-total.py`, `rq7-exception-cost.py` over the committed pair profiles |
 
+### 1.22 RQ4's deciding clause, tested at last: about a tenth of the gap, against a required third
+
+RQ4's red has two halves and only the first was ever tested: above 1.5×, **and** at least a third of
+the gap traceable to failed inlining, megamorphic dispatch or failed scalar replacement. §1.11
+argued from a decomposition that the gap is work; an argument is not the test, and the brief's author
+said so. This is the test.
+
+Two arms behind one binary at the **same fixed 2000 rps**, so every frame they share cancels and what
+is left is the layer. Both held the offered rate exactly.
+
+| | µs CPU/req | p50 | allocation |
+|---|---|---|---|
+| `jdbc` | 762 | 2.26 ms | 57 388 B/req |
+| `exposed` | 894 | 3.36 ms | 73 942 B/req |
+| **the gap** | **132 µs (1.17×)** | | **+16 554 B/req** |
+
+**The three named mechanisms, measured:**
+
+| mechanism | how it is read | share of the 132 µs gap |
+|---|---|---|
+| megamorphic dispatch | `vtable stub` / `itable stub` frames: 2.19 % of the jdbc arm, 3.04 % of the exposed arm | **+10.5 µs — 8 %** |
+| failed inlining leaving code uncompiled | interpreted frames: **0.00 % in both arms** | **0 %** |
+| failed scalar replacement | bounded from above by the extra allocation — 16 554 B is 22 % of what the exposed arm allocates, and all GC is 1.2 % of its CPU | **≤ 2.4 µs — 1.8 %** |
+| **together** | | **≈ 10 %** |
+
+**The clause is not met, and not narrowly.** About a tenth of the gap traces to the three mechanisms
+the brief names, against the third its red condition requires. The scalar-replacement figure
+deliberately overstates — an object that escapes was never a candidate for scalar replacement, so
+charging *all* the extra allocation to it is the safe direction for a threshold test, and it still
+comes to under two per cent.
+
+**Where the gap actually goes is data-structure work, and the largest piece is a surprise:**
+
+| | µs/req |
+|---|---|
+| `ThreadLocal$ThreadLocalMap.getEntryAfterMiss` | **+13.7** |
+| `HashMap.getNode` | +11.7 |
+| `ArrayList.grow` | +10.0 |
+| `itable stub` | +8.0 |
+| `Intrinsics.areEqual` | +6.9 |
+| `ResultRow$ResultRowCache.<init>` / `ResultRow$Companion.create` | +9.6 |
+
+`HashMap.getNode` is the per-column `fieldIndex` lookup §1.11 already named. The one at the top is
+new, and its stack says exactly what it is:
+
+```
+ResultRow.<init>
+  → TransactionsKt.currentTransactionOrNull
+    → ThreadLocalTransactionsStack.getTransactionOrNull
+      → ThreadLocal.get → ThreadLocalMap.getEntryAfterMiss
+```
+
+**Exposed consults a `ThreadLocal` to find the current transaction every time it constructs a
+`ResultRow`** — once per row, fifty times on this endpoint — and the lookup misses its direct hash
+slot and falls into the linear probe. That is the single largest component of the Exposed-over-JDBC
+gap, it is pure work, and it is on nobody's list of JIT questions.
+
+**One caution the same run produced.** Frames owned by Exposed are 40.8 % of the exposed arm's CPU —
+365 µs — against a gap of 132 µs. Owner-share is not cost: most of what Exposed's frames do is work
+the JDBC arm also did, under different names. A table that read 40.8 % as "what Exposed costs" would
+overstate it by nearly threefold.
+
+**Verdict: RQ4 is not red, and now for a measured reason.** The red needs both halves; the second is
+10 % against a required 33 %. The ratio itself remains rate-dependent — 1.17× here, 1.27–1.29× in
+§1.11, 1.61× at saturation in §1.12 — so "green" as the brief words it is not a stable answer, but
+"red" is now excluded outright. The gap is work, which is the brief's own category for a library
+cost rather than a finding.
+
+| Fact | Where verified |
+|---|---|
+| Both arms, their CPU per request, the three signals and the frame diff | `bench/profile/results/rq4-clause.md`, `bench/profile/rq4-clause.sh`, `rq4-diff.py` |
+
 ---
 
 ## 2. Where each research question stands
@@ -1391,18 +1463,27 @@ receiver census ([B-46](../backlog/B-46-rq6-encoder-receiver-census.md), §1.16)
 and shown to engage (§1.17); and RQ5 on both halves — prices and counts across owners
 ([B-48](../backlog/B-48-rq1-rq5-sizes-and-codegen-patterns.md), §1.18).
 
-**Every research question now has a verdict**, and §2.3 records that the brief's author reviewed
-them and that all eight objections held. So the fork this section used to describe — stop and write
-up, or bring JMH in — is closed: JMH was brought in, and it changed two verdicts (RQ3 from grey to
-green, RQ4 from green to amber) and one number (RQ2's, through the right dispatch table).
+**Every research question now has a verdict, and every verdict has a measurement under it.** §2.3
+records that the brief's author reviewed the first version and that all eight objections held; the
+fork this section used to describe — stop and write up, or bring JMH in — is long closed. JMH came
+in, and between it and the profiles that followed, three verdicts changed (RQ3 grey to green, RQ4
+green to amber to not-red, RQ7 from untouched to the phase's only red) and one number was corrected
+(RQ2's, through the right dispatch table).
 
-**What is left is not another construct.** Four things, in descending order of what they would
-change:
+**What is left is not a research question.** Two things:
 
-1. **RQ4's deciding clause** — above 1.5×, *and* at least a third of the gap from failed inlining,
-   dispatch or scalar replacement. The decomposition argues the gap is work; the clause was never
-   tested, and it is what holds RQ4 at amber (§1.11).
-**Done since this list was last written:** RQ7 (§1.21), which was the only question never measured —
+1. **C2's own CPU under a container limit.** §1.20 measured the compiler's threads at **4.9–6.1 % of
+   request CPU** on a saturated four-core box — four to five times the collector — and Open question 3
+   found **61 %** in a one-core container at 50 rps. Neither end is a construct verdict, so the brief's
+   output shape has no row for it; it is the article's strongest material and the largest JIT-related
+   number the phase produced.
+2. **The write-up itself** ([B-50](../backlog/B-50-verdict-table-and-write-up.md)) — §2 is the verdict
+   table the brief asks for, §2.1 the findings its form did not ask for, and §2.3 the review.
+
+**Done since this list was last written:** RQ4's deciding clause (§1.22), which closes the last
+research question — about a tenth of the gap traces to the three mechanisms the brief names, against
+a required third, and the largest single piece of it is a `ThreadLocal` miss per `ResultRow`; RQ7
+(§1.21), which was the only question never measured —
 red on a deoptimisation threshold that appears unreachable, green on exceptions by a wide margin; the
 three macro shares (§1.20); the RQ0 gate
 ([B-53](../backlog/B-53-compute-the-rq0-gate.md)), which turned out to have three answers; and
@@ -1410,10 +1491,11 @@ three macro shares (§1.20); the RQ0 gate
 multiply arm from 71 to 401 ns/op and leaves the other three untouched, so the advantage is
 vectorisation and the plain arms never had it. The stand reproduced JDK-8345044 without knowing it.
 
-**Open question 3 is still the largest number in the phase and still has no row in the brief.** At
-50 rps under a one-core limit, 61 % of self CPU was the JVM's own threads and the frames were C2's
-(§1.1). Both this document and the brief's author rank it above every construct in the list. It is
-not a construct verdict, so it fits an article rather than the table.
+**Open question 3 is still the largest number in the phase and still has no row in the brief**, and
+§1.20 now gives it a second data point: 61 % of self CPU in C2's threads at 50 rps under a one-core
+limit (§1.1), and 4.9–6.1 % on a saturated four-core box. Both this document and the brief's author
+rank it above every construct in the list. It is not a construct verdict, so it fits an article
+rather than the table.
 
 **What no further work can fix on this stand**: the governor cannot be fixed on any available host
 (§1.7), and the real-mode ceiling is the four-core box (§1.13). Both are stated as properties of the
