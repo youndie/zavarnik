@@ -42,8 +42,8 @@
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
 | [B-42](docs/backlog/B-42-warmup-gate-on-printcompilation.md) `[ ]` | A warm-up gate on an instrument that reports: jdk.Compilation switched on, inlining evidence taken elsewhere | P1 | S | - |
+| [B-49](docs/backlog/B-49-rq7-steady-state-and-the-compilers-own-cpu.md) `[ ]` | RQ7: is steady state stable — and what the compiler itself costs under a container limit | P1 | M | - |
 | [B-43](docs/backlog/B-43-static-scan-across-owners.md) `[ ]` | Re-run the scan and the join once the stand has a database | P2 | XS | B-41 |
-| [B-49](docs/backlog/B-49-rq7-steady-state-and-the-compilers-own-cpu.md) `[ ]` | RQ7: is steady state stable — and what the compiler itself costs under a container limit | P2 | M | B-42, B-44 |
 | [B-50](docs/backlog/B-50-verdict-table-and-write-up.md) `[ ]` | The verdict table and the article, with green, grey and stopped written up like red | P2 | S | B-45, B-46, B-47, B-48, B-49 |
 | [B-52](docs/backlog/B-52-multiply-makes-the-loop-faster.md) `[ ]` | A loop that multiplies is five times faster than the same loop without the multiply | P2 | S | - |
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
