@@ -448,8 +448,9 @@ itself multiplies; the ratio for Exposed alone is larger and is not what was mea
 scalar replacement. The decomposition below says the gap is work — a transaction wrapper, query
 building, per-column mapping — and not a JIT failure, which is the distinction the brief asks for in
 every row. But saying so from a decomposition is an argument, not the test the brief specified, and
-**RQ4 therefore stands as amber**: the ratio is 1.3–1.6× depending on rate, and the clause that would
-make it a finding is open.
+**RQ4 therefore stood as amber** until the clause was tested. §1.22 tests it: about a tenth of the gap
+traces to the three mechanisms, against a required third, so **RQ4 is not red** — and the ratio stays
+rate-dependent, which is why "green" as the brief words it is not a stable answer either.
 
 **The decomposition is worth more than the verdict**, because it says where the 30 % sits:
 
@@ -863,12 +864,11 @@ of magnitude more than everything else combined, and the controls of §1.14 put 
 1.670 ns against `uncheckedParam` at 1.863 — indistinguishable, with the checked arm nominally
 faster.
 
-**Verdict: RQ5 is green on the brief's list and amber off it.** Every construct the brief named is
-free or within the ruler. The two that are not free — `Delegates.observable` and eager collection
-chains — occur 168 and 1834 times respectively, mostly inside Exposed and Ktor, and neither has a
-macro share measured. At 3.4 µs per 256-element chain, a request would need about four such chains to
-clear 2 % of 646 µs; how many it actually runs is a profile question, and it is the same profile
-question RQ2 and RQ3 leave open.
+**Verdict: RQ5 is green.** Every construct the brief named is free or within the ruler. The two that
+are not free — `Delegates.observable` and eager collection chains — occur 168 and 1832 times
+respectively, mostly inside Exposed and Ktor, and §1.20 bounds both by what a request allocates at
+all: **0.18 % and 0.24 % of request CPU**. At the time this section was written those bounds were a
+profile question; they are now a measurement.
 
 | Fact | Where verified |
 |---|---|
@@ -964,7 +964,7 @@ answers land an order of magnitude below the line, and would not be if they were
 | Allocation per request and its buckets, three endpoints | `bench/profile/results/alloc-census.md`, `bench/profile/alloc-census.sh` |
 | Self samples at the two RQ2 sites; GC and JIT share of CPU | the committed `pair-real-db*.cpu.collapsed` profiles |
 
-### 1.21 RQ7, the last unmeasured question: green on exceptions, red on a threshold nothing meets
+### 1.21 RQ7, the only question never measured: green on exceptions, red on a threshold nothing meets
 
 RQ7 asks whether steady state is stable. Its green is "under 1 deoptimisation per minute after
 warmup, and exception construction under 2 % of request CPU"; its red is "a deoptimisation recurring
@@ -1126,18 +1126,19 @@ knowing what it costs — and the two are kept apart on purpose.
 
 | RQ | State | What is known, and where |
 |---|---|---|
-| **RQ0** gate | **replaced** | D1. Its bucket is nearly the whole process, so it passes by construction; the split inside it was already measured by two earlier phases (§1.1) |
+| **RQ0** gate | **replaced** | D1, on grounds that were themselves corrected in review. Computed rather than asserted (B-53), the gate has **three answers** — 2.2–4.4 % red on all three endpoints under the narrowest attribution, 11.6–22.8 % green on all three under the broadest — because the brief never says where a `HashMap.get` sample reached from Exposed belongs. Its green and red also leave a hole: one endpoint over the bar is neither. A gate whose verdict is chosen by whoever runs it is not a gate |
 | **RQ1** sizes | **GREEN** | Nothing on the path is within a factor of four of the huge-method limit (§1.8); of 638 methods over `FreqInlineSize` only **49 run**, owning 3.86 % of self samples together (§1.9); the dial provably fires — `hot method too big` refusals fall **155 → 3** — and moves CPU per request by **1.3 %, inside a 2.8–4.3 % ruler**, i.e. an effect bounded below ~4 % at n = 3 (§1.17) |
 | **RQ2** megamorphic | **GREEN, measured** | Megamorphic by construction, and priced through the right dispatch table: **4.006 ns against 0.693 monomorphic, 5.8×** via vtable, not the 6.715/8.9× first reported through an interface (§1.19). Macro half now measured rather than argued: the brief's two sites together are **0.52–0.87 % of request CPU** as an upper bound, against its 2 % line (§1.20) |
 | **RQ3** escape analysis | **GREEN on both halves** | Micro: nothing survives the non-suspending path. `-XX:-DoEscapeAnalysis` takes the arm from 16 to **168 B/op**, and the 16 B/op first reported as "the continuation" was the blackhole forcing the fast-path box to escape; consumed as an `Int` a suspend call is **0.911 ns against 0.917 plain, ≈0 B/op** (§1.15). Macro: a real request *does* suspend, and the machinery is **11–27 % of its 23–75 KB of allocation** — but all GC on this stand is 1.17–1.23 % of CPU, so that bucket is worth **0.13–0.33 %** (§1.20). Side finding: `Boxing.boxInt` is `new Integer`, never the cache |
-| **RQ4** Exposed | **amber** | **1.27–1.29× at a fixed 2000 rps, 1.61× at saturation** (§1.11, §1.12) — the brief's 1.5× line falls between them, and it was specified for stub mode, which this stand cannot compare in. Decomposed the gap is work: transaction wrapper ~64 µs flat, Exposed fixed ~70 µs, mapping 0.76 µs/row ≈ 0.151 µs/column. The red condition's second clause — a third of the gap from failed inlining, dispatch or scalar replacement — is **untested** |
+| **RQ4** Exposed | **not red, measured** | The ratio is rate-dependent — **1.17×, 1.27–1.29×, 1.61×** at three operating points (§1.22, §1.11, §1.12) — and the brief's 1.5× line falls inside that range, so "green" as worded is not a stable answer. But red needs *both* halves, and the second is now tested: **≈10 % of the gap** traces to dispatch stubs (8 %), uncompiled code (0 %) and failed scalar replacement (≤1.8 %), against a required third (§1.22). The gap is work, and its largest single piece is a `ThreadLocal` miss per `ResultRow` |
 | **RQ5** codegen patterns | **GREEN** | Measured on both halves (§1.18). Value classes through generics and nullables, `$default`, and capturing non-`inline` lambdas are **free — 0 B/op and inside 0.3 ns of their controls**. Two patterns the brief does not name are not: `Delegates.observable` at **15×** and one box per write, and an eager collection chain at **3.8×** and 7184 B/op. Both are now bounded by what a request allocates at all: **0.24 % and 0.18 % of request CPU** (§1.20). **2567 of 6700 classes on the path are Java** and cannot carry any of it |
 | **RQ6** encoders | **GREEN** | A JSON-only service is monomorphic at these sites; sustained mixed traffic makes them **bimorphic at 50/50**, read out of the inlining log, and `TypeProfileWidth` is 2 — so C2 still profiles and inlines them (§1.16). A one-off tree call costs nothing measurable |
 | **RQ7** steady state | **RED on deoptimisation, GREEN on exceptions** | Measured (§1.21). Steady state is **2.25–5.62 deoptimisations per minute**, above the brief's "under 1", and one site genuinely recurs — `CoroutineScheduler$Worker.tryPark()@40` at 31/26/16 s. Four events in 160 s: red by the letter of a threshold no healthy JVM under load appears to meet. Exceptions: **exactly 1.03 per request**, all `JobCancellationException`, costing **0.06–0.15 % of request CPU** because it is stackless as §1.2 predicted |
 
 **Kill criterion 4 is met several times over.** The criterion is "three RQs in a row come out green
-or grey". RQ1, RQ2, RQ3, RQ5 and RQ6 are green, RQ4 is amber on an untested clause, and RQ7 is the
-phase's only red — on a threshold that, measured, appears to be one no healthy JVM under load meets.
+or grey". RQ1, RQ2, RQ3, RQ5 and RQ6 are green, RQ4 is not red on a clause now tested at 10 % against
+a required third, and RQ7 is the phase's only red — on a threshold that, measured, appears to be one
+no healthy JVM under load meets.
 
 The brief's instruction is then to drop what remains and write that the stack is well served by C2.
 On the evidence that is right, but it has to be said in the form the evidence supports, and an
@@ -1224,9 +1225,9 @@ required new measurements to settle. They are listed in the order given.
 | # | Objection | What checking it found |
 |---|---|---|
 | 1 | **16 B/op cannot be a continuation** — a state machine is ≥32 bytes by field layout, so RQ3's conclusion may be inverted and the 16 bytes may be the harness | **Right on both halves.** `javap -p` gives `Continuations$hoisted$1` six fields, 36 bytes padded to 40. `-XX:-DoEscapeAnalysis` moves the arm to 168 B/op, so the continuations *were* being scalar-replaced; the surviving 16 was the blackhole forcing the fast-path box to escape. RQ3 goes from grey to **green** (§1.15) |
-| 2 | **RQ4's green depends on the denominator**, the 1.5× line was set for stub mode, and the study's own saturation number is 1.61× — the other side of the line | **Right.** The ratio is 1.27–1.29× at fixed rate and 1.61× at saturation; the brief's line falls between. RQ4 restated as **amber**, with the red condition's untested second clause named as what actually decides it (§1.11) |
+| 2 | **RQ4's green depends on the denominator**, the 1.5× line was set for stub mode, and the study's own saturation number is 1.61× — the other side of the line | **Right**, and it opened the clause that decides the question. The ratio is 1.17–1.61× across three operating points, so the brief's line falls inside it. The untested second clause was then tested (§1.22): ≈10 % of the gap against a required third, so **RQ4 is not red** — measured, not argued from a decomposition |
 | 3 | **No evidence the lever engaged** — `FreqInlineSize=2000` does not mean those methods were inlined, and "1.3 % inside a 2.8–4.3 % ruler" is an effect bounded below ~4 %, not zero | **Right to demand it, and the check passes.** Under `-XX:+PrintInlining`, `hot method too big` falls **155 → 3** — but `InlineSmallCode` refusals rise **324 → 453**, so a second gate does absorb part of it, exactly as suspected. The null is real; the wording was not (§1.17) |
-| 4 | **RQ2's 580 is a classpath count, `resumeWith` runs only on real resumption, and itable ≠ vtable** | **Right on all three.** Measured through the dispatch table `invokeSuspend` actually uses: **4.006 ns against 0.693, 5.8×**, not 6.715/8.9×. And the resumption argument closes RQ2 by arithmetic — ~3900 calls needed against single-digit resumptions per request (§1.19) |
+| 4 | **RQ2's 580 is a classpath count, `resumeWith` runs only on real resumption, and itable ≠ vtable** | **Right on all three.** Measured through the dispatch table `invokeSuspend` actually uses: **4.006 ns against 0.693, 5.8×**, not 6.715/8.9×. And the resumption argument closed RQ2 by arithmetic — ~3900 calls needed against single-digit resumptions per request (§1.19) — which §1.20 then replaced with a measurement: the two sites are 0.52–0.87 % of request CPU |
 | 5 | **B-52 is a known SuperWord heuristic**, JDK-8345044, not a stand fault — a reduction-only loop is refused vectorisation, which is why multiplying makes it faster | **Verified, and more exactly than expected.** JDK-8345044 is "Sum of array elements not vectorized", closed as a duplicate of JDK-8340093 "C2 SuperWord: implement cost model", which is **Fixed in JDK 26**, resolved 2025-11-10 — one release after the 25.0.4 this stand runs. The upstream reproducer is the same construct, and its numbers are the same shape: 552 → 142 ns/op there, 406.7 → 77.3 here. The stand reproduced a known bug it did not know about ([B-52](../backlog/B-52-multiply-makes-the-loop-faster.md)) |
 | 6 | **Over-generalisation** — the `Dispatchers.IO` result is one box and non-monotonic, and "no mechanism costs anything" is only true as "not shown to reach 2–4 %" | **Right.** Both restated: the dispatcher finding now carries its non-monotonicity (245/166/210/235 µs) and its scope, and the summary sentence in §2 was replaced outright |
 | 7 | **Stale and self-contradicting text** — §2 and §6 predate the JMH set, §2.1 lists a claim §2.2 retracts, 3.51 cores is attributed to a section that lacks it, 11 398 rps belongs to no configuration | **Right, and one item is worse than stale.** "3.51 of 4 cores" appears in **no results file at all**; the highest recorded is 3.87, from a five-second warm-up probe. The sentence has been withdrawn, not re-cited. The 11 398 figure exists but its arm was never recorded, so it is now marked as not comparable with §1.12 |
