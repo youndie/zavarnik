@@ -126,7 +126,7 @@ methods made hot one after another, which keeps the compiler busy for the whole 
 
 | Fact | Where verified |
 |---|---|
-| `profile.jfc` ships `jdk.Compilation` with **`threshold` 100 ms** and `jdk.CompilerInlining` with **`enabled` false**; `default.jfc` disables the inlining event too | `$JAVA_HOME/lib/jfr/{profile,default}.jfc`, JDK 25.0.2, quoted at the head of each result log |
+| `profile.jfc` ships `jdk.Compilation` with **`threshold` 100 ms** and `jdk.CompilerInlining` with **`enabled` false**; `default.jfc` disables the inlining event too | `openjdk-25.0.2!/lib/jfr/profile.jfc` and `openjdk-25.0.2!/lib/jfr/default.jfc`, quoted at the head of each result log |
 | **On the settings it ships with, JFR reports no compilation at all.** `settings=profile`, short workload: 1258 and 1275 compile tasks by `-XX:+PrintCompilation` against **0** `jdk.Compilation`. Long workload: **7262** tasks over 7.3 seconds, still **0** — and 0 `jdk.CompilerInlining`, 0 `jdk.CompilationFailure` | `experiments/jfr-compiler-events/results/`, arms `shipped` and `long-shipped` |
 | `jdk.Deoptimization` is the one compiler event that does report on stock settings: 1–5 events per run, in every arm | the same logs |
 | **Once `jdk.Compilation` is enabled explicitly, it is a census.** Long workload, `settings=none` with the event on and its threshold at 0: **6025 events against 6058 compile tasks in the same id range — 99.5 %** | `results/*.long.log`, arm `bare` |
@@ -388,7 +388,7 @@ stand, deciding nothing about the construct list.
 | stand | `bench/profile/attribute.py` — self/owner attribution of collapsed stacks |
 | experiment | `experiments/jfr-compiler-events/run.sh` — §1.3, the short workload |
 | experiment | `experiments/jfr-compiler-events/long-run.sh` — §1.3, the control that corrected it, and the price of each instrument |
-| JDK configuration | `lib/jfr/profile.jfc`, `lib/jfr/default.jfc` in the pinned JDK — §1.3 |
+| JDK configuration | `openjdk-25.0.2!/lib/jfr/profile.jfc`, `openjdk-25.0.2!/lib/jfr/default.jfc` — §1.3 |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/ResultRow.class` |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/IColumnType.class` |
 | artefact | `org.jetbrains.kotlin:kotlin-stdlib:2.4.20!/kotlin/coroutines/jvm/internal/BaseContinuationImpl.class` |
