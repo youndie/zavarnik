@@ -759,10 +759,12 @@ is exactly why they would have been lost had the study only filled in its own fo
 | **Nine tenths of a static size shortlist is code that never runs** — 49 of 638, and the miss rate has to be computed over artifacts that could have appeared at all | 89 % | §1.9 |
 | The real-mode ceiling on a four-core box with a co-located database is **the box**: 3.93 of 4 cores, of which the database takes 1.24 and the kernel 0.80 | — | §1.13 |
 
-### 2.2 Four explanations that were offered and withdrawn
+### 2.2 Eight claims that were offered and withdrawn
 
-Kept because three of them looked convincing on single runs, and because the pattern is the same
-every time: a share measured inside one run survives, a ratio between single runs does not.
+Kept, all of them, because most looked convincing when they were written and none was visible in its
+own numbers. Two patterns run through the list: a share measured inside one run survives while a
+ratio between single runs does not, and a benchmark can find its subject and still measure something
+else.
 
 | Claim | Why it died |
 |---|---|
@@ -770,6 +772,13 @@ every time: a share measured inside one run survives, a ratio between single run
 | "The pool sets the real-mode ceiling" | Repeats: 16/32/64 give 5286/5069/4595 rps — more pool is monotonically *worse* (§1.12) |
 | "Exposed sets the ceiling" | Hand-written JDBC hits the same wall at 1.67× the throughput (§1.12) |
 | "The `Dispatchers.IO` size sets the ceiling" | It moves the price of a request from 245 to 166 µs and leaves cores at 1.77–2.02 (§1.13) |
+| "Indexed iteration loses vectorisation" | Direct and indexed are within 3 %; the odd arm is the one that *multiplies* (§1.14). What remains is an unexplained anomaly, [B-52](../backlog/B-52-multiply-makes-the-loop-faster.md) |
+| "A suspend call costs 5.6× a plain one" | The plain side took a literal and constant-folded to 0.701 ns — about two cycles, which is the blackhole and nothing else (§1.15) |
+| "16 B/op is the continuation" — *before it was shown* | The `suspend { }` literal sat inside the benchmark method and was allocated per call. Only the hoisted arm, created once and still allocating 16, made the claim safe (§1.15) |
+| "One `encodeToJsonElement` takes a site from one receiver to three" | Loading three classes is not putting three receivers on a site. Sustained mixing gives **two**, which the profile width covers (§1.16) |
+
+One more belongs here without being a claim: the boxing arm of RQ3 summed 7 and 11, and 18 is inside
+the `Integer` cache, so the arm meant to measure boxing measured nothing at all (§1.15).
 
 ---
 
