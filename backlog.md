@@ -37,14 +37,12 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (10)
+## Open (8)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
 | [B-42](docs/backlog/B-42-warmup-gate-on-printcompilation.md) `[ ]` | A warm-up gate on an instrument that reports: jdk.Compilation switched on, inlining evidence taken elsewhere | P1 | S | - |
-| [B-44](docs/backlog/B-44-calibration-controls-and-the-known-order-pair.md) `[ ]` | Five calibration controls plus a pair whose order the code already decides | P1 | M | B-41, B-42 |
 | [B-43](docs/backlog/B-43-static-scan-across-owners.md) `[ ]` | Re-run the scan and the join once the stand has a database | P2 | XS | B-41 |
-| [B-47](docs/backlog/B-47-rq2-rq3-continuation-machinery.md) `[ ]` | RQ2 and RQ3: the one call site every suspend body shares, and the fast path that never suspends | P2 | M | B-44 |
 | [B-48](docs/backlog/B-48-rq1-rq5-sizes-and-codegen-patterns.md) `[~]` | RQ1 and RQ5: the size threshold with the one dial that exists, and the codegen patterns counted across owners | P2 | M | - |
 | [B-49](docs/backlog/B-49-rq7-steady-state-and-the-compilers-own-cpu.md) `[ ]` | RQ7: is steady state stable — and what the compiler itself costs under a container limit | P2 | M | B-42, B-44 |
 | [B-50](docs/backlog/B-50-verdict-table-and-write-up.md) `[ ]` | The verdict table and the article, with green, grey and stopped written up like red | P2 | S | B-45, B-46, B-47, B-48, B-49 |
@@ -52,7 +50,7 @@
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
-## Closed (42)
+## Closed (44)
 
 **Стенд**
 
@@ -116,8 +114,10 @@
 **Пятая фаза**
 
 - [B-41](docs/backlog/B-41-jit-stand-data-layer-and-endpoints.md) `[x]` - The stand grows a database: Exposed over Postgres in two modes, and the brief's four endpoints
+- [B-44](docs/backlog/B-44-calibration-controls-and-the-known-order-pair.md) `[x]` - Five calibration controls plus a pair whose order the code already decides
 - [B-45](docs/backlog/B-45-rq4-exposed-read-path-in-three-arms.md) `[x]` - RQ4 answered green; what is left is the microbenchmark arm the service cannot stage
 - [B-46](docs/backlog/B-46-rq6-encoder-receiver-census.md) `[x]` - RQ6: price the step from one encoder to three, which one line of application code buys
+- [B-47](docs/backlog/B-47-rq2-rq3-continuation-machinery.md) `[x]` - RQ2 and RQ3: the one call site every suspend body shares, and the fast path that never suspends
 - [B-51](docs/backlog/B-51-real-mode-ceiling-and-its-ruler.md) `[x]` - The real-mode ceiling is the machine, and pinning the database does not lift it
 
 <!-- END INDEX -->

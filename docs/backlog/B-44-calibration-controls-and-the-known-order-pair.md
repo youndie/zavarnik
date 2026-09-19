@@ -1,14 +1,25 @@
 ---
 id: B-44
 title: "Five calibration controls plus a pair whose order the code already decides"
-status: open
+status: done
 priority: P1
 size: M
 stage: stage-8-jit-constructs
-blocked_by: [B-41, B-42]
 ---
 
 # B-44 — Before any candidate, prove the chain can see and prove it is measuring the subject
+
+> **Done 2026-09-19.** All five of the brief's controls are green and the sixth pair — the one whose
+> order the code fixes — came out in the right order: 179.7 ns for the base and 269.5 for the same
+> loop plus one multiply. [research-jit-constructs](../research/research-jit-constructs.md) §1.14,
+> raw output in `microbench/results-controls.md`. Kill criterion 2 is satisfied, so every verdict
+> taken with this chain counts.
+>
+> **The smallest effect the chain demonstrably resolves**, which every later green has to quote: the
+> tightest control pair is the data-class `copy` at 5.354 ± 0.119 against 5.593 ± 0.151 ns — so
+> differences below roughly **0.3 ns, or 5 % at that scale**, are not distinguishable here.
+>
+> The controls also turned up an anomaly nobody was looking for, now [B-52](B-52-multiply-makes-the-loop-faster.md).
 
 The brief's five controls — `inline` functions with lambdas, `Intrinsics` parameter checks, `when`
 over a sealed hierarchy, loops over ranges and arrays, data class accessors and `copy` — are

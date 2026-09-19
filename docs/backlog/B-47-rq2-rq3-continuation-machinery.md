@@ -1,14 +1,30 @@
 ---
 id: B-47
 title: "RQ2 and RQ3: the one call site every suspend body shares, and the fast path that never suspends"
-status: open
+status: done
 priority: P2
 size: M
 stage: stage-8-jit-constructs
-blocked_by: [B-44]
 ---
 
 # B-47 — The resume edge and the continuation that may or may not be allocated
+
+> **Done 2026-09-19.** RQ2 priced, RQ3 grey.
+> [research-jit-constructs](../research/research-jit-constructs.md) §1.14–1.15.
+>
+> * the megamorphic call costs **6.715 ns against 0.755 monomorphic — 8.9×** — with the break
+>   between 2 and 8 receivers, where `TypeProfileWidth` says it belongs;
+> * on the non-suspending path the continuation **survives**: 16 B/op, and the arm with the lambda
+>   hoisted into a field proves those bytes are the state-machine copy rather than the lambda;
+> * the boxed primitive **is** removed — a value outside the `Integer` cache would make the arm read
+>   32 B/op and it reads 16.
+>
+> **Both halves stop at the macro share**: 6 ns and 16 bytes a call are arithmetic until something
+> counts the calls per request, and that is a profile question this phase has not asked.
+>
+> Three earlier versions of the RQ3 benchmark were wrong and each produced a plausible table —
+> constant folding, an allocation whose owner was unknown, and a boxing arm inside the `Integer`
+> cache. §1.15 keeps all three, because none was visible in its own numbers.
 
 `BaseContinuationImpl.resumeWith` is `final` and calls `abstract invokeSuspend(Object)`: one call
 site whose receivers are every suspend body in the process
