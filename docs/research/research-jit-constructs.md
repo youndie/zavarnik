@@ -899,6 +899,71 @@ author makes the sharper point: `resumeWith` runs only on a genuine *resumption*
 single-digit to low-tens of those — the IO hop, the socket read, the socket write. Two numbers three
 orders of magnitude apart do not need a measurement to be ordered.
 
+### 1.20 The three macro shares, measured instead of argued
+
+RQ2, RQ3 and RQ5's two off-list patterns were all closed by the same reasoning: the count a request
+would need to reach 2 % is orders of magnitude above the count it makes. That reasoning is sound and
+it is not a measurement, and §6 listed replacing it as the first thing left to do. This does it, from
+two profiles of the same stand — the CPU profiles already committed with the pair runs, and a new
+allocation census.
+
+**RQ2: 0.5–0.9 % of request CPU, against a 2 % line.** The brief names two sites and asks for both
+together. Taking *self* samples at each — the callees' cost belongs to the callees, not to the
+dispatch:
+
+| | `BaseContinuationImpl.resumeWith` | `io.ktor.util.pipeline.*` | together |
+|---|---|---|---|
+| dbitem | 0.23 % | 0.49 % | **0.72 %** |
+| dblist | 0.16 % | 0.36 % | **0.52 %** |
+| dbpost | 0.42 % | 0.45 % | **0.87 %** |
+
+Self samples at `resumeWith` include the whole body, not just the vtable lookup, so this is an upper
+bound on what the megamorphic dispatch costs. An upper bound under the threshold is a clean green.
+
+**RQ3: the machinery is a quarter of what a request allocates, and that is worth 0.3 % of its CPU.**
+§1.15 showed escape analysis removes the continuation on the path where a suspend function does not
+suspend. A real request *does* suspend — the IO hop, the socket read, the socket write — so the
+question the macro half asks is what survives there. The allocation census answers it:
+
+| bucket | dbitem | dblist | dbpost |
+|---|---|---|---|
+| total allocation | **23 434 B/req** | **74 953 B/req** | **30 741 B/req** |
+| coroutine machinery | 5894 B — 25.2 % | 5726 B — 7.6 % | 7042 B — 22.9 % |
+| boxing | 373 B — 1.6 % | 2604 B — 3.5 % | 424 B — 1.4 % |
+| **RQ3's bucket together** | **26.7 %** | **11.1 %** | **24.3 %** |
+
+So continuations are not free on the real path, and 5.7–7.0 KB per request is a real number. The
+brief's red condition asks what that costs: "continuation plus boxing allocations reach 2 % of
+request CPU". **All garbage collection on this stand is 1.17–1.23 % of CPU.** Even attributing GC
+strictly in proportion to bytes, RQ3's bucket is worth **0.13–0.33 % of request CPU** — and the
+allocation itself is a TLAB pointer bump already counted in the mutator frames. The red condition
+cannot be met by a bucket whose entire collector costs half of it.
+
+**RQ5's two off-list patterns are bounded by what the request allocates at all.** An eager
+`map{}.filter{}.sum()` over 256 elements costs 3.4 µs and 7184 B over the hand-written loop (§1.18).
+The largest `collections` bucket measured is 5651 B/req, so there is room for **at most 0.79 such
+chains per request** — 2.7 µs, or **0.24 %** of dbpost's 1108 µs. `Delegates.observable` costs 13.3 ns
+and one 16-byte box per write; the largest boxing bucket is 2604 B/req, so **at most 163 writes** even
+if every box in the request were one — 2.2 µs, or **0.18 %** of dblist's 1181 µs. Neither can reach
+2 % on this stand without allocating more than the whole request does.
+
+**Side result — C2's own threads cost 4.9–6.1 % of CPU here, on a saturated four-core box.** That is
+four to five times the collector, on a stand running flat out where compilation should long since
+have settled. It is the same quantity Open question 3 found at 61 % in a one-core container at 50
+rps, measured at the other end of the range, and it is larger than every construct in the brief's
+list put together.
+
+**What this section does not claim.** The allocation census ran uncapped at 4709/3186/2992 rps while
+the CPU-per-request denominators come from the pair runs at 2131/1818/1635. Allocation per request is
+robust across that gap in a way CPU per request is not (§1.10: 210 µs at 5k rps, 53 at saturation),
+so the byte counts are solid and the percentages of CPU are approximate — which is enough when the
+answers land an order of magnitude below the line, and would not be if they were near it.
+
+| Fact | Where verified |
+|---|---|
+| Allocation per request and its buckets, three endpoints | `bench/profile/results/alloc-census.md`, `bench/profile/alloc-census.sh` |
+| Self samples at the two RQ2 sites; GC and JIT share of CPU | the committed `pair-real-db*.cpu.collapsed` profiles |
+
 ---
 
 ## 2. Where each research question stands
@@ -913,10 +978,10 @@ knowing what it costs — and the two are kept apart on purpose.
 |---|---|---|
 | **RQ0** gate | **replaced** | D1. Its bucket is nearly the whole process, so it passes by construction; the split inside it was already measured by two earlier phases (§1.1) |
 | **RQ1** sizes | **GREEN** | Nothing on the path is within a factor of four of the huge-method limit (§1.8); of 638 methods over `FreqInlineSize` only **49 run**, owning 3.86 % of self samples together (§1.9); the dial provably fires — `hot method too big` refusals fall **155 → 3** — and moves CPU per request by **1.3 %, inside a 2.8–4.3 % ruler**, i.e. an effect bounded below ~4 % at n = 3 (§1.17) |
-| **RQ2** megamorphic | **green by arithmetic** | 580 `invokeSuspend` implementations exist on one call site — a *classpath* count, not a profile one (§1.6, corrected in §2.2). Priced through the right dispatch table: **4.006 ns against 0.693 monomorphic, 5.8×** via vtable, not the 6.715/8.9× first reported through an interface (§1.19). Reaching 2 % of a 646 µs request needs ~3900 megamorphic `resumeWith` calls; a request makes single-digit to low-tens of genuine resumptions |
-| **RQ3** escape analysis | **GREEN** | Nothing survives. Continuations are scalar-replaced — `-XX:-DoEscapeAnalysis` takes the arm from 16 to **168 B/op** — and the 16 B/op first reported as "the continuation" was the blackhole forcing the fast-path box to escape. Consumed as an `Int`, a suspend call is **0.911 ns against 0.917 plain, ≈0 B/op** (§1.15). Side finding: `Boxing.boxInt` is `new Integer`, never the cache |
+| **RQ2** megamorphic | **GREEN, measured** | Megamorphic by construction, and priced through the right dispatch table: **4.006 ns against 0.693 monomorphic, 5.8×** via vtable, not the 6.715/8.9× first reported through an interface (§1.19). Macro half now measured rather than argued: the brief's two sites together are **0.52–0.87 % of request CPU** as an upper bound, against its 2 % line (§1.20) |
+| **RQ3** escape analysis | **GREEN on both halves** | Micro: nothing survives the non-suspending path. `-XX:-DoEscapeAnalysis` takes the arm from 16 to **168 B/op**, and the 16 B/op first reported as "the continuation" was the blackhole forcing the fast-path box to escape; consumed as an `Int` a suspend call is **0.911 ns against 0.917 plain, ≈0 B/op** (§1.15). Macro: a real request *does* suspend, and the machinery is **11–27 % of its 23–75 KB of allocation** — but all GC on this stand is 1.17–1.23 % of CPU, so that bucket is worth **0.13–0.33 %** (§1.20). Side finding: `Boxing.boxInt` is `new Integer`, never the cache |
 | **RQ4** Exposed | **amber** | **1.27–1.29× at a fixed 2000 rps, 1.61× at saturation** (§1.11, §1.12) — the brief's 1.5× line falls between them, and it was specified for stub mode, which this stand cannot compare in. Decomposed the gap is work: transaction wrapper ~64 µs flat, Exposed fixed ~70 µs, mapping 0.76 µs/row ≈ 0.151 µs/column. The red condition's second clause — a third of the gap from failed inlining, dispatch or scalar replacement — is **untested** |
-| **RQ5** codegen patterns | **GREEN on the list, amber off it** | Measured on both halves (§1.18). Value classes through generics and nullables, `$default`, and capturing non-`inline` lambdas are **free — 0 B/op and inside 0.3 ns of their controls**. Two patterns the brief does not name are not: `Delegates.observable` at **15×** and one box per write, and an eager collection chain at **3.8×** and 7184 B/op. Counts across owners are in the census; **2567 of 6705 classes are Java and cannot carry any of it**. Macro shares unmeasured |
+| **RQ5** codegen patterns | **GREEN** | Measured on both halves (§1.18). Value classes through generics and nullables, `$default`, and capturing non-`inline` lambdas are **free — 0 B/op and inside 0.3 ns of their controls**. Two patterns the brief does not name are not: `Delegates.observable` at **15×** and one box per write, and an eager collection chain at **3.8×** and 7184 B/op. Both are now bounded by what a request allocates at all: **0.24 % and 0.18 % of request CPU** (§1.20). **2567 of 6700 classes on the path are Java** and cannot carry any of it |
 | **RQ6** encoders | **GREEN** | A JSON-only service is monomorphic at these sites; sustained mixed traffic makes them **bimorphic at 50/50**, read out of the inlining log, and `TypeProfileWidth` is 2 — so C2 still profiles and inlines them (§1.16). A one-off tree call costs nothing measurable |
 | **RQ7** steady state | **partial** | The instrument is settled — `jdk.Compilation` switched on is a census, `jdk.CompilerInlining` is not (§1.3). The exception arm is named: `JobCancellationException` is already stackless, `TimeoutCancellationException` is not (§1.2). Rates not measured |
 
@@ -939,10 +1004,11 @@ The claim the evidence actually supports is narrower and is worth stating exactl
 > stand's resolution; where it was reported and then re-tested, it more often turned out not to exist
 > than to be expensive.
 
-The remaining honest gaps are that RQ2's and RQ3's macro shares are arithmetic rather than
-measurement, RQ5's two off-list patterns have no macro share at all, RQ4's deciding clause is
-untested, and RQ7 was not measured. "Not shown to cost 2 %" is not "costs nothing", and the
-difference is the whole of what is left.
+The macro shares that sentence used to owe are now measured (§1.20): RQ2's two sites are 0.52–0.87 %
+of request CPU, RQ3's allocation bucket 0.13–0.33 %, RQ5's two off-list patterns bounded at 0.24 %
+and 0.18 %. **The remaining honest gaps are two**: RQ4's deciding clause is untested, and RQ7 was
+never measured at all. "Not shown to cost 2 %" is still not "costs nothing" — but on five of the
+seven questions it is now a measurement saying so rather than an argument.
 
 What does cost — a transaction wrapper at 64 µs, a dispatcher default at 27 % on this box, a
 co-located database taking a third of the machine — is on nobody's list of JIT questions.
@@ -964,6 +1030,8 @@ is exactly why they would have been lost had the study only filled in its own fo
 | **Two fifths of the request path is Java** — Netty, the PostgreSQL driver and HikariCP are 2567 of 6705 classes and cannot carry a Kotlin codegen pattern at all | 38 % of classes | §1.18 |
 | **Nine tenths of a static size shortlist is code that never runs** — 49 of 638, and the miss rate has to be computed over artifacts that could have appeared at all | 89 % | §1.9 |
 | The real-mode ceiling on a four-core box with a co-located database is **the box**: 3.93 of 4 cores, of which the database takes 1.24 and the kernel 0.80 | — | §1.13 |
+| **C2's own threads cost 4.9–6.1 % of request CPU on a saturated four-core stand** — four to five times the collector, on a box running flat out where compilation should have settled. The same quantity Open question 3 found at 61 % in a one-core container | 5 % against GC's 1.2 % | §1.20 |
+| **A request on this stack allocates 23–75 KB**, of which a quarter is coroutine machinery on the two small endpoints — and all garbage collection costs 1.2 % of CPU, so the size of the number and the size of its price are unrelated | 23 434 / 74 953 / 30 741 B | §1.20 |
 
 ### 2.2 Thirteen claims that were offered and withdrawn
 
@@ -1249,16 +1317,20 @@ green, RQ4 from green to amber) and one number (RQ2's, through the right dispatc
 **What is left is not another construct.** Four things, in descending order of what they would
 change:
 
-1. **The macro shares that three verdicts rest on arithmetic for.** RQ2, RQ3 and RQ5's two off-list
-   patterns are all closed by "the count a request would need is orders of magnitude above the count
-   it makes". That reasoning is sound and it is not a measurement. One allocation and dispatch
-   profile of the real endpoint would replace all three with counts.
-2. **[B-53](../backlog/B-53-compute-the-rq0-gate.md)** — compute the RQ0 gate instead of arguing it
-   away. One division over data already taken.
-3. **[B-49](../backlog/B-49-rq7-steady-state-and-the-compilers-own-cpu.md)** — RQ7, the only question never measured:
-   deoptimisation rates, exception construction share, and C2's own CPU under a container limit.
-4. **[B-52](../backlog/B-52-multiply-makes-the-loop-faster.md)** — the vectorisation anomaly, now
-   with a candidate mechanism from the brief's author that has to be confirmed or withdrawn.
+1. **[B-49](../backlog/B-49-rq7-steady-state-and-the-compilers-own-cpu.md)** — RQ7, now the only
+   question never measured: deoptimisation rates, exception construction share, and C2's own CPU
+   under a container limit. §1.20 makes this the most valuable item left, because it measured C2's
+   threads at **4.9–6.1 % of CPU on a saturated four-core box** — four to five times the collector,
+   and larger than every construct in the brief's list together.
+2. **RQ4's deciding clause** — above 1.5×, *and* at least a third of the gap from failed inlining,
+   dispatch or scalar replacement. The decomposition argues the gap is work; the clause was never
+   tested, and it is what holds RQ4 at amber (§1.11).
+3. **[B-52](../backlog/B-52-multiply-makes-the-loop-faster.md)** — the vectorisation anomaly. The
+   upstream citation is now verified, and what is left is the cheap differential that shows *this*
+   arm is the same phenomenon: both arms under `-XX:-UseSuperWord`.
+
+**Done since this list was last written:** the three macro shares (§1.20) and the RQ0 gate
+([B-53](../backlog/B-53-compute-the-rq0-gate.md)), which turned out to have three answers.
 
 **Open question 3 is still the largest number in the phase and still has no row in the brief.** At
 50 rps under a one-core limit, 61 % of self CPU was the JVM's own threads and the frames were C2's
