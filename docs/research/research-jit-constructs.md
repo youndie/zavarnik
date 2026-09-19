@@ -289,7 +289,7 @@ differed by 13–17 %. D2.
 
 ### 1.8 The size shortlist, for the whole request path rather than for application code
 
-Phase 1 of the brief. The second phase scanned 283 application methods; this scans the 56 471
+Phase 1 of the brief. The second phase scanned 283 application methods; this scans the 56 405
 methods with a body across the 25 artifacts of the pinned stack — Ktor 3.5.2 on Netty,
 kotlinx.serialization and coroutines 1.11.0, Exposed 1.4.0 over the PostgreSQL driver 42.7.13 and
 HikariCP 7.0.2 — because the request path is mostly framework and a scan of application code alone
@@ -297,7 +297,7 @@ prices a twentieth of it.
 
 | Fact | Where verified |
 |---|---|
-| **691 of 56 471 methods exceed `FreqInlineSize` — 1.22 %** — and 53 of those are class initialisers, which run once and are never candidates for inlining into a request | `experiments/method-sizes/results/`, threshold read from the JVM at report time |
+| **691 of 56 405 methods exceed `FreqInlineSize` — 1.23 %** — and 53 of those are class initialisers, which run once and are never candidates for inlining into a request | `experiments/method-sizes/results/`, threshold read from the JVM at report time |
 | **Three methods on the whole classpath exceed 8000 bytes, and all three are cold**: two Unicode tables in the driver's shaded `stringprep` (SCRAM authentication, once per connection) and Netty's SPDY class initialiser | the same log's shortlist |
 | The densest artifact is the serialisation glue: `ktor-serialization-kotlinx-jvm` has **4 of 36** methods over the threshold — 11.1 % — and content negotiation 4 of 75. By count the leaders are coroutines 104, the driver 101, `ktor-server-core` 71, Exposed 79 across its two artifacts | the per-artifact table |
 | **52 `invokeSuspend` bodies exceed the threshold**, and four of them are on the request path by construction: `DefaultEnginePipelineKt$defaultEnginePipeline$1` 1080 b, `DefaultTransformKt$installDefaultTransformations$2` 1044 b, `ResponseConverterKt$convertResponseBody$1$2` 939 b, and Netty's `RequestBodyHandler$job$1` 1122 b | the shortlist, filtered to `invokeSuspend` |
@@ -846,19 +846,19 @@ understate every pattern by however much it is reused.
 
 | pattern | total | where it concentrates |
 |---|---|---|
-| null-check intrinsic | 18 042 | stdlib 9272, exposed-core 3308, ktor-server-core 1332 |
-| `$default` synthetic | 1 366 | exposed-core 299, coroutines 197, ktor-server-core 186 |
-| eager collection op | 1 834 | stdlib 795, exposed-core 406, ktor-server-core 165, ktor-http 165 |
-| value class boxed | 1 178 | stdlib 1061 — 90 % of all of them |
+| null-check intrinsic | 17 950 | stdlib 9180, exposed-core 3308, ktor-server-core 1332 |
+| `$default` synthetic | 1 363 | exposed-core 299, coroutines 197, ktor-server-core 186 |
+| eager collection op | 1 832 | stdlib 793, exposed-core 406, ktor-server-core 165, ktor-http 165 |
+| value class boxed | 1 175 | stdlib 1058 — 90 % of all of them |
 | capturing lambda classes | 289 | coroutines 103, ktor-server-core 93 |
 | `Sequence` op | 238 | stdlib 184 |
 | delegated `getValue`/`setValue` | 168 | exposed-core 58, ktor-http 26, ktor-server-core 17 |
 
 **Roughly two fifths of the request path cannot have any of these patterns at all.** Netty, the
-PostgreSQL driver and HikariCP are **2567 of 6705 classes** and score zero in every column, because
+PostgreSQL driver and HikariCP are **2567 of 6700 classes** and score zero in every column, because
 they are Java. RQ5's subject is smaller than the path it lives on before a single measurement.
 
-**The most common pattern is the one measured to be free.** 18 042 null-check intrinsics is an order
+**The most common pattern is the one measured to be free.** 17 950 null-check intrinsics is an order
 of magnitude more than everything else combined, and the controls of §1.14 put `checkedParam` at
 1.670 ns against `uncheckedParam` at 1.863 — indistinguishable, with the checked arm nominally
 faster.
@@ -875,6 +875,7 @@ question RQ2 and RQ3 leave open.
 | Pattern prices, 3 forks × 5×2 s on bench-a, JDK 25.0.4 | `microbench/results-rq5.md`, `microbench/src/jmh/kotlin/micro/Codegen.kt` |
 | Pattern counts over the pinned stack | `experiments/codegen-census/results/2026-09-19-230019-ktor-3.5.2-exposed-1.4.0.log` |
 | The counter agrees with `javap` on an independent artifact | exposed-core: 299 `$default` against javap's 300, 56 `$delegate` fields against 56 |
+| The scanned stack is the one the stand runs | `experiments/stack.sh` refuses to scan unless every pin matches `bench/profile/results/dist-manifest.txt`, taken from the stand's own `installDist` |
 
 ### 1.19 RQ2's number was taken through the wrong dispatch table
 
@@ -1004,7 +1005,7 @@ required new measurements to settle. They are listed in the order given.
 | 2 | **RQ4's green depends on the denominator**, the 1.5× line was set for stub mode, and the study's own saturation number is 1.61× — the other side of the line | **Right.** The ratio is 1.27–1.29× at fixed rate and 1.61× at saturation; the brief's line falls between. RQ4 restated as **amber**, with the red condition's untested second clause named as what actually decides it (§1.11) |
 | 3 | **No evidence the lever engaged** — `FreqInlineSize=2000` does not mean those methods were inlined, and "1.3 % inside a 2.8–4.3 % ruler" is an effect bounded below ~4 %, not zero | **Right to demand it, and the check passes.** Under `-XX:+PrintInlining`, `hot method too big` falls **155 → 3** — but `InlineSmallCode` refusals rise **324 → 453**, so a second gate does absorb part of it, exactly as suspected. The null is real; the wording was not (§1.17) |
 | 4 | **RQ2's 580 is a classpath count, `resumeWith` runs only on real resumption, and itable ≠ vtable** | **Right on all three.** Measured through the dispatch table `invokeSuspend` actually uses: **4.006 ns against 0.693, 5.8×**, not 6.715/8.9×. And the resumption argument closes RQ2 by arithmetic — ~3900 calls needed against single-digit resumptions per request (§1.19) |
-| 5 | **B-52 is a known SuperWord heuristic**, JDK-8345044, not a stand fault — a reduction-only loop is refused vectorisation, which is why multiplying makes it faster | **Accepted as the explanation and recorded**, with the caveat that it is their citation and has not been independently confirmed here. `perfasm` on a KVM guest will likely need `-prof perfasm:events=cpu-clock` for want of a PMU. [B-52](../backlog/B-52-multiply-makes-the-loop-faster.md) |
+| 5 | **B-52 is a known SuperWord heuristic**, JDK-8345044, not a stand fault — a reduction-only loop is refused vectorisation, which is why multiplying makes it faster | **Verified, and more exactly than expected.** JDK-8345044 is "Sum of array elements not vectorized", closed as a duplicate of JDK-8340093 "C2 SuperWord: implement cost model", which is **Fixed in JDK 26**, resolved 2025-11-10 — one release after the 25.0.4 this stand runs. The upstream reproducer is the same construct, and its numbers are the same shape: 552 → 142 ns/op there, 406.7 → 77.3 here. The stand reproduced a known bug it did not know about ([B-52](../backlog/B-52-multiply-makes-the-loop-faster.md)) |
 | 6 | **Over-generalisation** — the `Dispatchers.IO` result is one box and non-monotonic, and "no mechanism costs anything" is only true as "not shown to reach 2–4 %" | **Right.** Both restated: the dispatcher finding now carries its non-monotonicity (245/166/210/235 µs) and its scope, and the summary sentence in §2 was replaced outright |
 | 7 | **Stale and self-contradicting text** — §2 and §6 predate the JMH set, §2.1 lists a claim §2.2 retracts, 3.51 cores is attributed to a section that lacks it, 11 398 rps belongs to no configuration | **Right, and one item is worse than stale.** "3.51 of 4 cores" appears in **no results file at all**; the highest recorded is 3.87, from a five-second warm-up probe. The sentence has been withdrawn, not re-cited. The 11 398 figure exists but its arm was never recorded, so it is now marked as not comparable with §1.12 |
 | 8 | **D1 argues with a different quantity than RQ0 defines**, and the gate should be computed rather than asserted | **Right.** RQ0 is CPU per request against p50 latency; D1 answers with CPU shares by owner. The division is one line over data already taken and is now [B-53](../backlog/B-53-compute-the-rq0-gate.md) rather than an assertion. Their own admission that the gate is rate-dependent — under 1 % at saturation — is recorded with it |
@@ -1099,7 +1100,7 @@ wherever a verdict needs both an inlining reason and a time.
 
 `-XX:FreqInlineSize` is the dial. `-XX:-DontCompileHugeMethods` is a bound with no subject: not one
 method on the whole request path comes within a factor of four of 8000 bytes, and the three that
-exceed it across 56 471 are cold (§1.8). Splitting a suspend function by hand stays, and §1.8 says
+exceed it across 56 405 are cold (§1.8). Splitting a suspend function by hand stays, and §1.8 says
 which one to split first — the four `invokeSuspend` bodies that run on every request belong to Ktor
 and the Netty engine, not to the application.
 

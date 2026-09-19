@@ -13,7 +13,7 @@ CACHE=${GRADLE_CACHE:-$HOME/.gradle/caches/modules-2/files-2.1}
 CENTRAL=${MAVEN_CENTRAL:-https://repo1.maven.org/maven2}
 
 KTOR=${KTOR_VERSION:-3.5.2}
-KOTLIN=${KOTLIN_VERSION:-2.4.20}
+KOTLIN=${KOTLIN_VERSION:-2.4.10}
 KOTLINX_SER=${KOTLINX_SER_VERSION:-1.11.0}
 KOTLINX_COR=${KOTLINX_COR_VERSION:-1.11.0}
 EXPOSED=${EXPOSED_VERSION:-1.4.0}
@@ -66,7 +66,34 @@ resolve() { # group:artifact:version -> path on stdout
   echo "$f"
 }
 
+# The pins above are a hand-written list beside a set that moves, which is the failure this guard
+# exists for: the scans read kotlin-stdlib 2.4.20 for a stand that ships 2.4.10, and stdlib owns the
+# largest column in the codegen census. A version that is merely written down names nothing.
+#
+# The manifest is produced FROM the stand's own installDist and committed, so the check has a
+# subject that travels with the repository rather than one that only exists on the bench host.
+MANIFEST=${MANIFEST:-$(dirname "${BASH_SOURCE[0]}")/../bench/profile/results/dist-manifest.txt}
+verify_against_dist() {
+  [ -r "$MANIFEST" ] || { echo "stack.sh: no dist manifest at $MANIFEST - cannot verify pins" >&2; return 0; }
+  local bad=0 c g rest a v
+  for c in $COORDS; do
+    g=${c%%:*}; rest=${c#*:}; a=${rest%%:*}; v=${rest#*:}
+    # Only artifacts the stand actually ships are checkable; the scan deliberately reads a few that
+    # it does not (and those are listed, not silently skipped).
+    if grep -q "^$a-" "$MANIFEST"; then
+      grep -q "^$a-$v\.jar$" "$MANIFEST" || {
+        echo "stack.sh: PIN MISMATCH $a pinned $v, stand ships $(grep "^$a-" "$MANIFEST" | head -1)" >&2
+        bad=1
+      }
+    else
+      echo "stack.sh: note - $a is scanned but not shipped by the stand" >&2
+    fi
+  done
+  [ "$bad" = 0 ] || { echo "stack.sh: refusing to scan a stack the stand does not run" >&2; return 1; }
+}
+
 resolve_all() { # fills JARS and MISSING from COORDS
+  verify_against_dist || exit 1
   mkdir -p lib
   JARS=(); MISSING=()
   for c in $COORDS; do

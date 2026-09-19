@@ -51,3 +51,29 @@ benchmark classes ([research-jit-constructs](../research/research-jit-constructs
 - AC: the JDK-8345044 citation verified against the ticket and the JDK 25 source, or withdrawn.
 - AC: if it is codegen, a minimal reproducer that does not depend on JMH.
 - Anchors: `microbench/src/jmh/kotlin/micro/Controls.kt`, `microbench/results-candidates.md`.
+
+## The citation is verified — 2026-09-19
+
+Both tickets were read rather than taken on trust, and they say what the review said they say.
+
+| | |
+|---|---|
+| **JDK-8345044** | "Sum of array elements not vectorized". Affects JDK 24. **Closed as a duplicate** of JDK-8340093, fix version TBD. The report's own reproducer is this one: adding a multiplication — it uses `11 * in1I[i]` — makes the loop vectorise, producing `vpmulld`/`vpaddd` where the plain sum emitted scalar `addl`. Their measurement is ~552 ns/op scalar against ~142 vectorised |
+| **JDK-8340093** | "C2 SuperWord: implement cost model". **Resolved/Fixed, fix version JDK 26**, resolved 2025-11-10, integrated in b24 |
+
+So the anomaly is a documented HotSpot behaviour on the JDK this stand runs, not a stand fault, and
+this measurement independently reproduces an upstream reproducer it did not know about: same
+construct, same direction, 406.7 → 77.3 ns/op here against their 552 → 142. **The stand is
+vindicated rather than indicted** — D8's rule fired correctly and the answer came back "the ordering
+is real and known".
+
+The JDK 25.0.4 this phase measures on predates the cost model by one release, so the heuristic is
+expected to be present. That is the whole explanation.
+
+**What is still not shown** is that *this particular arm* is scalar for *that* reason rather than
+sharing a shape with it by coincidence. The cheap form of that check needs no hsdis: run both arms
+under `-XX:-UseSuperWord`. If the multiply arm's advantage is vectorisation, denying SuperWord
+should collapse the pair to the same speed.
+
+- AC (revised): both arms measured with and without `-XX:-UseSuperWord`, and a sentence saying
+  whether the advantage survives. `perfasm` becomes optional confirmation rather than the only route.
