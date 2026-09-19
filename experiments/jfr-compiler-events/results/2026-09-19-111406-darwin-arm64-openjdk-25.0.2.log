@@ -1,0 +1,50 @@
+JFR compiler events against -XX:+PrintCompilation
+  openjdk version "25.0.2" 2026-01-20
+  OpenJDK Runtime Environment (build 25.0.2+10-69)
+  OpenJDK 64-Bit Server VM (build 25.0.2+10-69, mixed mode, sharing)
+  host: Darwin 27.0.0 arm64
+
+profile.jfc, as shipped:
+      <event name="jdk.Compilation">
+        <setting name="enabled" control="compiler-enabled">true</setting>
+        <setting name="threshold" control="compiler-compilation-threshold">100 ms</setting>
+      </event>
+      <event name="jdk.CompilationFailure">
+        <setting name="enabled" control="compiler-enabled-failure">true</setting>
+      </event>
+      <event name="jdk.CompilerInlining">
+        <setting name="enabled" control="compiler-enabled-failure">false</setting>
+      </event>
+      <event name="jdk.Deoptimization">
+        <setting name="enabled">true</setting>
+        <setting name="stackTrace">true</setting>
+      </event>
+
+== shipped
+   recording: settings=profile
+   PrintCompilation:     1258 compile tasks (+      121 native wrappers)
+   JFR  jdk.Deoptimization                          2            45
+   JFR  jdk.Compilation                             0             0
+   JFR  jdk.CompilationFailure                      0             0
+   JFR  jdk.CompilerInlining                        0             0
+
+== forced
+   recording: settings=profile,jdk.Compilation#threshold=0ms,+jdk.CompilerInlining#enabled=true
+   PrintCompilation:     1347 compile tasks (+      123 native wrappers)
+   JFR  jdk.CompilerInlining                      210         18144
+   JFR  jdk.Compilation                            57          1431
+   JFR  jdk.Deoptimization                          6           137
+   JFR  jdk.CompilationFailure                      0             0
+   JFR compileId range: 1264..1386; PrintCompilation tasks in that range:      117
+   JFR event time span: 11:14:08.005 11:14:08.029
+
+== bare
+   recording: settings=none,+jdk.Compilation#enabled=true,+jdk.Compilation#threshold=0ms,+jdk.CompilerInlining#enabled=true,+jdk.Deoptimization#enabled=true
+   PrintCompilation:     1028 compile tasks (+      113 native wrappers)
+   JFR  jdk.CompilerInlining                      131         11135
+   JFR  jdk.Compilation                            28           675
+   JFR  jdk.Deoptimization                          2            44
+   JFR  jdk.CompilationFailure                      0             0
+   JFR compileId range: 984..1041; PrintCompilation tasks in that range:       57
+   JFR event time span: 11:14:09.338 11:14:09.369
+

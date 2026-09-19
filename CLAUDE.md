@@ -17,7 +17,7 @@ DSL `crac { ignoreRemotePort(...) }`, Jib-режим `jibCracCheckpoint`/`jibCra
 восстановлением вместо точки входа, образец `samples/ktor-jib -Pcrac` в CI; открыта B-35 (CPUFeatures).
 Четвёртая фаза (`docs/research/research-engines.md`, B-36…B-38) закрыта 11.09.2026: тот же стенд
 `bench/` на трёх движках Ktor — CIO, Netty, Jetty, движок выбирается `-Dbench.engine`; журналы
-прогонов — `bench/profile/results/engine-*`. См. `backlog.md`.
+прогонов — `bench/profile/results/engine-*`. **Пятая фаза (`docs/research/research-jit-constructs.md`, B-41…B-50) открыта 19.09.2026:** что C2 делает с горячим путём Ktor + Exposed. Её документы — **по-английски**, остальные — по-русски (`docs/README.md`, раздел «Соглашения»). Ресёрч пока без единого своего замера на стенде: он сводит знаменатели, уже измеренные второй и четвёртой фазами, и отмечает три посылки брифа, которые не пережили встречу с JDK 25. См. `backlog.md`.
 
 ## Как начать сессию
 
