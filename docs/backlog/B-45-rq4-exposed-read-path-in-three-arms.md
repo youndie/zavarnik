@@ -1,34 +1,35 @@
 ---
 id: B-45
-title: "RQ4: what Exposed's read path costs, in three arms rather than two"
-status: open
+title: "RQ4 answered green; what is left is the microbenchmark arm the service cannot stage"
+status: done
 priority: P1
 size: M
 stage: stage-8-jit-constructs
-blocked_by: [B-41, B-44]
 ---
 
-# B-45 — Separating the array from the map from the column type
+# B-45 — Exposed costs 1.3× hand-written JDBC, against a line drawn at 1.5×
 
-The brief suspects `ResultRow` "as `Array<Any?>`" and proposes one toggle: a typed row holder
-against Exposed. Read in the artefact, a column read goes
-`get → getInternal → getRaw → getExpressionIndex → data[i] → rawToColumnValue`, and
-`getExpressionIndex` is a hash lookup keyed by an `Expression<?>`, per column, per row
-([research-jit-constructs](../research/research-jit-constructs.md) §1.4). A two-arm comparison
-prices the array, the map and the cache object together and hands the total to the array.
+> **Done 2026-09-19.** Three arms on the pair, two endpoints, three interleaved rounds at a fixed
+> rate: `exposed / jdbc` is **1.27×** on a single row and **1.29×** on fifty, so RQ4 is **green** by
+> the brief's own threshold. Spreads 2–7 %, against the 30 % the same stand showed on single
+> windows the day before. Numbers and decomposition:
+> [research-jit-constructs](../research/research-jit-constructs.md) §1.11.
 
-- **Three arms**: Exposed as shipped; an array without the per-column map lookup; a typed row
-  holder. Plus hand-written JDBC for the same query as the brief's outer bound.
-- **`IColumnType` is the other suspect and is separate.** One abstract method after erasure,
-  `Object valueFromDB(Object)`, on an interface with many implementations — how many receivers a
-  request sees is a runtime measurement, not a count of classes in the jar.
-- **The brief's distinction is the verdict's shape**: Exposed doing work is library cost and is
-  recorded and left alone; only the part traceable to failed inlining, megamorphic dispatch or
-  failed scalar replacement is a finding of this study.
-- Does **not** cover: the DAO layer or R2DBC.
+What the decomposition says, and it is the useful half:
 
-- AC: four numbers per query shape with spreads beside them, in stub mode, plus the share of the
-  gap that the inlining log attributes to each of the three named causes.
-- AC: the receiver count observed at the `valueFromDB` site on the list endpoint, from the
-  compilation log — a number, not an adjective.
-- Anchors: `bench/src/main/kotlin/bench/`, `bench/profile/ab.sh`.
+- **the transaction wrapper is ~64 µs per request and flat** — as much as everything Exposed adds
+  on a single-row read, and not a JIT question at all;
+- **Exposed's fixed part is ~70 µs**, its mapping **0.76 µs per row**, about **0.151 µs per column**;
+- so the per-column `HashMap` lookup and `valueFromDB` dispatch that §1.4 suspected are real and
+  amount to 5 % of a fifty-row request. The mechanism was right and the size makes it a footnote.
+
+What is left, and it is deliberately not carried by this item:
+
+- **The typed-row-holder arm needs JMH.** It cannot be staged at service level, because Exposed
+  exposes no index-based row access. The per-row term bounds what it could show: 0.76 µs a row is
+  the whole of what a perfect holder could win, so the arm is worth running only if something else
+  brings JMH into the phase.
+- **The 1.3× carries the stand's caveats**: one pool size, one rate, one machine pair whose governor
+  cannot be fixed, and a real-mode ceiling that is still unexplained ([B-51](B-51-real-mode-ceiling-and-its-ruler.md)).
+
+- Anchors: `bench/src/main/kotlin/bench/Data.kt`, `bench/profile/results/pair-rq4-arms.md`.

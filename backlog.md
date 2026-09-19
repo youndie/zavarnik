@@ -37,14 +37,13 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (13)
+## Open (12)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
 | [B-41](docs/backlog/B-41-jit-stand-data-layer-and-endpoints.md) `[ ]` | The stand grows a database: Exposed over Postgres in two modes, and the brief's four endpoints | P1 | M | - |
 | [B-42](docs/backlog/B-42-warmup-gate-on-printcompilation.md) `[ ]` | A warm-up gate on an instrument that reports: jdk.Compilation switched on, inlining evidence taken elsewhere | P1 | S | - |
 | [B-44](docs/backlog/B-44-calibration-controls-and-the-known-order-pair.md) `[ ]` | Five calibration controls plus a pair whose order the code already decides | P1 | M | B-41, B-42 |
-| [B-45](docs/backlog/B-45-rq4-exposed-read-path-in-three-arms.md) `[ ]` | RQ4: what Exposed's read path costs, in three arms rather than two | P1 | M | B-41, B-44 |
 | [B-51](docs/backlog/B-51-real-mode-ceiling-and-its-ruler.md) `[ ]` | Explain the real-mode ceiling, or make the stand able to ask the question | P1 | M | B-41 |
 | [B-43](docs/backlog/B-43-static-scan-across-owners.md) `[ ]` | Re-run the scan and the join once the stand has a database | P2 | XS | B-41 |
 | [B-46](docs/backlog/B-46-rq6-encoder-receiver-census.md) `[ ]` | RQ6: price the step from one encoder to three, which one line of application code buys | P2 | S | B-44 |
@@ -55,7 +54,7 @@
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
-## Closed (38)
+## Closed (39)
 
 **Стенд**
 
@@ -115,6 +114,10 @@
 - [B-37](docs/backlog/B-37-three-engines-under-one-protocol.md) `[x]` - CIO против Netty и Jetty: профиль, пропускная способность и цена запроса под одним протоколом
 - [B-38](docs/backlog/B-38-io-parallelism-lever.md) `[x]` - Рычаг kotlinx.coroutines.io.parallelism: если очередь стоит трети CPU, что её снимает
 - [B-39](docs/backlog/B-39-verify-before-filing.md) `[x]` - Перед issue в Ktor: подтвердить механизм без Ktor и перепроверить прибор, которым меряли CPU
+
+**Пятая фаза**
+
+- [B-45](docs/backlog/B-45-rq4-exposed-read-path-in-three-arms.md) `[x]` - RQ4 answered green; what is left is the microbenchmark arm the service cannot stage
 
 <!-- END INDEX -->
 

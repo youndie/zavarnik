@@ -400,6 +400,56 @@ not end where the protocol declared it ended.
 control arm — the same query through hand-written JDBC — which is [B-45](../backlog/B-45-rq4-exposed-read-path-in-three-arms.md).
 The ceiling has an item of its own now: [B-51](../backlog/B-51-real-mode-ceiling-and-its-ruler.md).
 
+### 1.11 RQ4 answered: Exposed costs 1.3× hand-written JDBC, and the brief's line is 1.5×
+
+Three arms behind one binary, sharing the pool, the dispatcher and the row shape, so that the only
+difference between them is the layer: hand-written JDBC with autocommit; the same SQL inside an
+explicit `BEGIN`/`COMMIT`; and the shipped Exposed path. All three return identical responses. Two
+endpoints, three rounds, arms rotating within each round, the first window after warm-up discarded,
+20-second measured windows at a fixed 2000 rps.
+
+| Endpoint | jdbc | jdbc-tx | exposed | exposed / jdbc |
+|---|---|---|---|---|
+| `/db/items/{id}`, 1 row | 510 µs | 575 µs | 646 µs | **1.27×** |
+| `/db/items?limit=50` | 595 µs | 658 µs | 768 µs | **1.29×** |
+
+Spreads across the three rounds: 2–7 %. That is the protocol paying for itself — the same stand
+measured a **30 %** spread the day before, on single windows at a floating rate (§1.10).
+
+**The verdict. RQ4 is green**, by the brief's own threshold: green is "CPU per request within 1.5×
+of hand-written JDBC for the same query", and the measured ratio is 1.27–1.29×. The red condition —
+above 1.5×, with a third of the gap traceable to failed inlining, megamorphic dispatch or failed
+scalar replacement — is not reached, so its second half never comes up.
+
+**The decomposition is worth more than the verdict**, because it says where the 30 % sits:
+
+| Layer | Cost | Shape |
+|---|---|---|
+| the transaction wrapper | **~64 µs per request** | flat — 65 µs on one row, 63 µs on fifty |
+| Exposed's fixed part | **~70 µs per request** | query building, transaction manager, statement setup |
+| Exposed's mapping | **0.76 µs per row** over hand-written, ≈ **0.151 µs per column** | grows with rows: +71 µs at one row, +110 µs at fifty |
+
+**Consequence — §1.4's suspicion was right in mechanism and small in size.** The per-column
+`HashMap` lookup in `getExpressionIndex` plus the `valueFromDB` dispatch are real and they are what
+the per-row term measures, but they cost about 0.15 µs a column. On a fifty-row page with five
+columns that is 38 µs against a 768 µs request — 5 %. A study that had found the mechanism and
+stopped would have reported a defect; the number turns it into a footnote.
+
+**Consequence — the biggest single line is not Exposed at all.** Wrapping the same SQL in an
+explicit transaction costs 64 µs, as much as everything Exposed adds on a single-row read. That is
+not a JIT question and not an Exposed question; by the brief's own distinction it is library cost
+and is recorded and left alone.
+
+**What this does not answer.** The brief also asks for a typed row holder against `Array<Any?>` in
+a microbenchmark. That arm cannot be staged honestly at service level — Exposed exposes no
+index-based row access — and it needs JMH, which this phase does not have yet. The per-row term
+above bounds what it could ever show: 0.76 µs a row is the whole of what a perfect holder could win.
+
+**A caution about reading these beside §1.10.** Those numbers were taken at a different pool size
+and a floating rate; the same `exposed` arm reads 995 µs there and 646 µs here. Absolute
+microseconds do not survive between sweeps on this stand, ratios do, and the ratios here were all
+taken inside one sweep against each other.
+
 ---
 
 ## 2. Decisions
@@ -559,6 +609,7 @@ stand, deciding nothing about the construct list.
 | stand | `bench/profile/jit-pair.sh` — §1.10, the two-host protocol with a shared rate per endpoint |
 | stand | `bench/src/main/kotlin/bench/Data.kt` — §1.10, the two data modes |
 | measurement | `bench/profile/results/pair-stand-notes.md` — §1.10, the stand's ruler and every probe behind it |
+| measurement | `bench/profile/results/pair-rq4-arms.md` — §1.11, the three arms with every round |
 | profile | `bench/profile/results/netty-jit/` — §1.9, the run the join reads |
 | JDK configuration | `openjdk-25.0.2!/lib/jfr/profile.jfc`, `openjdk-25.0.2!/lib/jfr/default.jfc` — §1.3 |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/ResultRow.class` |

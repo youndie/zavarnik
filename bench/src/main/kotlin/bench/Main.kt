@@ -73,16 +73,24 @@ fun main() {
 private fun openRepository(): ItemRepository =
     when (val mode = System.getProperty("bench.data") ?: "stub") {
         "stub" -> StubItemRepository()
-        "real" ->
-            ExposedItemRepository(
+        "real" -> {
+            val pool =
                 connectPostgres(
                     url = System.getProperty("bench.db.url") ?: "jdbc:postgresql://127.0.0.1:5432/bench",
                     user = System.getProperty("bench.db.user") ?: "bench",
                     password = System.getProperty("bench.db.password") ?: "bench",
                     poolSize = System.getProperty("bench.db.pool")?.toInt() ?: 16,
                     seed = System.getProperty("bench.db.seed")?.toInt() ?: 200,
-                ),
-            )
+                )
+            // RQ4's arms. They share the pool, the dispatcher and the row shape, so what differs
+            // between them is the layer and nothing else.
+            when (val arm = System.getProperty("bench.repo") ?: "exposed") {
+                "exposed" -> ExposedItemRepository(pool.database)
+                "jdbc" -> JdbcItemRepository(pool.dataSource)
+                "jdbc-tx" -> JdbcTxItemRepository(pool.dataSource)
+                else -> error("unknown bench.repo: $arm (exposed, jdbc, jdbc-tx)")
+            }
+        }
         else -> error("unknown bench.data: $mode (stub, real)")
     }
 
