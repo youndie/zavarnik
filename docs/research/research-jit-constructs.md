@@ -364,6 +364,25 @@ untouched — the whole point of [B-41](../backlog/B-41-jit-stand-data-layer-and
 89 % is the honest miss rate; the 92.3 % over the whole shortlist is the one that would have
 flattered this section.
 
+**Re-run with a database behind the stand, which is what §1.9 was waiting for.** The first join
+used a stub-mode profile, so 192 of the 638 suspects — Exposed, HikariCP and the driver — could not
+appear at all, and the 89 % miss rate was honest about that. Joined against four real-mode profiles
+instead:
+
+| | stub-mode profile | database-backed profiles |
+|---|---|---|
+| oversized methods seen at all | 49 | **73** |
+| never seen | 89 % | **88.6 %** |
+| share of self samples they own together | 3.86 % | **3.48 %** |
+| the largest single one | 0.56 % | **0.60 %** — `QueryExecutorImpl.processResults`, 2304 bytes |
+
+**The 192 stopped being unknown and changed nothing.** They do run: `PgResultSet.getObject` at
+0.20 % self, `BlockingExecutableKt.executeIn` at 0.11 %, `QueryExecutorImpl.sendBind` at 0.13 %. But
+the miss rate moved by half a point and the total share went *down*. Adding a data layer changes
+which oversized methods run and not the conclusion drawn from them, which is the comparison
+[B-43](../backlog/B-43-static-scan-across-owners.md) asked for rather than a replacement of one
+number by another. Log: `experiments/method-sizes/results/2026-09-20-join-with-database.log`.
+
 ### 1.10 The stand with a database, on a dedicated pair — and what its ruler turned out to be
 
 B-41 built the data layer; this measures on it. Subject and generator are separate machines
@@ -953,7 +972,12 @@ have settled. It is the same quantity Open question 3 found at 61 % in a one-cor
 rps, measured at the other end of the range, and it is larger than every construct in the brief's
 list put together.
 
-**What this section does not claim.** The allocation census ran uncapped at 4709/3186/2992 rps while
+**What this section does not claim.** Two things. The allocation census warmed for **40 s**, and the
+warm-up measurement that came later ([B-42](../backlog/B-42-warmup-gate-on-printcompilation.md)) put
+the quiet point at 90 s of load — so these numbers are taken slightly early, while some compilation
+is still going. The bias runs one way, towards *more* allocation and CPU than steady state, and every
+answer here lands an order of magnitude below its threshold, so it does not move a verdict; it would
+if any of them were near the line. And the census ran uncapped at 4709/3186/2992 rps while
 the CPU-per-request denominators come from the pair runs at 2131/1818/1635. Allocation per request is
 robust across that gap in a way CPU per request is not (§1.10: 210 µs at 5k rps, 53 at saturation),
 so the byte counts are solid and the percentages of CPU are approximate — which is enough when the
@@ -1109,6 +1133,11 @@ overstate it by nearly threefold.
 §1.11, 1.61× at saturation in §1.12 — so "green" as the brief words it is not a stable answer, but
 "red" is now excluded outright. The gap is work, which is the brief's own category for a library
 cost rather than a finding.
+
+**The same warm-up caveat applies**: this run warmed for 45 s against the 90 s
+[B-42](../backlog/B-42-warmup-gate-on-printcompilation.md) later measured, so both arms carry a
+little unfinished compilation. They carry it equally — same binary, same rate, same warm-up — and the
+measurement is a difference, which is the case where a shared bias cancels.
 
 | Fact | Where verified |
 |---|---|

@@ -17,8 +17,9 @@
 # what it measures, so it may say which refusals happen and must not say what they cost.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+. "$(dirname "$0")/warmup.env"
 GEN=${GEN:?set GEN}; TARGET=${TARGET:?set TARGET}
-PORT=18100; CONNS=${CONNS:-64}; RATE=${RATE:-2000}; WARM=${WARM:-45}; MEASURE=${MEASURE:-60}
+PORT=18100; CONNS=${CONNS:-64}; RATE=${RATE:-2000}; WARM=${WARM:-$BENCH_WARMUP}; MEASURE=${MEASURE:-60}
 ASPROF=${ASPROF:-$HOME/tools/async-profiler-4.5-linux-x64/bin/asprof}
 OUT=${OUT:-$HOME/bench-results}/rq4-clause; mkdir -p "$OUT"
 export JAVA_HOME=${JAVA_HOME:-$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")}

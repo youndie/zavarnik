@@ -18,8 +18,9 @@
 # and warm for 40 s (five seconds gave a profile that was 71 % JVM - C2 still compiling).
 set -uo pipefail
 cd "$(dirname "$0")/.."
+. "$(dirname "$0")/warmup.env"
 GEN=${GEN:?set GEN}; TARGET=${TARGET:?set TARGET}
-PORT=18100; CONNS=${CONNS:-64}; WARM=${WARM:-40}; MEASURE=${MEASURE:-60}
+PORT=18100; CONNS=${CONNS:-64}; WARM=${WARM:-$BENCH_WARMUP}; MEASURE=${MEASURE:-60}
 ASPROF=${ASPROF:-$HOME/tools/async-profiler-4.5-linux-x64/bin/asprof}
 OUT=${OUT:-$HOME/bench-results}/alloc-census; mkdir -p "$OUT"
 export JAVA_HOME=${JAVA_HOME:-$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")}

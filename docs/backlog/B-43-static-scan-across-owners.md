@@ -1,7 +1,7 @@
 ---
 id: B-43
 title: "Re-run the scan and the join once the stand has a database"
-status: open
+status: done
 priority: P2
 size: XS
 stage: stage-8-jit-constructs
@@ -36,3 +36,24 @@ something for them to run in.
   output, so that the 192 stop being unknown.
 - Anchors: `experiments/method-sizes/intersect.py`, `experiments/method-sizes/scan.py`,
   `bench/profile/results/netty-jit/`.
+
+## Result — 2026-09-20: the 192 run, and the conclusion does not move
+
+Joined against four real-mode profiles (`pair-real-db{item,list,post}` and `rq4-clause/exposed`)
+instead of the stub-mode one:
+
+| | stub | with a database |
+|---|---|---|
+| of 638 oversized methods, seen at all | 49 | **73** |
+| never seen | 89 % | **88.6 %** |
+| self samples they own together | 3.86 % | **3.48 %** |
+| largest single | 0.56 % | **0.60 %** (`QueryExecutorImpl.processResults`, 2304 b) |
+
+Both acceptance criteria are met. The Exposed and driver rows gained shares rather than being struck
+out — `PgResultSet.getObject` 0.20 %, `QueryExecutorImpl.sendBind` 0.13 %, `BlockingExecutableKt.executeIn`
+0.11 % — and the miss rate is reported beside the old one rather than replacing it. The one artifact
+that still cannot appear is named in the output (`netty-resolver`), so the denominator is honest.
+
+**What it changes: nothing, and that is the result.** A data layer adds 24 methods to the list of
+oversized code that actually runs and lowers their combined share. Written into
+[research-jit-constructs](../research/research-jit-constructs.md) §1.9.

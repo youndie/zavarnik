@@ -1,0 +1,31 @@
+# The size shortlist joined against a database-backed profile — 2026-09-20
+# scan: 2026-09-19-235030-ktor-3.5.2-exposed-1.4.0.json
+# profiles: pair-real-db{item,list,post} + rq4-clause/exposed, all real mode
+
+samples: 347882; methods over 325 bytes: 638; of those seen in the profile: 73
+never seen: 565 of the whole shortlist (88.6 %), 564 of the 637 in artifacts that appear at all (88.5 %)
+artifacts absent from this profile, so their methods could not run: netty-resolver-4.2.16.Final.jar
+
+   bytes   self%  stack%  method
+    2304   0.60%  12.60%  org/postgresql/core/v3/QueryExecutorImpl.processResults  [postgresql-42.7.13.jar]
+     980   0.25%   0.95%  io/ktor/server/routing/RoutingResolveContext.handleRoute  [ktor-server-core-jvm-3.5.2.jar]
+    1628   0.20%   1.03%  org/postgresql/jdbc/PgResultSet.getObject  [postgresql-42.7.13.jar]
+     330   0.14%   1.53%  io/netty/channel/AbstractChannelHandlerContext.write  [netty-transport-4.2.16.Final.jar]
+     407   0.13%   3.67%  kotlinx/serialization/json/internal/StreamingJsonEncoder.encodeSerializableValue  [kotlinx-serialization-json-jvm-1.11.0.jar]
+     878   0.13%   0.19%  io/ktor/util/StringValuesImpl.<init>  [ktor-utils-jvm-3.5.2.jar]
+     824   0.13%   0.17%  org/postgresql/core/v3/QueryExecutorImpl.sendBind  [postgresql-42.7.13.jar]
+     619   0.12%   0.81%  org/postgresql/jdbc/PgResultSet.internalGetObject  [postgresql-42.7.13.jar]
+     413   0.12%   0.22%  kotlinx/coroutines/JobSupport.attachChild  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+     370   0.11%  21.80%  org/postgresql/core/v3/QueryExecutorImpl.execute  [postgresql-42.7.13.jar]
+     450   0.11%  21.80%  org/postgresql/core/v3/QueryExecutorImpl.execute  [postgresql-42.7.13.jar]
+     932   0.11%  18.79%  org/jetbrains/exposed/v1/jdbc/statements/BlockingExecutableKt.executeIn  [exposed-jdbc-1.4.0.jar]
+     327   0.10%   7.88%  org/jetbrains/exposed/v1/jdbc/JdbcTransaction.commit$lambda$0  [exposed-jdbc-1.4.0.jar]
+     356   0.10%  10.12%  io/netty/channel/nio/NioIoHandler.select  [netty-transport-4.2.16.Final.jar]
+     492   0.08%   6.09%  io/ktor/server/plugins/contentnegotiation/ResponseConverterKt$convertResponseBody$1.invokeSuspend  [ktor-server-content-negotiation-jvm-3.5.2.jar]
+     717   0.08%   2.26%  org/jetbrains/exposed/v1/core/AbstractQuery.prepareSQL$lambda$1  [exposed-core-1.4.0.jar]
+     939   0.07%   5.79%  io/ktor/server/plugins/contentnegotiation/ResponseConverterKt$convertResponseBody$1$2.invokeSuspend  [ktor-server-content-negotiation-jvm-3.5.2.jar]
+     400   0.07%  52.33%  kotlinx/coroutines/DispatchedTask.run  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+     933   0.06%   1.04%  io/netty/handler/codec/http/HttpObjectDecoder.decode  [netty-codec-http-4.2.16.Final.jar]
+     441   0.05%   0.40%  org/postgresql/core/v3/QueryExecutorImpl.sendOneQuery  [postgresql-42.7.13.jar]
+
+oversized methods own 3.48 % of self samples in total

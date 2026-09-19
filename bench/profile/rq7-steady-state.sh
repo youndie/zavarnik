@@ -15,8 +15,9 @@
 # for the same reason: a default that silently drops events looks exactly like a stable steady state.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+. "$(dirname "$0")/warmup.env"
 GEN=${GEN:?set GEN}; TARGET=${TARGET:?set TARGET}
-PORT=18100; CONNS=${CONNS:-64}; WARM=${WARM:-90}; MEASURE=${MEASURE:-180}
+PORT=18100; CONNS=${CONNS:-64}; WARM=${WARM:-$BENCH_WARMUP}; MEASURE=${MEASURE:-180}
 OUT=${OUT:-$HOME/bench-results}/rq7; mkdir -p "$OUT"
 export JAVA_HOME=${JAVA_HOME:-$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")}
 JFR="$JAVA_HOME/bin/jfr"
