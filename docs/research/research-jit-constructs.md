@@ -112,7 +112,8 @@ them.
 
 | Fact | Where verified |
 |---|---|
-| `JobCancellationException` declares `public Throwable fillInStackTrace()`; `TimeoutCancellationException` declares no such override | `javap -p` on `org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0!/kotlinx/coroutines/{JobCancellationException,TimeoutCancellationException}.class` |
+| `JobCancellationException` declares `public Throwable fillInStackTrace()` | `javap -p` on `org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0!/kotlinx/coroutines/JobCancellationException.class` |
+| `TimeoutCancellationException` declares no such override — its only additions are `coroutine` and `createCopy` | `javap -p` on `org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0!/kotlinx/coroutines/TimeoutCancellationException.class` |
 
 ### 1.3 JFR reports no compilation on the settings it ships with, and a census on any other
 
