@@ -49,15 +49,19 @@ import java.util.concurrent.atomic.AtomicLong
  */
 fun main() {
     val port = System.getProperty("bench.port")?.toInt() ?: 18100
+    // On a rented box with a public address, 0.0.0.0 puts a stand with a database on the internet
+    // for the length of a run. The default keeps the single-host behaviour of the earlier phases;
+    // the two-host protocol passes the private address of the subject.
+    val host = System.getProperty("bench.host") ?: "0.0.0.0"
     val store = ItemStore()
     val pricing = Pricing()
     val repo = openRepository()
     // The engine is the only thing that differs between the variants of the engine phase
     // (docs/research/research-engines.md): same jars, same process, same routes, one -D.
     when (val engine = System.getProperty("bench.engine") ?: "cio") {
-        "cio" -> embeddedServer(CIO, port = port) { bench(store, pricing, repo) }.start(wait = true)
-        "netty" -> embeddedServer(Netty, port = port) { bench(store, pricing, repo) }.start(wait = true)
-        "jetty" -> embeddedServer(Jetty, port = port) { bench(store, pricing, repo) }.start(wait = true)
+        "cio" -> embeddedServer(CIO, port = port, host = host) { bench(store, pricing, repo) }.start(wait = true)
+        "netty" -> embeddedServer(Netty, port = port, host = host) { bench(store, pricing, repo) }.start(wait = true)
+        "jetty" -> embeddedServer(Jetty, port = port, host = host) { bench(store, pricing, repo) }.start(wait = true)
         else -> error("unknown bench.engine: $engine (cio, netty, jetty)")
     }
 }

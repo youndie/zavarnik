@@ -6,10 +6,19 @@
 #   START overrides how the service is launched (default: the installDist start script), which
 #   is how the R8-processed jar is measured with the same harness. CATEGORIES is passed on to
 #   attribute.py as --categories, and SELF_FRAMES is how many leaf frames the summary lists.
+#
+# TWO HOSTS.  GEN=<ssh host> TARGET=<address the generator dials> moves the load generator to
+# another machine, which is the only arrangement that measures a ceiling honestly. A generator on
+# the subject's own box takes CPU from it, the offered rate quietly drops, and the subject survives
+# load it was never given - measured elsewhere in this portfolio as the same binaries under the same
+# limit surviving on a shared box and dying 5 times out of 6 on a dedicated pair. With GEN set the
+# JVM is not pinned by default: it has the machine to itself.
 set -u
 cd "$(dirname "$0")/.."
 WARMUP=${WARMUP:-60}; MEASURE=${MEASURE:-120}; CONNS=${CONNS:-64}; LABEL=${LABEL:-baseline}
 PORT=18100; OHA=${OHA:-$HOME/tools/oha}; ASPROF=${ASPROF:-$HOME/tools/async-profiler-4.5-linux-x64/bin/asprof}
+# Empty GEN keeps the single-host behaviour of the first four phases byte for byte.
+GEN=${GEN:-}; TARGET=${TARGET:-127.0.0.1}; GEN_OHA=${GEN_OHA:-\$HOME/tools/oha}
 JAVA=${JAVA_HOME:?set JAVA_HOME}/bin/java
 # Outside the source tree on purpose: a one-way replica (mutagen) deletes files the run writes
 # into the synced directory, mid-run. Copy the label's directory into bench/profile/results/
@@ -25,7 +34,10 @@ grep -m1 "model name" /proc/cpuinfo | sed 's/^/# /' | tee -a "$OUT/summary.md"
 # mask. Measured 10.09.2026: after `taskset -pc 0-7 $PID`, 49 of the 50 threads still read
 # `Cpus_allowed_list: 0-19`, and the process burned 12.6 cores while nominally capped at 8. Pinned
 # on the exec the JVM also sizes its pools to the 8 processors it can see (30 threads, not 50).
-JVM_CPUS=${JVM_CPUS:-0-7}; LOAD_CPUS=${LOAD_CPUS:-8-15}
+# With the generator on another machine there is nothing to pin away from, and pinning to half the
+# cores would only shrink the subject.
+if [ -n "$GEN" ]; then JVM_CPUS=${JVM_CPUS:-none}; else JVM_CPUS=${JVM_CPUS:-0-7}; fi
+LOAD_CPUS=${LOAD_CPUS:-8-15}
 PIN=; [ "$JVM_CPUS" = none ] || PIN="taskset -c $JVM_CPUS"
 JAVA_OPTS="${JAVA_OPTS:-} -Xms1g -Xmx1g -XX:+UseG1GC" $PIN $START > "$OUT/service.log" 2>&1 & PID=$!
 trap 'kill -TERM $PID 2>/dev/null; wait $PID 2>/dev/null' EXIT
@@ -45,6 +57,16 @@ cpu_ticks() { sed 's/.*) //' "/proc/$PID/stat" | awk '{print $12+$13}'; }
 ctx_switches() { awk '/ctxt_switches/ {n+=$2} END {print n+0}' /proc/$PID/task/*/status 2>/dev/null; }
 threads() { ls /proc/$PID/task 2>/dev/null | wc -l; }
 
+# The generator, wherever it lives. Both arms write the same JSON to stdout, so nothing downstream
+# has to know which one ran.
+gen() {
+  if [ -n "$GEN" ]; then
+    ssh -o BatchMode=yes -o StrictHostKeyChecking=no "$GEN" "$GEN_OHA" "$@"
+  else
+    taskset -c "$LOAD_CPUS" "$OHA" "$@"
+  fi
+}
+
 run_endpoint() { # $1 name, rest = oha args
   local name=$1; shift
   echo; echo "## $name" | tee -a "$OUT/summary.md"
@@ -53,7 +75,7 @@ run_endpoint() { # $1 name, rest = oha args
   # 44.9k without), so rps and latency come from here and the profiles from the two windows after.
   local t0 x0 t1 x1
   t0=$(cpu_ticks); x0=$(ctx_switches)
-  taskset -c "$LOAD_CPUS" "$OHA" -z "${MEASURE}s" -c "$CONNS" --no-tui --output-format json "$@" > "$OUT/$name.oha0.json" 2>&1
+  gen -z "${MEASURE}s" -c "$CONNS" --no-tui --output-format json "$@" > "$OUT/$name.oha0.json" 2>&1
   t1=$(cpu_ticks); x1=$(ctx_switches)
   python3 - "$OUT/$name.oha0.json" <<'PY' | sed 's/^/clean: /' | tee -a "$OUT/summary.md"
 import json,sys; d=json.load(open(sys.argv[1])); s=d["summary"]; p=d["latencyPercentiles"]
@@ -69,7 +91,7 @@ print(f"cost: cpu={cpu:.1f}s over {secs:.1f}s = {cpu/secs:.2f} cores busy, {cpu/
 PY
   "$ASPROF" -d "$MEASURE" -e cpu -i 1ms -o collapsed -f "$OUT/$name.cpu.collapsed" $PID > /dev/null 2>&1 &
   local pc=$!
-  taskset -c "$LOAD_CPUS" "$OHA" -z "${MEASURE}s" -c "$CONNS" --no-tui --output-format json "$@" > "$OUT/$name.oha.json" 2>&1
+  gen -z "${MEASURE}s" -c "$CONNS" --no-tui --output-format json "$@" > "$OUT/$name.oha.json" 2>&1
   wait $pc
   python3 - "$OUT/$name.oha.json" <<'PY' | tee -a "$OUT/summary.md"
 import json,sys; d=json.load(open(sys.argv[1])); s=d["summary"]; p=d["latencyPercentiles"]
@@ -79,7 +101,7 @@ PY
   if [[ " ${PROFILES:-cpu alloc} " == *" alloc "* ]]; then
     "$ASPROF" -d "$MEASURE" -e alloc --total -o collapsed -f "$OUT/$name.alloc.collapsed" $PID > /dev/null 2>&1 &
     pc=$!
-    taskset -c "$LOAD_CPUS" "$OHA" -z "${MEASURE}s" -c "$CONNS" --no-tui --output-format json "$@" > "$OUT/$name.oha2.json" 2>&1
+    gen -z "${MEASURE}s" -c "$CONNS" --no-tui --output-format json "$@" > "$OUT/$name.oha2.json" 2>&1
     wait $pc
     python3 profile/attribute.py ${CATEGORIES:+--categories "$CATEGORIES"} "$OUT/$name.cpu.collapsed" "$OUT/$name.alloc.collapsed" | tee -a "$OUT/summary.md"
   else
@@ -93,13 +115,13 @@ PY
 ENDPOINTS=${ENDPOINTS:-"echo items business"}
 for ep in $ENDPOINTS; do
   case $ep in
-    echo) run_endpoint echo "http://127.0.0.1:$PORT/echo?msg=hello-from-oha" ;;
-    items) run_endpoint items "http://127.0.0.1:$PORT/items?limit=20" ;;
-    business) run_endpoint business -m POST -T application/json -D profile/order.json "http://127.0.0.1:$PORT/business" ;;
-    plaintext) run_endpoint plaintext "http://127.0.0.1:$PORT/plaintext" ;;
-    dbitem) run_endpoint dbitem "http://127.0.0.1:$PORT/db/items/42" ;;
-    dblist) run_endpoint dblist "http://127.0.0.1:$PORT/db/items?limit=50" ;;
-    dbpost) run_endpoint dbpost -m POST -T application/json -D profile/new-item.json "http://127.0.0.1:$PORT/db/items" ;;
+    echo) run_endpoint echo "http://$TARGET:$PORT/echo?msg=hello-from-oha" ;;
+    items) run_endpoint items "http://$TARGET:$PORT/items?limit=20" ;;
+    business) run_endpoint business -m POST -T application/json -D profile/order.json "http://$TARGET:$PORT/business" ;;
+    plaintext) run_endpoint plaintext "http://$TARGET:$PORT/plaintext" ;;
+    dbitem) run_endpoint dbitem "http://$TARGET:$PORT/db/items/42" ;;
+    dblist) run_endpoint dblist "http://$TARGET:$PORT/db/items?limit=50" ;;
+    dbpost) run_endpoint dbpost -m POST -T application/json -D profile/new-item.json "http://$TARGET:$PORT/db/items" ;;
   esac
 done
 echo; echo "## GC and JIT from the service log" | tee -a "$OUT/summary.md"
