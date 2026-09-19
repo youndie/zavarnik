@@ -242,8 +242,8 @@ anywhere near the endpoint it slows down.
 
 | Fact | Where verified |
 |---|---|
-| `BaseContinuationImpl.resumeWith` is `public final` and calls `protected abstract invokeSuspend(Object)` — one call site whose receivers are every `invokeSuspend` in the process | `javap -p` on `org.jetbrains.kotlin:kotlin-stdlib:2.4.20!/kotlin/coroutines/jvm/internal/BaseContinuationImpl.class` |
-| `startCoroutineUninterceptedOrReturn` appears in the Kotlin metadata of `IntrinsicsKt__IntrinsicsJvmKt` but has **no JVM member** there: it is inline-only and compiled into its caller. `createCoroutineUnintercepted` and `intercepted` are ordinary static methods | `javap` and a binary search of `org.jetbrains.kotlin:kotlin-stdlib:2.4.20!/kotlin/coroutines/intrinsics/IntrinsicsKt__IntrinsicsJvmKt.class` |
+| `BaseContinuationImpl.resumeWith` is `public final` and calls `protected abstract invokeSuspend(Object)` — one call site whose receivers are every `invokeSuspend` in the process | `javap -p` on `org.jetbrains.kotlin:kotlin-stdlib:2.4.10!/kotlin/coroutines/jvm/internal/BaseContinuationImpl.class` |
+| `startCoroutineUninterceptedOrReturn` is **`@InlineOnly`**: `IntrinsicsKt__IntrinsicsJvmKt` carries three `private static final` overloads of it, so nothing outside the file can call one and every caller gets it inlined. `createCoroutineUnintercepted` and `intercepted` are ordinary public static methods. *(This row used to say the class has **no JVM member** for it. It has three; they are private, and a `javap` run without `-p` does not show them — the conclusion was right and the evidence under it was not.)* | `javap -p` on `org.jetbrains.kotlin:kotlin-stdlib:2.4.10!/kotlin/coroutines/intrinsics/IntrinsicsKt__IntrinsicsJvmKt.class` |
 | `CoroutineSingletons` is an enum with `COROUTINE_SUSPENDED`, `UNDECIDED`, `RESUMED` | the same jar |
 | **The pinned classpath carries 580 `invokeSuspend` implementations** before a line of application code — coroutines 263, `ktor-server-core` 134, `ktor-io` 68, `ktor-utils` 27, stdlib 21, the Netty engine 18, `ktor-http` 15, `exposed-jdbc` 12 | `experiments/method-sizes/results/`, the scan of §1.8 |
 
@@ -1217,7 +1217,7 @@ is exactly why they would have been lost had the study only filled in its own fo
 | **C2's own threads cost 4.9–6.1 % of request CPU on a saturated four-core stand** — four to five times the collector, on a box running flat out where compilation should have settled. The same quantity Open question 3 found at 61 % in a one-core container | 5 % against GC's 1.2 % | §1.20 |
 | **A request on this stack allocates 23–75 KB**, of which a quarter is coroutine machinery on the two small endpoints — and all garbage collection costs 1.2 % of CPU, so the size of the number and the size of its price are unrelated | 23 434 / 74 953 / 30 741 B | §1.20 |
 
-### 2.2 Thirteen claims that were offered and withdrawn
+### 2.2 Fourteen claims that were offered and withdrawn
 
 Kept, all of them, because most looked convincing when they were written and none was visible in its
 own numbers. Two patterns run through the list: a share measured inside one run survives while a
@@ -1238,6 +1238,7 @@ else.
 | **"RQ2 costs 6.715 ns against 0.755, 8.9×"** | Measured through an interface (itable). `resumeWith` → `invokeSuspend` is a virtual call on a class (vtable), which prices at 4.006 against 0.693, 5.8× (§1.19) |
 | **"RQ4 is green: 1.27–1.29× against a 1.5× line"** | The ratio is rate-dependent and the two measurements straddle the line — 1.61× at saturation. The line was also specified for stub mode, and the deciding clause of the red condition was never tested (§1.11) |
 | **"Stub mode reached 3.51 of 4 cores"** | The figure is in no results file, §1.10 does not contain it, and the fixed-rate pairs run the other way: stub takes fewer cores than real at the same rate (§1.13) |
+| **"`startCoroutineUninterceptedOrReturn` has no JVM member"** | It has three, `private static final`, which is what `@InlineOnly` compiles to. The original `javap` ran without `-p` and public-only output was read as absence (§1.6) |
 | "One `encodeToJsonElement` takes a site from one receiver to three" | Loading three classes is not putting three receivers on a site. Sustained mixing gives **two**, which the profile width covers (§1.16) |
 
 One more belongs here without being a claim: the boxing arm of RQ3 summed 7 and 11, and 18 is inside
@@ -1472,7 +1473,7 @@ stand, deciding nothing about the construct list.
 | JDK configuration | `openjdk-25.0.2!/lib/jfr/profile.jfc`, `openjdk-25.0.2!/lib/jfr/default.jfc` — §1.3 |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/ResultRow.class` |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/IColumnType.class` |
-| artefact | `org.jetbrains.kotlin:kotlin-stdlib:2.4.20!/kotlin/coroutines/jvm/internal/BaseContinuationImpl.class` |
+| artefact | `org.jetbrains.kotlin:kotlin-stdlib:2.4.10!/kotlin/coroutines/jvm/internal/BaseContinuationImpl.class` |
 | artefact | `org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0!/kotlinx/coroutines/JobCancellationException.class` |
 | artefact | `org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.11.0!/kotlinx/serialization/json/internal/StreamingJsonEncoder.class` |
 
