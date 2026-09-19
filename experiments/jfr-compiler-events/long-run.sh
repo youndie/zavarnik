@@ -85,6 +85,22 @@ arm() {
 arm shipped "settings=profile"
 arm bare    "settings=none,$EV"
 
+# The claim that jdk.CompilerInlining always truncates after a few dozen compilations needs more
+# than the one run above, and a number quoted from a run that was not kept is a number nobody can
+# check. Repeats of the bare arm only: the shipped arm's zero does not need repeating to be
+# believed, and each repeat costs seven seconds.
+REPEATS=${REPEATS:-3}
+echo "== jdk.CompilerInlining across $REPEATS repeats of the bare arm" >> "$OUT"
+for i in $(seq 1 "$REPEATS"); do
+  "$JAVA" -XX:StartFlightRecording="filename=$WORK/rep$i.jfr,settings=none,$EV" -cp "$WORK" Many > /dev/null 2>&1
+  "$JFR" print --events jdk.CompilerInlining "$WORK/rep$i.jfr" | awk '/compileId/{print $3}' | sort -n > "$WORK/rep$i.ci"
+  "$JFR" print --events jdk.Compilation "$WORK/rep$i.jfr" | awk '/compileId/{print $3}' | sort -n > "$WORK/rep$i.c"
+  printf '   repeat %d: jdk.CompilerInlining %s events over ids %s-%s; jdk.Compilation %s events over ids %s-%s\n' \
+    "$i" "$(wc -l < "$WORK/rep$i.ci" | tr -d ' ')" "$(head -1 "$WORK/rep$i.ci")" "$(tail -1 "$WORK/rep$i.ci")" \
+    "$(wc -l < "$WORK/rep$i.c" | tr -d ' ')" "$(head -1 "$WORK/rep$i.c")" "$(tail -1 "$WORK/rep$i.c")" >> "$OUT"
+done
+echo >> "$OUT"
+
 # The price of watching. Interleaved, three repeats, medians read by a person: an absolute second on
 # this machine says nothing, the ratio between arms of one sweep says what an instrument costs.
 echo "== cost, wall seconds, three interleaved repeats" >> "$OUT"

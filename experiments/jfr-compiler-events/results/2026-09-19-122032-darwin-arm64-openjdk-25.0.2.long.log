@@ -1,0 +1,31 @@
+JFR compiler events on a workload that keeps compiling (3000 methods x 60000 iterations)
+  openjdk version "25.0.2" 2026-01-20
+  OpenJDK Runtime Environment (build 25.0.2+10-69)
+  OpenJDK 64-Bit Server VM (build 25.0.2+10-69, mixed mode, sharing)
+  host: Darwin 27.0.0 arm64
+
+== shipped
+   recording: settings=profile
+   PrintCompilation: 7268 non-native compile tasks, last at 4517 ms
+   JFR  jdk.Deoptimization                          5           110
+   JFR  jdk.Compilation                             0             0
+   JFR  jdk.CompilerInlining                        0             0
+
+== bare
+   recording: settings=none,+jdk.Compilation#enabled=true,+jdk.Compilation#threshold=0ms,+jdk.CompilerInlining#enabled=true,+jdk.Deoptimization#enabled=true
+   PrintCompilation: 7009 non-native compile tasks, last at 4563 ms
+   JFR  jdk.Compilation                          6022        148224
+   JFR  jdk.CompilerInlining                       80          6980
+   JFR  jdk.Deoptimization                          1            22
+   jdk.Compilation ids 973..7025: 6022 events against 6052 tasks in that range; 886 tasks compiled before the recording was live
+   jdk.CompilerInlining ids: 973-1023
+
+== jdk.CompilerInlining across 3 repeats of the bare arm
+   repeat 1: jdk.CompilerInlining 87 events over ids 1035-1087; jdk.Compilation 6024 events over ids 1035-7090
+   repeat 2: jdk.CompilerInlining 82 events over ids 989-1084; jdk.Compilation 6023 events over ids 989-7086
+   repeat 3: jdk.CompilerInlining 90 events over ids 1032-1076; jdk.Compilation 6024 events over ids 1032-7078
+
+== cost, wall seconds, three interleaved repeats
+   repeat 1: none 4.17   jfr(jdk.Compilation) 4.39   -XX:+PrintCompilation 4.25
+   repeat 2: none 4.18   jfr(jdk.Compilation) 4.40   -XX:+PrintCompilation 4.29
+   repeat 3: none 4.19   jfr(jdk.Compilation) 4.40   -XX:+PrintCompilation 4.30

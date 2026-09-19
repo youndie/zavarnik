@@ -34,15 +34,18 @@ is the count.
 
 The answer is in [research-jit-constructs](../../docs/research/research-jit-constructs.md) §1.3:
 
-- on the settings it ships with, JFR reports **zero** compilations whatever the JVM is doing — 7262
-  compile tasks in 7.3 seconds, 0 `jdk.Compilation` events — so a gate phrased as "no compilations
-  for 60 seconds" cannot fail;
-- switched on explicitly, `jdk.Compilation` is a **census**: 6025 events against 6058 compile tasks
+- on the settings it ships with, JFR reports **zero** compilations whatever the JVM is doing — 7268
+  and 7300 compile tasks across two sweeps, 0 `jdk.Compilation` events — so a gate phrased as "no
+  compilations for 60 seconds" cannot fail;
+- switched on explicitly, `jdk.Compilation` is a **census**: 99.5 % and 99.9 % of the compile tasks
   in its id range, missing only what compiled before the recording was live;
-- `jdk.CompilerInlining` is the one that truncates — a few dozen compilations at the start of the
-  recording, reproducibly, every run;
-- watching is not free, and the ranking is the opposite of the brief's assumption: JFR +4.8 %,
-  `-XX:+PrintCompilation` +1.6 % on this workload.
+- `jdk.CompilerInlining` is the one that truncates — the first 8 to 96 compile ids of a recording
+  and nothing after, in eight recordings out of eight;
+- watching is not free, and the ranking is the opposite of the brief's assumption: JFR +5.3 % and
+  +5.7 %, `-XX:+PrintCompilation` +2.6 % and +1.9 %, across the two sweeps.
+
+Absolute seconds moved between the sweeps — the same script ran the workload in 6.7 s once and
+4.2 s later — while the ordering held. Compare ratios across sweeps, not seconds.
 
 `run.sh` alone said JFR "is not a census". That was the subject, not the instrument: its one-method
 loop stops compiling before the recording is live. The short arms are kept because the comparison

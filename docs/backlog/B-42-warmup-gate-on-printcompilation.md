@@ -12,22 +12,23 @@ stage: stage-8-jit-constructs
 The brief starts measurement "after JFR shows no C2 compilations for 60 seconds" and calls JFR the
 instrument that needs no diagnostic flags. Measured
 ([research-jit-constructs](../research/research-jit-constructs.md) §1.3), a `settings=profile`
-recording of a run with **7262** compile tasks over 7.3 seconds holds **zero** `jdk.Compilation`
+recording of a run with **7268** compile tasks holds **zero** `jdk.Compilation`
 events: the shipped threshold is 100 ms and `jdk.CompilerInlining` ships disabled. The gate as
 written cannot fail.
 
-Switched on explicitly, the same event is a census — 6025 events against 6058 compile tasks in its
-id range — so the gate is buildable. What is not buildable on JFR is the inlining evidence.
+Switched on explicitly, the same event is a census — 6022 against 6052 compile tasks in its id
+range in one sweep, 6015 against 6024 in another — so the gate is buildable. What is not buildable
+on JFR is the inlining evidence.
 
 - **The gate is `jdk.Compilation` with `+jdk.Compilation#enabled=true` and `#threshold=0ms`**, and
-  the runs it gates carry the same setting, since it is the same census either way and costs +4.8 %
-  on a microbenchmark that does nothing but compile.
+  the runs it gates carry the same setting, since it is the same census either way and costs +5.3 % and +5.7 % across two sweeps
+  on a microbenchmark that does nothing but compile — less, on a service that waits for I/O.
 - **The duration is per data mode and per engine**, not one number: real mode compiles driver and
   pool code that stub mode never loads.
 - **Inlining refusals come from `-XX:+PrintInlining` / `LogCompilation`, in their own runs**, because
-  `jdk.CompilerInlining` stops after a few dozen compilations. That splits a verdict needing both a
-  reason and a time across two runs, and the item's job is to make that split cheap rather than to
-  wish it away.
+  `jdk.CompilerInlining` covers the first 8 to 96 compile ids of a recording and then stops, in
+  eight recordings out of eight. That splits a verdict needing both a reason and a time across two
+  runs, and the item's job is to make that split cheap rather than to wish it away.
 - **The first version of this item had it backwards**, and the reason is kept in §1.3: the control
   was a one-method loop that stopped compiling before the recording was live, so a truncated subject
   read as a truncated instrument.

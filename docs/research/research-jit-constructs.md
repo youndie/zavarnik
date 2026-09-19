@@ -27,11 +27,22 @@ that the third phase's protocol had never pinned anything. Between them they alr
 of the denominators this brief's thresholds are divided by. §1.1 collects them, because a study
 that re-derives them will spend its budget arriving where the repository already is.
 
-Three of the brief's premises did not survive contact with the JDK it pins: the toggle RQ1 asks
-for does not exist on a product VM (§1.2), the instrument RQ7's steady-state gate is defined
-against reports nothing on the settings it ships with (§1.3), and the relevance threshold the
-whole method rests on is below the resolution of the macro instrument on this host (§1.7). Each is
-marked *deviation from the brief* where it appears.
+Three of the brief's premises did not survive contact with the JDK it pins. The toggle RQ1 asks for
+does not exist on a product VM (§1.2). The instrument its steady-state gate is defined against
+reports no compilation at all on the settings it ships with, so that gate cannot fail (§1.3). And
+the relevance threshold the whole method rests on — 2 % of request CPU — is below the resolution of
+the macro instrument on this host (§1.7). Each is marked *deviation from the brief* where it
+appears.
+
+Four of its questions also changed shape before any stand ran, which is the more useful result.
+RQ1's suspicion is right and aimed at the wrong code: the oversized suspend bodies on every request
+belong to Ktor and the Netty engine, not to the application, and nothing on the path is within a
+factor of four of the huge-method limit (§1.8). RQ2 does not need to ask whether a megamorphic site
+exists — one does by construction, 580 receivers on one call site with a type profile two wide
+(§1.6). RQ5, scoped as the brief scopes it, is green by arithmetic before it is measured, because
+application code is 0.9–4.0 % of a real service's CPU (§1.1). And RQ6 has two answers separated by
+a single line of application code (§1.5). None of this required a measurement the brief planned;
+all of it changes what the measurements should be.
 
 Runs of 2026-09-19 are on the mac (Darwin aarch64, OpenJDK 25.0.2+10-69) and are committed under
 `experiments/jfr-compiler-events/` — `run.sh` on a short workload, `long-run.sh` on one that keeps
@@ -127,13 +138,14 @@ methods made hot one after another, which keeps the compiler busy for the whole 
 | Fact | Where verified |
 |---|---|
 | `profile.jfc` ships `jdk.Compilation` with **`threshold` 100 ms** and `jdk.CompilerInlining` with **`enabled` false**; `default.jfc` disables the inlining event too | `openjdk-25.0.2!/lib/jfr/profile.jfc` and `openjdk-25.0.2!/lib/jfr/default.jfc`, quoted at the head of each result log |
-| **On the settings it ships with, JFR reports no compilation at all.** `settings=profile`, short workload: 1258 and 1275 compile tasks by `-XX:+PrintCompilation` against **0** `jdk.Compilation`. Long workload: **7262** tasks over 7.3 seconds, still **0** — and 0 `jdk.CompilerInlining`, 0 `jdk.CompilationFailure` | `experiments/jfr-compiler-events/results/`, arms `shipped` and `long-shipped` |
+| **On the settings it ships with, JFR reports no compilation at all.** `settings=profile`, short workload: 1258 and 1275 compile tasks by `-XX:+PrintCompilation` against **0** `jdk.Compilation`. Long workload, two sweeps: **7268 and 7300** tasks over about 4.5 seconds, still **0** — and 0 `jdk.CompilerInlining`, 0 `jdk.CompilationFailure` | `experiments/jfr-compiler-events/results/`, the `shipped` arm of both scripts |
 | `jdk.Deoptimization` is the one compiler event that does report on stock settings: 1–5 events per run, in every arm | the same logs |
-| **Once `jdk.Compilation` is enabled explicitly, it is a census.** Long workload, `settings=none` with the event on and its threshold at 0: **6025 events against 6058 compile tasks in the same id range — 99.5 %** | `results/*.long.log`, arm `bare` |
-| What it misses is startup, not compilation: **893 tasks compiled before the recording was live**, all of them below the first id JFR reports | the same log |
-| **`jdk.CompilerInlining` is the event that truncates.** In the same run it reported 103 events over compile ids 980–1035 and then stopped, while `jdk.Compilation` went on to 7038. Reproduced: 65 events over ids 1049–1072, 97 over 1036–1081, 123 and 83 in further runs — always a few dozen compilations at the start of the recording, never more | `results/*.long.log` and repeats |
+| **Once `jdk.Compilation` is enabled explicitly, it is a census.** Long workload, `settings=none` with the event on and its threshold at 0: **6022 events against 6052 compile tasks** in the same id range in one sweep and **6015 against 6024** in the other — 99.5 % and 99.9 % | `results/*.long.log`, arm `bare` |
+| What it misses is startup, not compilation: **886 and 933 tasks compiled before the recording was live**, all of them below the first id JFR reports | the same logs |
+| **`jdk.CompilerInlining` is the event that truncates.** Eight recordings: it covers the **first 8 to 96 compile ids** of the recording and then stops, while `jdk.Compilation` in the very same recording runs on past 7000. Its event *count* is not the quantity to quote — 19, 33, 42, 80, 82, 87, 90, 342 — because one compilation makes many inlining decisions; the id span is what repeats | `results/*.long.log`, the `bare` arm plus three repeats, in each of two sweeps |
 | The content is right where it arrives: `jdk.CompilerInlining` carries `succeeded` and the same refusal vocabulary as `-XX:+PrintInlining` — "callee is too large", "callee uses too much stack", "too big", "no static binding" — alongside the successes | `jfr print --events jdk.CompilerInlining` |
-| **Watching costs something, and JFR costs more than the flag the brief calls diagnostic.** Three interleaved repeats on the long workload: no instrument 6.73 s, `jdk.Compilation` via JFR 7.05 s (**+4.8 %**), `-XX:+PrintCompilation` 6.84 s (**+1.6 %**). Within-variant spread under 0.15 %, so both differences are real on this workload | `results/*.long.log`, section `cost` |
+| **Watching costs something, and JFR costs more than the flag the brief calls diagnostic.** Medians of three interleaved repeats, two sweeps: no instrument 4.18 and 4.23 s; `jdk.Compilation` via JFR 4.40 and 4.47 s (**+5.3 %**, **+5.7 %**); `-XX:+PrintCompilation` 4.29 and 4.31 s (**+2.6 %**, **+1.9 %**). Within-variant spread is at most 1.4 %, so the ordering is not noise | `results/*.long.log`, section `cost` |
+| **Between sweeps the absolute seconds moved and the ordering did not.** An earlier sweep of the same script on this machine ran the workload in about 6.7 s rather than 4.2. Only the ratios are compared across sweeps, and this row exists so that a reader adding a later number to this table knows that | the two committed `*.long.log` files |
 
 **Correction found while controlling this section.** It first read that JFR's compiler view "is not
 a census", on the strength of the short workload: some 60 events of 1340 compile tasks, inside a
@@ -152,11 +164,14 @@ as a pass. And "without diagnostic flags" does not survive either: the event nee
 setting on the command line exactly as `-XX:+PrintCompilation` does, and costs three times more on
 a compile-heavy workload. D3.
 
-**Consequence — inlining evidence cannot come from JFR.** `jdk.CompilerInlining` stops after a few
-dozen compilations, every time, at the start of the recording. Every inlining refusal this study
-quotes has to come from `-XX:+PrintInlining` or `LogCompilation`, which is the invasive instrument
-the brief's own Threats section says changes timing — so the inlining runs and the timing runs are
-different runs, and that is a cost of the method rather than an oversight in it.
+**Consequence — inlining evidence cannot come from JFR, and the positive control sizes each event
+separately.** `jdk.Compilation` switched on is a census and can carry a gate. `jdk.CompilerInlining`
+switched on covers the first few dozen compile ids of the recording and nothing after, in eight
+recordings out of eight. The two sit in the same recording and only one of them can be believed, so
+every inlining refusal this study quotes has to come from `-XX:+PrintInlining` or `LogCompilation` —
+the invasive instrument the brief's own Threats section says changes timing. The inlining runs and
+the timing runs are therefore different runs, which is a cost of the method rather than an oversight
+in it.
 
 **Precedent, one phase earlier.** The second phase's first inlining measurement returned zero
 mentions of application code in 4744 inlining decisions, and the zero was the instrument: without
@@ -338,8 +353,8 @@ Decision, in two halves, because the two events behave differently (§1.3):
 
 * **The gate uses `jdk.Compilation`, switched on explicitly** — `+jdk.Compilation#enabled=true` and
   `#threshold=0ms` — and the runs it gates carry that setting too, since at 99.5 % coverage it is a
-  census and at +4.8 % on a compile-heavy microbenchmark it is affordable on a service that spends
-  most of its time in I/O. On the settings the brief assumes, the same gate cannot fail.
+  census, and at +5.3 % and +5.7 % across two sweeps of a microbenchmark that does nothing but
+  compile it is affordable on a service that spends most of its time waiting for I/O. On the settings the brief assumes, the same gate cannot fail.
 * **Inlining refusals come from `-XX:+PrintInlining` or `LogCompilation`, in their own runs.**
   `jdk.CompilerInlining` stops after a few dozen compilations, reproducibly. The brief is right that
   those flags change timing, so no timing number is taken from a run that carries them.
