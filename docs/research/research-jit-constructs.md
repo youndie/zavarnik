@@ -258,6 +258,43 @@ criterion 3 would end the study over a 5 % spread. The first route survives, bec
 owner are proportions inside one process and were stable across dirty runs where absolute CPU
 differed by 13–17 %. D2.
 
+### 1.8 The size shortlist, for the whole request path rather than for application code
+
+Phase 1 of the brief. The second phase scanned 283 application methods; this scans the 56 471
+methods with a body across the 25 artifacts of the pinned stack — Ktor 3.5.2 on Netty,
+kotlinx.serialization and coroutines 1.11.0, Exposed 1.4.0 over the PostgreSQL driver 42.7.13 and
+HikariCP 7.0.2 — because the request path is mostly framework and a scan of application code alone
+prices a twentieth of it.
+
+| Fact | Where verified |
+|---|---|
+| **691 of 56 471 methods exceed `FreqInlineSize` — 1.22 %** — and 53 of those are class initialisers, which run once and are never candidates for inlining into a request | `experiments/method-sizes/results/`, threshold read from the JVM at report time |
+| **Three methods on the whole classpath exceed 8000 bytes, and all three are cold**: two Unicode tables in the driver's shaded `stringprep` (SCRAM authentication, once per connection) and Netty's SPDY class initialiser | the same log's shortlist |
+| The densest artifact is the serialisation glue: `ktor-serialization-kotlinx-jvm` has **4 of 36** methods over the threshold — 11.1 % — and content negotiation 4 of 75. By count the leaders are coroutines 104, the driver 101, `ktor-server-core` 71, Exposed 79 across its two artifacts | the per-artifact table |
+| **52 `invokeSuspend` bodies exceed the threshold**, and four of them are on the request path by construction: `DefaultEnginePipelineKt$defaultEnginePipeline$1` 1080 b, `DefaultTransformKt$installDefaultTransformations$2` 1044 b, `ResponseConverterKt$convertResponseBody$1$2` 939 b, and Netty's `RequestBodyHandler$job$1` 1122 b | the shortlist, filtered to `invokeSuspend` |
+| Exposed's `TransactionsKt.inTopLevelSuspendTransaction` is **1549 bytes** | the same |
+| Coroutines' largest bodies are `BufferedChannel.toString`, `toStringDebug` and `checkSegmentStructureInvariants` — debug and invariant code, cold in a service | the same |
+
+**Consequence — the brief's RQ1 suspicion is right and pointed at the wrong code.** It expects
+`invokeSuspend` bodies "inflated by inline calls such as `transaction {}`", and names application
+code. `transaction {}` does produce one: 1549 bytes in Exposed. But the four suspend bodies that run
+on *every* request belong to Ktor and to the Netty engine, and the largest application method the
+second phase found was 816 bytes. Under D5 the shortlist is the framework's, and the study's first
+RQ1 arm is `DefaultTransformKt$installDefaultTransformations$2` — which is also the method the
+second phase already caught building a `KClassImpl.toString` on every `call.receive<T>()`
+([research-optimizer](research-optimizer.md) §1.4). Two phases, two instruments, one method.
+
+**Consequence — RQ1's huge-method half is green, and now for a reason.** Nothing on the request
+path is within a factor of four of 8000 bytes; the three that exceed it authenticate connections
+and speak SPDY. That is a verdict reached by looking rather than by assuming, and it retires half
+of RQ1 before the stand exists.
+
+**What this scan cannot say.** Size is static. A method over the threshold is a suspect, not a
+cost: only the profile says whether anything calls it, and only the inlining log says whether C2
+was ever asked to inline it and refused. `BufferedChannel.toStringDebug` is 941 bytes and will
+never appear in a request. The shortlist exists to be intersected with the profile, which is
+[B-43](../backlog/B-43-static-scan-across-owners.md)'s second half and B-48's input.
+
 ---
 
 ## 2. Decisions
@@ -307,10 +344,11 @@ wherever a verdict needs both an inlining reason and a time.
 
 ### D4. RQ1 keeps one dial and one bound
 
-`-XX:FreqInlineSize` is the dial. `-XX:-DontCompileHugeMethods` is a bound and has no subject on
-this stand, because the largest application method measured is 1827 bytes (§1.1). Splitting a
-suspend function by hand stays, and is the only arm that tests the brief's actual suspicion — that
-`transaction {}` and friends inflate `invokeSuspend` past the threshold.
+`-XX:FreqInlineSize` is the dial. `-XX:-DontCompileHugeMethods` is a bound with no subject: not one
+method on the whole request path comes within a factor of four of 8000 bytes, and the three that
+exceed it across 56 471 are cold (§1.8). Splitting a suspend function by hand stays, and §1.8 says
+which one to split first — the four `invokeSuspend` bodies that run on every request belong to Ktor
+and the Netty engine, not to the application.
 
 ### D5. Constructs are counted wherever they occur *(deviation from the brief)*
 
@@ -407,6 +445,7 @@ stand, deciding nothing about the construct list.
 | experiment | `experiments/jfr-compiler-events/run.sh` — §1.3, the short workload |
 | experiment | `experiments/jfr-compiler-events/long-run.sh` — §1.3, the control that corrected it, and the price of each instrument |
 | experiment | `experiments/json-encoder-census/run.sh`, `experiments/json-encoder-census/Probe.kt` — §1.5 |
+| experiment | `experiments/method-sizes/run.sh`, `experiments/method-sizes/scan.py` — §1.8 |
 | JDK configuration | `openjdk-25.0.2!/lib/jfr/profile.jfc`, `openjdk-25.0.2!/lib/jfr/default.jfc` — §1.3 |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/ResultRow.class` |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/IColumnType.class` |

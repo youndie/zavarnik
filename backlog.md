@@ -43,7 +43,7 @@
 |---|---|---|---|---|
 | [B-41](docs/backlog/B-41-jit-stand-data-layer-and-endpoints.md) `[ ]` | The stand grows a database: Exposed over Postgres in two modes, and the brief's four endpoints | P1 | M | - |
 | [B-42](docs/backlog/B-42-warmup-gate-on-printcompilation.md) `[ ]` | A warm-up gate on an instrument that reports: jdk.Compilation switched on, inlining evidence taken elsewhere | P1 | S | - |
-| [B-43](docs/backlog/B-43-static-scan-across-owners.md) `[ ]` | Static scan of the whole runtime classpath, not only of application code | P1 | S | - |
+| [B-43](docs/backlog/B-43-static-scan-across-owners.md) `[ ]` | Intersect the classpath-wide size shortlist with the profile, so a suspect becomes a cost | P1 | S | B-41 |
 | [B-44](docs/backlog/B-44-calibration-controls-and-the-known-order-pair.md) `[ ]` | Five calibration controls plus a pair whose order the code already decides | P1 | M | B-41, B-42 |
 | [B-45](docs/backlog/B-45-rq4-exposed-read-path-in-three-arms.md) `[ ]` | RQ4: what Exposed's read path costs, in three arms rather than two | P1 | M | B-41, B-44 |
 | [B-46](docs/backlog/B-46-rq6-encoder-receiver-census.md) `[ ]` | RQ6: price the step from one encoder to three, which one line of application code buys | P2 | S | B-44 |

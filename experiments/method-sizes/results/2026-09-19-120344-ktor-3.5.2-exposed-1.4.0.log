@@ -1,0 +1,185 @@
+Method sizes on the request path, by artifact
+  FreqInlineSize read from the JVM: 325
+  openjdk version "25.0.2" 2026-01-20
+  OpenJDK Runtime Environment (build 25.0.2+10-69)
+  OpenJDK 64-Bit Server VM (build 25.0.2+10-69, mixed mode, sharing)
+  artifacts: 26
+
+methods with a body: 56471 in 25 artifacts
+over FreqInlineSize=325: 691 (1.22 %), of which <clinit>: 53
+over 8000: 3, of which <clinit>: 1
+
+artifact                                              methods     >325   share  >8000
+kotlinx-coroutines-core-jvm-1.11.0.jar                   4698      104    2.2%      0
+postgresql-42.7.13.jar                                   4242      101    2.4%      2
+ktor-server-core-jvm-3.5.2.jar                           2764       71    2.6%      0
+exposed-core-1.4.0.jar                                   4705       50    1.1%      0
+kotlin-stdlib-2.4.20.jar                                10158       44    0.4%      0
+netty-codec-http-4.2.16.Final.jar                        4083       41    1.0%      0
+netty-handler-4.2.16.Final.jar                           2643       32    1.2%      0
+exposed-jdbc-1.4.0.jar                                   1073       29    2.7%      0
+ktor-io-jvm-3.5.2.jar                                     865       23    2.7%      0
+kotlinx-serialization-json-jvm-1.11.0.jar                1032       21    2.0%      0
+ktor-http-jvm-3.5.2.jar                                  1734       18    1.0%      0
+netty-common-4.2.16.Final.jar                            4281       17    0.4%      0
+ktor-server-netty-jvm-3.5.2.jar                           597       14    2.3%      0
+ktor-utils-jvm-3.5.2.jar                                 1300       14    1.1%      0
+netty-buffer-4.2.16.Final.jar                            4124       14    0.3%      0
+HikariCP-7.0.2.jar                                       1481       11    0.7%      0
+kotlinx-serialization-core-jvm-1.11.0.jar                1495        9    0.6%      0
+netty-codec-base-4.2.16.Final.jar                        1067        7    0.7%      0
+netty-transport-4.2.16.Final.jar                         3813        5    0.1%      0
+ktor-server-content-negotiation-jvm-3.5.2.jar              75        4    5.3%      0
+ktor-serialization-kotlinx-jvm-3.5.2.jar                   36        4   11.1%      0
+ktor-serialization-jvm-3.5.2.jar                           40        2    5.0%      0
+ktor-serialization-kotlinx-json-jvm-3.5.2.jar              49        2    4.1%      0
+netty-resolver-4.2.16.Final.jar                           105        1    1.0%      0
+ktor-events-jvm-3.5.2.jar                                  11        0    0.0%      0
+
+the 25 largest bodies, class initialisers set aside:
+    25262  org/postgresql/shaded/com/ongres/stringprep/Tables.mapWithNfkc(I)[I  [postgresql-42.7.13.jar]
+    15700  org/postgresql/shaded/com/ongres/stringprep/Tables.mapWithoutNormalization(I)[I  [postgresql-42.7.13.jar]
+     4565  org/postgresql/shaded/com/ongres/stringprep/Tables.bidirectionalPropertyL(I)Z  [postgresql-42.7.13.jar]
+     4322  org/postgresql/shaded/com/ongres/stringprep/Tables.unassignedCodePoints(I)Z  [postgresql-42.7.13.jar]
+     3770  io/netty/handler/ssl/ReferenceCountedOpenSslEngine.wrap([Ljava/nio/ByteBuffer;IILjava/nio/ByteBuffer;)Ljavax/net/ssl/SSLEngineResult;  [netty-handler-4.2.16.Final.jar]
+     2936  io/ktor/server/http/content/StaticContentKt.respondStaticPath(Lio/ktor/server/application/ApplicationCall;Lio/ktor/server/http/content/FileSystemPaths;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lio/ktor/server/http/content/ETagProvider;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function1;Ljava/util/List;Ljava/lang/String;Lkotlin/jvm/functions/Function3;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;  [ktor-server-core-jvm-3.5.2.jar]
+     2913  io/ktor/server/http/content/PreCompressedKt.respondStaticResource(Lio/ktor/server/application/ApplicationCall;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function1;Lio/ktor/server/http/content/ETagProvider;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;  [ktor-server-core-jvm-3.5.2.jar]
+     2736  io/ktor/server/http/content/StaticContentKt.respondStaticFile(Lio/ktor/server/application/ApplicationCall;Ljava/lang/String;Ljava/io/File;Ljava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lio/ktor/server/http/content/ETagProvider;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function1;Ljava/util/List;Ljava/lang/String;Lkotlin/jvm/functions/Function3;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;  [ktor-server-core-jvm-3.5.2.jar]
+     2732  io/netty/util/concurrent/SingleThreadEventExecutor$5.run()V  [netty-common-4.2.16.Final.jar]
+     2304  org/postgresql/core/v3/QueryExecutorImpl.processResults(Lorg/postgresql/core/ResultHandler;IZ)V  [postgresql-42.7.13.jar]
+     2162  kotlin/time/InstantKt.parseIso(Ljava/lang/CharSequence;)Lkotlin/time/InstantParseResult;  [kotlin-stdlib-2.4.20.jar]
+     1963  org/jetbrains/exposed/v1/core/SchemaUtilityApi.dbDefaultToString(Lorg/jetbrains/exposed/v1/core/vendors/DatabaseDialect;Lorg/jetbrains/exposed/v1/core/Column;Lorg/jetbrains/exposed/v1/core/Expression;)Ljava/lang/String;  [exposed-core-1.4.0.jar]
+     1934  io/ktor/server/http/content/PreCompressedKt.respondStaticPath(Lio/ktor/server/application/ApplicationCall;Lio/ktor/server/http/content/FileSystemPaths;Ljava/nio/file/Path;Ljava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function1;Lio/ktor/server/http/content/ETagProvider;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;  [ktor-server-core-jvm-3.5.2.jar]
+     1921  io/ktor/utils/io/ByteReadChannelOperationsKt.internalReadLineTo(Lio/ktor/utils/io/ByteReadChannel;Ljava/lang/Appendable;JZZLkotlin/coroutines/Continuation;)Ljava/lang/Object;  [ktor-io-jvm-3.5.2.jar]
+     1920  io/ktor/server/engine/internal/CallableUtilsKt.executeModuleFunction(Ljava/lang/ClassLoader;Ljava/lang/String;Lio/ktor/server/application/Application;Lio/ktor/server/application/ModuleParametersInjector;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;  [ktor-server-core-jvm-3.5.2.jar]
+     1895  org/postgresql/jdbc/PgDatabaseMetaData.getColumns(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/sql/ResultSet;  [postgresql-42.7.13.jar]
+     1884  io/ktor/server/http/content/PreCompressedKt.respondStaticFile(Lio/ktor/server/application/ApplicationCall;Ljava/io/File;Ljava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lio/ktor/server/http/content/ETagProvider;Lkotlin/jvm/functions/Function3;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;  [ktor-server-core-jvm-3.5.2.jar]
+     1847  io/ktor/util/EncodersJvmKt$inflate$1.invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;  [ktor-utils-jvm-3.5.2.jar]
+     1844  io/ktor/server/http/content/StaticContentKt.respondStaticResource(Lio/ktor/server/application/ApplicationCall;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lio/ktor/server/http/content/ETagProvider;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function1;Ljava/util/List;Ljava/lang/String;Lkotlin/jvm/functions/Function3;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;  [ktor-server-core-jvm-3.5.2.jar]
+     1796  io/netty/handler/codec/http/multipart/HttpPostRequestEncoder.addBodyHttpData(Lio/netty/handler/codec/http/multipart/InterfaceHttpData;)V  [netty-codec-http-4.2.16.Final.jar]
+     1779  io/netty/handler/ssl/ReferenceCountedOpenSslContext.<init>(Ljava/lang/Iterable;Lio/netty/handler/ssl/CipherSuiteFilter;Lio/netty/handler/ssl/OpenSslApplicationProtocolNegotiator;I[Ljava/security/cert/Certificate;Lio/netty/handler/ssl/ClientAuth;[Ljava/lang/String;ZLjava/lang/String;ZZLjava/util/List;Lio/netty/handler/ssl/ResumptionController;[Ljava/util/Map$Entry;Ljava/util/List;)V  [netty-handler-4.2.16.Final.jar]
+     1777  org/postgresql/jdbc/PgDatabaseMetaData.getProcedureColumns(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/sql/ResultSet;  [postgresql-42.7.13.jar]
+     1734  kotlin/jvm/internal/ClassReference$Companion.simpleNameOf(Ljava/lang/String;)Ljava/lang/String;  [kotlin-stdlib-2.4.20.jar]
+     1714  org/postgresql/jdbc/PgDatabaseMetaData.getFunctionColumns(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/sql/ResultSet;  [postgresql-42.7.13.jar]
+     1676  kotlin/jvm/internal/ClassReference$Companion.classFqNameOf(Ljava/lang/String;)Ljava/lang/String;  [kotlin-stdlib-2.4.20.jar]
+
+invokeSuspend bodies over the threshold: 52; the 25 largest:
+     1847  io/ktor/util/EncodersJvmKt$inflate$1  [ktor-utils-jvm-3.5.2.jar]
+     1449  kotlin/io/path/PathTreeWalk$dfsIterator$1  [kotlin-stdlib-2.4.20.jar]
+     1122  io/ktor/server/netty/cio/RequestBodyHandler$job$1  [ktor-server-netty-jvm-3.5.2.jar]
+     1080  io/ktor/server/engine/DefaultEnginePipelineKt$defaultEnginePipeline$1  [ktor-server-core-jvm-3.5.2.jar]
+     1044  io/ktor/server/engine/DefaultTransformKt$installDefaultTransformations$2  [ktor-server-core-jvm-3.5.2.jar]
+      939  io/ktor/server/plugins/contentnegotiation/ResponseConverterKt$convertResponseBody$1$2  [ktor-server-content-negotiation-jvm-3.5.2.jar]
+      930  kotlin/collections/SlidingWindowKt$windowedIterator$1  [kotlin-stdlib-2.4.20.jar]
+      863  io/ktor/util/ByteChannelsKt$copyToBoth$1  [ktor-utils-jvm-3.5.2.jar]
+      829  kotlinx/coroutines/flow/internal/CombineKt$combineInternal$2  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+      827  io/ktor/utils/io/ByteWriteChannelOperationsKt$writer$job$1  [ktor-io-jvm-3.5.2.jar]
+      820  kotlinx/coroutines/channels/ChannelsKt__DeprecatedKt$zip$2  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+      787  org/jetbrains/exposed/v1/jdbc/transactions/TransactionsKt$inTopLevelSuspendTransaction$2  [exposed-jdbc-1.4.0.jar]
+      746  kotlinx/coroutines/channels/ChannelsKt__DeprecatedKt$map$1  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+      719  kotlin/io/path/PathTreeWalk$bfsIterator$1  [kotlin-stdlib-2.4.20.jar]
+      657  org/jetbrains/exposed/v1/jdbc/transactions/TransactionsKt$suspendTransaction$2  [exposed-jdbc-1.4.0.jar]
+      625  kotlinx/coroutines/flow/FlowKt__DelayKt$debounceInternal$1  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+      624  io/ktor/util/NonceKt$nonceGeneratorJob$1  [ktor-utils-jvm-3.5.2.jar]
+      517  io/ktor/server/config/MapApplicationConfig$Companion$flatten$2  [ktor-server-core-jvm-3.5.2.jar]
+      500  io/ktor/server/config/MapApplicationConfig$Companion$flatten$1  [ktor-server-core-jvm-3.5.2.jar]
+      492  io/ktor/server/plugins/contentnegotiation/ResponseConverterKt$convertResponseBody$1  [ktor-server-content-negotiation-jvm-3.5.2.jar]
+      440  io/ktor/server/application/ApplicationModules_jvmKt$LoadConcurrently$1$2  [ktor-server-core-jvm-3.5.2.jar]
+      437  io/ktor/server/engine/BaseApplicationResponse$Companion$setupFallbackResponse$1  [ktor-server-core-jvm-3.5.2.jar]
+      432  io/ktor/server/engine/DefaultTransformKt$installDefaultTransformations$3  [ktor-server-core-jvm-3.5.2.jar]
+      430  kotlinx/coroutines/channels/ChannelsKt__DeprecatedKt$dropWhile$1  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+      423  io/ktor/util/ByteChannelsKt$split$1  [ktor-utils-jvm-3.5.2.jar]
+
+the largest bodies per artifact, class initialisers set aside:
+  kotlinx-coroutines-core-jvm-1.11.0.jar
+        947  BufferedChannel.toString
+        941  BufferedChannel.toStringDebug$kotlinx_coroutines_core
+        862  BufferedChannel.checkSegmentStructureInvariants
+  postgresql-42.7.13.jar
+      25262  Tables.mapWithNfkc
+      15700  Tables.mapWithoutNormalization
+       4565  Tables.bidirectionalPropertyL
+  ktor-server-core-jvm-3.5.2.jar
+       2936  StaticContentKt.respondStaticPath
+       2913  PreCompressedKt.respondStaticResource
+       2736  StaticContentKt.respondStaticFile
+  exposed-core-1.4.0.jar
+       1963  SchemaUtilityApi.dbDefaultToString
+       1094  H2Dialect.areEquivalentColumnTypes
+       1091  FunctionProviderKt.addClausesToMergeStatement
+  kotlin-stdlib-2.4.20.jar
+       2162  InstantKt.parseIso
+       1734  ClassReference$Companion.simpleNameOf
+       1676  ClassReference$Companion.classFqNameOf
+  netty-codec-http-4.2.16.Final.jar
+       1796  HttpPostRequestEncoder.addBodyHttpData
+       1624  SpdyFrameDecoder.decode
+       1341  SpdyHttpDecoder.decode
+  netty-handler-4.2.16.Final.jar
+       3770  ReferenceCountedOpenSslEngine.wrap
+       1779  ReferenceCountedOpenSslContext.<init>
+       1493  ReferenceCountedOpenSslEngine.unwrap
+  exposed-jdbc-1.4.0.jar
+       1559  JdbcDatabaseMetadataImpl.existingIndices
+       1549  TransactionsKt.inTopLevelSuspendTransaction
+       1266  JdbcDatabaseMetadataImpl.tableConstraints
+  ktor-io-jvm-3.5.2.jar
+       1921  ByteReadChannelOperationsKt.internalReadLineTo
+        827  ByteWriteChannelOperationsKt$writer$job$1.invokeSuspend
+        665  ByteReadChannelOperationsKt.read
+  kotlinx-serialization-json-jvm-1.11.0.jar
+       1053  AbstractJsonTreeDecoder.beginStructure
+       1022  JsonToJavaStreamWriter.writeUtf8
+        808  AbstractJsonLexer.consumeNumericLiteral
+  ktor-http-jvm-3.5.2.jar
+        965  URLParserKt.takeFromUnsafe
+        884  CookieUtilsKt.handleToken
+        838  CookieKt.renderSetCookieHeader
+  netty-common-4.2.16.Final.jar
+       2732  SingleThreadEventExecutor$5.run
+       1096  NetUtil.getIPv6ByName
+        932  PlatformDependent.normalizeArch
+  ktor-server-netty-jvm-3.5.2.jar
+       1168  NettyHttpResponsePipeline.respondWithBigBody
+       1122  RequestBodyHandler$job$1.invokeSuspend
+        797  HttpFrameAdapterKt.http2frameLoop
+  ktor-utils-jvm-3.5.2.jar
+       1847  EncodersJvmKt$inflate$1.invokeSuspend
+       1260  FileChannelsKt.writeToScope
+       1119  DeflaterKt.deflateTo
+  netty-buffer-4.2.16.Final.jar
+        474  ByteBufUtil.indexOf
+        433  ByteBufUtil.unsafeWriteUtf8
+        432  PooledByteBufAllocator.<init>
+  HikariCP-7.0.2.jar
+        609  PropertyElf.setProperty
+        534  HikariConfig.validateNumerics
+        484  JavassistProxyFactory.generateProxyClass
+  kotlinx-serialization-core-jvm-1.11.0.jar
+        764  SerializersKt__SerializersJvmKt.serializerByJavaTypeImpl$SerializersKt__SerializersJvmKt
+        680  PlatformKt.initBuiltins
+        584  SerialModuleImpl.dumpTo
+  netty-codec-base-4.2.16.Final.jar
+        544  MessageAggregator.decode
+        536  JsonObjectDecoder.decode
+        474  ByteToMessageDecoder.channelRead
+  netty-transport-4.2.16.Final.jar
+        505  ChannelHandlerMask.mask0
+        466  AbstractOioByteChannel.doRead
+        356  NioIoHandler.select
+  ktor-server-content-negotiation-jvm-3.5.2.jar
+        939  ResponseConverterKt$convertResponseBody$1$2.invokeSuspend
+        577  RequestConverterKt.convertBody
+        492  ResponseConverterKt$convertResponseBody$1.invokeSuspend
+  ktor-serialization-kotlinx-jvm-3.5.2.jar
+        546  KotlinxSerializationConverter.deserialize
+        495  SerializerLookupKt.elementSerializer
+        449  KotlinxSerializationConverter$serialize$$inlined$map$1$2.emit
+  ktor-serialization-jvm-3.5.2.jar
+        445  ContentConverterKt$deserialize$$inlined$map$1$2.emit
+        342  ContentConverterKt.deserialize
+  ktor-serialization-kotlinx-json-jvm-3.5.2.jar
+        621  KotlinxSerializationJsonExtensions.serialize
+        550  KotlinxSerializationJsonExtensions$serialize$$inlined$collectIndexed$1.emit
+  netty-resolver-4.2.16.Final.jar
+        407  HostsFileEntriesProvider$ParserImpl.parse
