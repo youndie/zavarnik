@@ -450,6 +450,47 @@ and a floating rate; the same `exposed` arm reads 995 µs there and 646 µs here
 microseconds do not survive between sweeps on this stand, ratios do, and the ratios here were all
 taken inside one sweep against each other.
 
+### 1.12 The ceiling is two cores of four, and it is neither the pool nor Exposed
+
+§1.10 left the real-mode ceiling unexplained and §1.11 measured on top of it anyway. This is the
+repeat-backed sweep B-51 asked for: four configurations, three rounds, rotating within each round,
+the first window after warm-up discarded. Spreads 3–10 %, against the 30 % single windows gave.
+
+| Arm | Pool | rps (median) | spread | cores | µs/req | p50 |
+|---|---|---|---|---|---|---|
+| exposed | 16 | 5286 | 3 % | 1.98 | 375 | 43.0 ms |
+| exposed | 32 | 5069 | 10 % | 1.93 | 381 | 44.2 ms |
+| exposed | 64 | 4595 | 4 % | 1.93 | 420 | 53.5 ms |
+| **jdbc** | 32 | **8488** | 8 % | 2.01 | **237** | 26.5 ms |
+
+**The pool is not the ceiling, and now that is measured rather than guessed.** More connections are
+slightly *worse*, monotonically: 5286 → 5069 → 4595 across 16, 32, 64. The "step at 16→32" that
+§1.10 saw was noise between single runs, and it is now retired.
+
+**Exposed is not the ceiling either, though it is the cost.** Hand-written JDBC through the same
+pool and the same dispatcher runs **1.67× more requests** — and spends **1.61× less CPU on each**.
+Those two ratios agreeing is the point: both arms stop at the *same wall* and differ only in what a
+request costs to get through it.
+
+**The wall is ~2.0 of 4 cores, in every configuration measured.** Pool 16, 32, 64; Exposed and raw
+JDBC; 4595 to 8488 rps — cores stay at 1.93–2.01. Throughput is then simply two cores divided by
+the price of a request, which is why the two ratios match.
+
+**And the stub mode does not have it.** The same binary, the same engine, the same machine reached
+**3.51 of 4 cores** in the calibration sweep (§1.10) with the data layer stubbed out. So the wall
+arrives with the data path, and what the data path adds is the `withContext(Dispatchers.IO)` hop.
+
+**Consequence — the hypothesis is named and testable, and the earlier one is dead.** The spin in
+`ConcurrentBag.requite` (§1.10) is real but cannot be the ceiling: it lives in the pool, and the
+ceiling does not move with the pool. The live hypothesis is the IO dispatcher, and it has a lever
+the fourth phase already used — `kotlinx.coroutines.io.parallelism`. If the wall moves with it, it
+is the dispatcher; if it does not, this hypothesis dies as the last one did and the section says so.
+
+**Consequence for §1.11's verdict — it stands, and for a better reason than before.** RQ4's 1.27–
+1.29× was measured at a fixed 2000 rps, far below every ceiling here, so it was never a comparison
+of walls. The ceiling sweep independently puts the same gap at 1.61× in CPU per request *at
+saturation* — a different rate, a different protocol, the same direction and the same rough size.
+
 ---
 
 ## 2. Decisions
@@ -610,6 +651,7 @@ stand, deciding nothing about the construct list.
 | stand | `bench/src/main/kotlin/bench/Data.kt` — §1.10, the two data modes |
 | measurement | `bench/profile/results/pair-stand-notes.md` — §1.10, the stand's ruler and every probe behind it |
 | measurement | `bench/profile/results/pair-rq4-arms.md` — §1.11, the three arms with every round |
+| measurement | `bench/profile/results/pair-ceiling.md` — §1.12, the ceiling with repeats |
 | profile | `bench/profile/results/netty-jit/` — §1.9, the run the join reads |
 | JDK configuration | `openjdk-25.0.2!/lib/jfr/profile.jfc`, `openjdk-25.0.2!/lib/jfr/default.jfc` — §1.3 |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/ResultRow.class` |
