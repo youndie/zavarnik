@@ -1,44 +1,44 @@
 ---
 id: B-51
-title: "Explain the real-mode ceiling, or make the stand able to ask the question"
-status: open
+title: "The real-mode ceiling is the machine, and pinning the database does not lift it"
+status: done
 priority: P1
 size: M
 stage: stage-8-jit-constructs
-blocked_by: [B-41]
 ---
 
-# B-51 — A ceiling nobody has explained, measured with a ruler too coarse to explain it
+# B-51 — Answered: the box is full, and three JVM hypotheses died on the way
 
-In real mode the stand saturates near 3–4.5k rps while PostgreSQL alone does **15 631 tps** on the
-same box at 0.256 ms, and the JVM sits at 2.2–2.5 of its 4 cores
-([research-jit-constructs](../research/research-jit-constructs.md) §1.10). Something between the
-two is the limit and it is not named.
+> **Done 2026-09-19.** Under load the whole machine reads **3.93 of 4 cores** — JVM 1.89,
+> PostgreSQL 1.24, kernel and network 0.80. The service stops at two cores because two cores is what
+> is left. Numbers and the failed hypotheses:
+> [research-jit-constructs](../research/research-jit-constructs.md) §1.12 and §1.13.
 
-The wall-clock profile names a candidate: **19.4 %** of the request path's time is
-`HikariPool.recycle → ConcurrentBag.requite → Thread.yield`, the spin HikariCP runs while anyone
-waits for a connection. Acquisition wait is 0.16 %, so it is the hand-off and not the capacity.
+What died along the way, in order, each with repeats behind it:
 
-What stops that from being the answer is the ruler. Five repeats of one configuration in one
-process span **30 %**, and the same pool/concurrency pair measured 4675 rps once and 2641 twenty
-minutes later. Every sweep run so far is a single run, so every difference between them is inside
-the noise.
+- **the pool** — 16/32/64 give 5286/5069/4595 rps, monotonically *worse*. The "step at 16→32" that
+  the single-run sweep showed was noise;
+- **Exposed** — hand-written JDBC through the same pool and dispatcher runs 1.67× more requests at
+  1.61× less CPU each, and hits the same wall;
+- **the IO dispatcher** — `io.parallelism` of 4/8/16/64/128 moves the price of a request from 245 to
+  166 µs but leaves cores at 1.77–2.02 throughout;
+- and earlier, **the `ConcurrentBag` spin**, which is real but lives in the pool the ceiling ignores.
 
-- **Measure before explaining.** Three repeats minimum per point, median reported with the spread
-  beside it, and the first window after warm-up discarded — it was the slowest of five even after
-  40 seconds of load.
-- **Then the arms worth trying**, in the order their mechanism is testable: concurrency matched to
-  the pool; `-XX:ActiveProcessorCount` against the `Dispatchers.IO` default of 64 threads feeding a
-  much smaller pool; the round-trip count per request from the driver's own view.
-- **A negative answer is a result here.** If the ceiling is the hand-off, that is a finding about
-  every Ktor-plus-Hikari service under over-subscription and belongs upstream rather than in a
-  verdict row.
-- Does **not** cover: RQ4's construct verdicts. Those need [B-45](B-45-rq4-exposed-read-path-in-three-arms.md),
-  and until this item closes, every real-mode number carries the 30 % ruler with it.
+**The brief's own mitigation does not work here**, and that is worth more than the answer. Its
+threats section prescribes pinning the same-host database to its own cores. Pinned, throughput
+*fell* 11 398 → 9 471 rps: it throttled Postgres from 1.24 to 0.96 cores rather than giving the JVM a
+third. Pinning separates competitors when there is spare capacity; on four cores there is none to
+partition.
 
-- AC: the ceiling is attributed to a named mechanism with repeats behind it, or recorded as
-  unexplained with the arms that were tried and what each cost.
-- AC: the stand's real-mode ruler is restated after the repeats, so later items know what they can
-  claim.
-- Anchors: `bench/profile/jit-pair.sh`, `bench/profile/results/pair-stand-notes.md`,
-  `bench/src/main/kotlin/bench/Data.kt`.
+- **The rule this leaves**: construct verdicts come from fixed-rate runs below saturation, where the
+  arms differ only in their own cost. Saturation runs describe the stand. RQ4 ([B-45](B-45-rq4-exposed-read-path-in-three-arms.md))
+  was taken that way and is unaffected.
+- **A side result worth carrying out of the phase**: the default `Dispatchers.IO` size of 64 costs
+  **27 % more CPU per request** than 16 on this four-core box, with 16 the cheapest of five sizes
+  tried. Not a JIT finding — library cost, recorded and left alone, but it is a tuning fact about
+  every Ktor service that hops to `Dispatchers.IO`.
+- **What would actually fix the stand**: the database on a third machine. This pair has two, so the
+  write-up states the ceiling as a property of the stand instead.
+
+- Anchors: `bench/profile/results/pair-ceiling.md`,
+  `bench/profile/results/pair-ceiling-mechanism.md`, `bench/profile/jit-pair.sh`.

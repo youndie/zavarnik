@@ -491,6 +491,52 @@ is the dispatcher; if it does not, this hypothesis dies as the last one did and 
 of walls. The ceiling sweep independently puts the same gap at 1.61× in CPU per request *at
 saturation* — a different rate, a different protocol, the same direction and the same rough size.
 
+### 1.13 The ceiling is the machine: the database and the kernel own the other half
+
+Three hypotheses about the JVM failed to explain the two-core wall — the pool, the repository arm,
+the IO dispatcher. The fourth candidate was the one thing none of them looked at: `cost:` counts the
+JVM's own `utime+stime`, and **PostgreSQL runs on the same box**.
+
+| Measured under load, 11 398 rps | cores |
+|---|---|
+| the JVM | 1.89 |
+| PostgreSQL | 1.24 |
+| **the whole machine** | **3.93 of 4** |
+| so: kernel, network stack, everything else | 0.80 |
+
+**The box is full.** The service stops at two cores because two cores is what is left after the
+database takes a third of a four-core machine and the network stack takes a fifth. Stub mode reached
+3.51 cores on the same binary and the same machine precisely because Postgres had nothing to do.
+
+**The brief's own mitigation does not work at this core count**, and that is a *deviation from the
+brief*. Its threats section says the same-host database "is pinned to its own cores so that it does
+not inflate JVM CPU per request". Pinned — Postgres to core 0, the JVM to 1–3 — throughput **fell**
+from 11 398 to 9 471 rps: pinning did not give the JVM a third core, it throttled the database from
+1.24 to 0.96 cores and made it the limit. Pinning separates competitors when the machine has spare
+capacity. Here there is none to partition.
+
+| Fact | Where verified |
+|---|---|
+| Whole machine 3.93 of 4 under load; JVM 1.89, Postgres 1.24, remainder 0.80 | `bench/profile/results/pair-ceiling-mechanism.md` |
+| Pinning Postgres to one core lowers throughput 11 398 → 9 471 rps and leaves the JVM at 1.99 cores | the same file |
+| `kotlinx.coroutines.io.parallelism` moves the **price** of a request but not the wall: 245 µs at 4, **166 µs at 16**, 210 at the default 64, 235 at 128 — cores 1.77–2.02 throughout | `bench/profile/results/pair-ceiling-mechanism.md`, two rounds each |
+
+**Consequence — a side result worth more than the ceiling.** The default `Dispatchers.IO` size of 64
+is **27 % more expensive per request** than 16 on this four-core box, and 16 is the cheapest of the
+five sizes tried. That is a tuning fact about every Ktor service that hops to `Dispatchers.IO`, it
+is measured with repeats, and it is not a JIT finding — by the brief's own distinction it is library
+cost, recorded and left alone.
+
+**Consequence — what the ceiling numbers are about.** Every saturation number on this stand
+describes the four-core box, not the stack. So RQ4's verdict (§1.11) is the one to trust: it was
+taken at a fixed 2000 rps, far below saturation, where the arms differ only in their own cost. The
+rule this leaves for the rest of the phase: **construct verdicts come from fixed-rate runs below
+saturation; saturation runs describe the stand.**
+
+**Consequence — B-51 closes with an answer and a cost.** The stand cannot be fixed by pinning; it
+would need the database on a third machine, and this pair has two. The honest statement in the
+write-up is that the real-mode ceiling is the machine, and every real-mode absolute carries it.
+
 ---
 
 ## 2. Decisions
@@ -652,6 +698,7 @@ stand, deciding nothing about the construct list.
 | measurement | `bench/profile/results/pair-stand-notes.md` — §1.10, the stand's ruler and every probe behind it |
 | measurement | `bench/profile/results/pair-rq4-arms.md` — §1.11, the three arms with every round |
 | measurement | `bench/profile/results/pair-ceiling.md` — §1.12, the ceiling with repeats |
+| measurement | `bench/profile/results/pair-ceiling-mechanism.md` — §1.13, who owns the machine |
 | profile | `bench/profile/results/netty-jit/` — §1.9, the run the join reads |
 | JDK configuration | `openjdk-25.0.2!/lib/jfr/profile.jfc`, `openjdk-25.0.2!/lib/jfr/default.jfc` — §1.3 |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/ResultRow.class` |
