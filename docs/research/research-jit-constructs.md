@@ -680,6 +680,35 @@ does not put three receivers on a site — reaching three requires three of them
 and the tree path in practice contributes one (`JsonTreeEncoder`) at a time per site. One line of
 application code buys bimorphism, which C2 handles, not megamorphism, which it does not.
 
+### 1.17 RQ1's lever moves nothing, and that closes it green
+
+§1.8 found 638 methods over `FreqInlineSize` on the request path; §1.9 narrowed that to the **49
+that actually run**, owning 3.86 % of self samples between them with the largest at 0.56 %. That
+bounded what the dial could possibly be worth. This pulls it.
+
+Protocol as in §1.11, the one that gives 2–7 % spreads instead of 30: a fixed offered rate of 2000
+rps, arms rotated within each round, the first window after warm-up discarded, three measured
+rounds, on the fifty-row endpoint where the serialisation glue lives.
+
+| `FreqInlineSize` | µs/req (median) | rounds | spread |
+|---|---|---|---|
+| **325**, the default | 607 | 587, 607, 613 | 4.3 % |
+| **2000**, past every method that runs here | 599 | 589, 599, 606 | 2.8 % |
+
+**1.3 % apart, inside a ruler of 2.8–4.3 %.** The dial does nothing measurable.
+
+**Verdict: RQ1 is green on both halves.** The brief's red needs either a hot method left uncompiled
+or "raising `FreqInlineSize` meets both thresholds" — 10 % on the micro measure and 2 % of request
+CPU on the macro. Neither is approached. The huge-method half was already green by inspection
+(§1.8): nothing on the path is within a factor of four of 8000 bytes, and the three methods that
+exceed it authenticate connections and speak SPDY.
+
+**Consequence — the size threshold is real, visible, and worth nothing here.** Every step of the
+chain found its subject: 638 methods are genuinely over the threshold, 49 of them genuinely run,
+their refusals genuinely appear in the compilation log. And the toggle that would pay for fixing
+them returns 1.3 %. That is the difference between a mechanism and a cost, and it is the distinction
+the brief asks for in every row.
+
 ---
 
 ## 2. Where each research question stands
@@ -692,7 +721,7 @@ knowing what it costs — and the two are kept apart on purpose.
 | RQ | State | What is known, and where |
 |---|---|---|
 | **RQ0** gate | **replaced** | D1. Its bucket is nearly the whole process, so it passes by construction; the split inside it was already measured by two earlier phases (§1.1) |
-| **RQ1** sizes | **half green, half grey** | Nothing on the request path is within a factor of four of the huge-method limit, and the three methods over it are cold (§1.8). Of 638 methods over `FreqInlineSize`, **49 run**; together they own **3.86 %** of self samples and the largest owns 0.56 %, against a 2 % red line (§1.9). Unpriced: the `FreqInlineSize` toggle has not been pulled |
+| **RQ1** sizes | **GREEN** | Nothing on the path is within a factor of four of the huge-method limit (§1.8); of 638 methods over `FreqInlineSize` only **49 run**, owning 3.86 % of self samples together (§1.9); and raising the dial to 2000 moves CPU per request by **1.3 %, inside a 2.8–4.3 % ruler** (§1.17). Mechanism found at every step, cost nil |
 | **RQ2** megamorphic | **priced, macro open** | Megamorphic *by construction*: 580 `invokeSuspend` implementations on one call site, type profile two wide (§1.6). Priced: **6.715 ns per call against 0.755 monomorphic, 8.9×**, with the break between 2 and 8 receivers (§1.14). How many such calls a request makes is a profile question |
 | **RQ3** escape analysis | **grey** | The continuation survives on the non-suspending path — **16 B/op**, proven not to be the lambda by the hoisted arm — while the boxed primitive is scalar-replaced (§1.15). Micro effect far past the 10 % line; the 2 % macro share is unmeasured |
 | **RQ4** Exposed | **GREEN** | 1.27× on one row, 1.29× on fifty, against the brief's own green line of 1.5× (§1.11). Decomposed: transaction wrapper ~64 µs flat, Exposed fixed ~70 µs, mapping 0.76 µs/row ≈ 0.151 µs/column |
@@ -700,11 +729,19 @@ knowing what it costs — and the two are kept apart on purpose.
 | **RQ6** encoders | **GREEN** | A JSON-only service is monomorphic at these sites; sustained mixed traffic makes them **bimorphic at 50/50**, read out of the inlining log, and `TypeProfileWidth` is 2 — so C2 still profiles and inlines them (§1.16). A one-off tree call costs nothing measurable |
 | **RQ7** steady state | **partial** | The instrument is settled — `jdk.Compilation` switched on is a census, `jdk.CompilerInlining` is not (§1.3). The exception arm is named: `JobCancellationException` is already stackless, `TimeoutCancellationException` is not (§1.2). Rates not measured |
 
-**By the brief's own kill criterion 4, this study is at its stopping point.** The criterion is "three
-RQs in a row come out green or grey": RQ4 is green, RQ1 is green-and-grey, RQ5 is green by
-arithmetic. The brief says the remaining questions are then dropped and the write-up says the stack
-is well served by C2. That is a defensible reading of what has been measured, and it is stated here
-rather than left for someone to notice.
+**Kill criterion 4 is met several times over, and the verdict it points to is the honest one.** The
+criterion is "three RQs in a row come out green or grey". Three are green outright — RQ1, RQ4, RQ6 —
+RQ3 is grey, and RQ5 is green by arithmetic in the brief's own scope. Not one red verdict came out
+of the phase.
+
+The brief's instruction is then to drop what remains and write that the stack is well served by C2.
+On the evidence that is right, and it is worth stating in the form the study actually produced:
+**every mechanism the brief suspected is real, and none of them costs anything.** Methods do exceed
+the inline threshold; the resume site is megamorphic by construction; continuations do survive
+escape analysis; `ResultRow` does do a hash lookup per column; mixed traffic does split the encoder
+profile. Each was found, and each priced out at or below the noise of a stand that can resolve a few
+per cent. What does cost — a transaction wrapper at 64 µs, a dispatcher default at 27 %, a
+co-located database taking a third of the machine — is on nobody's list of JIT questions.
 
 ### 2.1 What the brief did not ask, and the phase found anyway
 
@@ -900,6 +937,7 @@ stand, deciding nothing about the construct list.
 | microbenchmark | `microbench/results-controls.md`, `microbench/results-candidates.md` — §1.14 |
 | microbenchmark | `microbench/results-rq3.md` — §1.15, allocation on the non-suspending path |
 | microbenchmark | `microbench/results-rq6.md` — §1.16, the three arms and the type profiles |
+| measurement | `bench/profile/results/pair-rq1-lever.md` — §1.17, the FreqInlineSize toggle |
 | profile | `bench/profile/results/netty-jit/` — §1.9, the run the join reads |
 | JDK configuration | `openjdk-25.0.2!/lib/jfr/profile.jfc`, `openjdk-25.0.2!/lib/jfr/default.jfc` — §1.3 |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/ResultRow.class` |

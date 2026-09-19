@@ -1,14 +1,25 @@
 ---
 id: B-48
 title: "RQ1 and RQ5: the size threshold with the one dial that exists, and the codegen patterns counted across owners"
-status: open
+status: wip
 priority: P2
 size: M
 stage: stage-8-jit-constructs
-blocked_by: [B-43, B-44]
 ---
 
-# B-48 — What a refusal costs, and which Kotlin shapes pay it
+# B-48 — RQ1 answered green; RQ5 still needs its per-pattern counts
+
+> **RQ1 done 2026-09-19, RQ5 open.** Raising `FreqInlineSize` from 325 to 2000 — past every method
+> that runs on this path — moves CPU per request by **1.3 %, inside a ruler of 2.8–4.3 %**. With
+> §1.8's huge-method half already green and §1.9's 49 running methods owning 3.86 % of self samples
+> between them, RQ1 is green on both halves:
+> [research-jit-constructs](../research/research-jit-constructs.md) §1.17.
+>
+> The chain found its subject at every step and the toggle still returned nothing. That is the
+> difference between a mechanism and a cost, and it is what the brief asks each row to separate.
+>
+> **What remains is RQ5**: the per-pattern counts across owners, per D5. It is the one question in
+> the phase that has neither been measured nor bounded by something already measured.
 
 Two of the brief's questions share a subject: a method C2 refuses to inline, and the constructs
 that make methods that size. The second phase already found the refusals on this stand — five under
