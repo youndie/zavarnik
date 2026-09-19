@@ -1,7 +1,7 @@
 ---
 id: B-49
 title: "RQ7: is steady state stable — and what the compiler itself costs under a container limit"
-status: open
+status: done
 priority: P1
 size: M
 stage: stage-8-jit-constructs
@@ -57,3 +57,31 @@ stable steady state.
 - AC: a committed number for the compiler threads' own CPU under a container limit, with the rate,
   the limit and the machine stated beside it.
 - Anchors: `bench/profile/run.sh`, `bench/profile/konekt.sh`.
+
+## Result — 2026-09-20: red on a threshold nothing meets, green on exceptions
+
+Written up in [research-jit-constructs](../research/research-jit-constructs.md) §1.21. The two
+halves the brief asks for are answered; the third — C2's own CPU under a container limit — stays
+open as article material, with §1.20's 4.9–6.1 % on a saturated four-core box as its other end.
+
+**Deoptimisation.** Raw the runner reports 25–34 per minute. Bucketed by ten seconds, 37–62 events
+land in the first bucket and 5–17 in the last, with single digits across the 160 s between: starting
+and stopping the recording deoptimises the service being recorded. The steady state is **2.25–5.62
+per minute, 11–38 per million requests** — above the brief's "under 1 per minute", so red on the
+rate. Sorting by interval rather than by count leaves exactly one genuinely recurring site,
+`kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark()@40`, four times at 31/26/16 s,
+reason `unstable_if`. Everything else that looked repeated was a burst inside one millisecond.
+
+**So the red is a criterion problem.** Four events in 160 seconds cost nothing measurable, and a
+threshold a well-behaved service fails does not separate it from a badly behaved one. Recorded as a
+deviation from the brief rather than as a finding about the stack.
+
+**Exceptions.** `jdk.JavaExceptionThrow` is throttled at 300/s in `profile.jfc` and sat on the
+ceiling — 51 607–52 406 per 180 s at three very different request rates, which is not a property of
+the load. `jdk.ExceptionStatistics` is uncapped and says **1.03 exceptions per request**, all
+`JobCancellationException`. That is exceptions as control flow at exactly one per request, and it
+costs **0.06–0.15 % of request CPU** because the class is stackless — which §1.2 predicted from
+reading its source before any of this ran. Green with room to spare.
+
+**Anchors:** `bench/profile/rq7-steady-state.sh`, `bench/profile/rq7-analyse.py`,
+`bench/profile/rq7-exception-*.py`, `bench/profile/results/rq7-steady-state.md`.

@@ -964,6 +964,84 @@ answers land an order of magnitude below the line, and would not be if they were
 | Allocation per request and its buckets, three endpoints | `bench/profile/results/alloc-census.md`, `bench/profile/alloc-census.sh` |
 | Self samples at the two RQ2 sites; GC and JIT share of CPU | the committed `pair-real-db*.cpu.collapsed` profiles |
 
+### 1.21 RQ7, the last unmeasured question: green on exceptions, red on a threshold nothing meets
+
+RQ7 asks whether steady state is stable. Its green is "under 1 deoptimisation per minute after
+warmup, and exception construction under 2 % of request CPU"; its red is "a deoptimisation recurring
+at the same site, or exception construction at 2 % or more". The two halves need different readings —
+one is a rate, the other a shape — and both were corrupted by the instrument before they were read.
+
+**The instrument deoptimises the service, twice per recording.** Raw, the runner reports 33.7, 31.3
+and 25.0 deoptimisations per minute, which would be red thirty times over. Bucketed by ten seconds
+the shape is not a rate at all:
+
+| | first 10 s | the middle 160 s | last 10 s |
+|---|---|---|---|
+| dbitem | **59** | 15 | **16** |
+| dblist | **62** | 6 | **17** |
+| dbpost | **37** | 14 | **5** |
+
+`JFR.start` with `settings=profile` enables instrumentation that forces recompilation, and `JFR.stop`
+undoes it. Filtering events whose stack is JFR's own removes 9–19 of them; the rest are the service's
+own methods being deoptimised *because* the recording started. **Only the middle is steady state.**
+
+**Deoptimisation, measured properly: 2.25–5.62 per minute, or 11–38 per million requests.** An order
+of magnitude below the raw figure and still above the brief's "under 1 per minute". Actions split
+`maybe_recompile` / `reinterpret` roughly evenly, and the reasons are ordinary speculation failures —
+`speculate_class_check`, `unstable_if`.
+
+**One site genuinely recurs, and the brief's red names it.** Most repeated "sites" are bursts inside a
+single millisecond — one deoptimisation event recorded several times, not a site returning. Sorting by
+interval instead of by count leaves exactly one: `kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark()@40`,
+four times at **31 s, 26 s, 16 s** apart, reason `unstable_if`, action `reinterpret`. The scheduler's
+park decision is bimodal by construction, C2 speculates it will not park, and it periodically does.
+
+**So RQ7's deoptimisation half is red by the letter of the criterion and worth nothing by the
+measurement** — four events in 160 seconds. That is a *deviation from the brief* worth stating plainly:
+**"under 1 deoptimisation per minute" appears to be a threshold no healthy JVM under load meets**, and
+"a deoptimisation recurring at the same site" fires on ordinary adaptive reprofiling. A criterion that
+a well-behaved service fails does not separate well-behaved services from badly behaved ones.
+
+**The exception half needed a different instrument than the brief's, for the third time in this
+phase.** `jdk.JavaExceptionThrow` reported 51 607–52 406 throws per 180-second window — nearly the
+same count on endpoints running at 4788, 2974 and 1768 rps, which is not a property of the load. It is
+**throttled at 300/s in `profile.jfc`**: 300 × 180 = 54 000, and the recording was sitting on the
+ceiling. `jdk.ExceptionStatistics` carries the uncapped counter, and it says something else entirely:
+
+| | throws in 180 s | per request |
+|---|---|---|
+| dbitem | 888 762 | **1.031** |
+| dblist | 559 790 | **1.046** |
+| dbpost | 328 311 | **1.032** |
+
+**Every request on this stack throws exactly one exception**, and it is `JobCancellationException` —
+exceptions as control flow, which is what RQ7 suspects, at one per request. The throttled sample had
+understated it by a factor of 6 to 17.
+
+**And it costs nothing, for the reason §1.2 predicted before any of this ran.**
+`JobCancellationException` overrides `fillInStackTrace` and is stackless, so a throw is an allocation
+and no stack walk:
+
+| | self samples in exception construction | every sample with an exception frame anywhere |
+|---|---|---|
+| dbitem | **0.154 %** | 0.73 % |
+| dblist | **0.056 %** | 0.61 % |
+| dbpost | **0.094 %** | 0.58 % |
+
+The right-hand column overcounts badly on purpose — it charges the whole stack to the exception — and
+even that is a third of the brief's 2 % line. **The exception half is green with room to spare.**
+
+**Verdict: RQ7 is red on deoptimisation, green on exceptions, and the red is a criterion problem
+rather than a service problem.** The honest sentence is that steady state on this stack is stable: a
+handful of speculation failures a minute, one of which recurs at a site whose branch really is
+unstable, and one stackless exception per request that costs a tenth of a per cent.
+
+| Fact | Where verified |
+|---|---|
+| Deoptimisation events, buckets, steady-state rate and site intervals | `bench/profile/results/rq7-steady-state.md`, `bench/profile/rq7-steady-state.sh`, `rq7-analyse.py` |
+| `jdk.JavaExceptionThrow` is throttled at 300/s; `jdk.ExceptionStatistics` is not | `openjdk-25.0.4!/lib/jfr/profile.jfc` |
+| One exception per request, and its CPU share | `rq7-exception-total.py`, `rq7-exception-cost.py` over the committed pair profiles |
+
 ---
 
 ## 2. Where each research question stands
@@ -983,11 +1061,11 @@ knowing what it costs — and the two are kept apart on purpose.
 | **RQ4** Exposed | **amber** | **1.27–1.29× at a fixed 2000 rps, 1.61× at saturation** (§1.11, §1.12) — the brief's 1.5× line falls between them, and it was specified for stub mode, which this stand cannot compare in. Decomposed the gap is work: transaction wrapper ~64 µs flat, Exposed fixed ~70 µs, mapping 0.76 µs/row ≈ 0.151 µs/column. The red condition's second clause — a third of the gap from failed inlining, dispatch or scalar replacement — is **untested** |
 | **RQ5** codegen patterns | **GREEN** | Measured on both halves (§1.18). Value classes through generics and nullables, `$default`, and capturing non-`inline` lambdas are **free — 0 B/op and inside 0.3 ns of their controls**. Two patterns the brief does not name are not: `Delegates.observable` at **15×** and one box per write, and an eager collection chain at **3.8×** and 7184 B/op. Both are now bounded by what a request allocates at all: **0.24 % and 0.18 % of request CPU** (§1.20). **2567 of 6700 classes on the path are Java** and cannot carry any of it |
 | **RQ6** encoders | **GREEN** | A JSON-only service is monomorphic at these sites; sustained mixed traffic makes them **bimorphic at 50/50**, read out of the inlining log, and `TypeProfileWidth` is 2 — so C2 still profiles and inlines them (§1.16). A one-off tree call costs nothing measurable |
-| **RQ7** steady state | **partial** | The instrument is settled — `jdk.Compilation` switched on is a census, `jdk.CompilerInlining` is not (§1.3). The exception arm is named: `JobCancellationException` is already stackless, `TimeoutCancellationException` is not (§1.2). Rates not measured |
+| **RQ7** steady state | **RED on deoptimisation, GREEN on exceptions** | Measured (§1.21). Steady state is **2.25–5.62 deoptimisations per minute**, above the brief's "under 1", and one site genuinely recurs — `CoroutineScheduler$Worker.tryPark()@40` at 31/26/16 s. Four events in 160 s: red by the letter of a threshold no healthy JVM under load appears to meet. Exceptions: **exactly 1.03 per request**, all `JobCancellationException`, costing **0.06–0.15 % of request CPU** because it is stackless as §1.2 predicted |
 
 **Kill criterion 4 is met several times over.** The criterion is "three RQs in a row come out green
-or grey". RQ1, RQ3, RQ5 and RQ6 are green, RQ2 is green by arithmetic, RQ4 is amber on an untested
-clause. Not one red verdict came out of the phase.
+or grey". RQ1, RQ2, RQ3, RQ5 and RQ6 are green, RQ4 is amber on an untested clause, and RQ7 is the
+phase's only red — on a threshold that, measured, appears to be one no healthy JVM under load meets.
 
 The brief's instruction is then to drop what remains and write that the stack is well served by C2.
 On the evidence that is right, but it has to be said in the form the evidence supports, and an
@@ -1006,9 +1084,10 @@ The claim the evidence actually supports is narrower and is worth stating exactl
 
 The macro shares that sentence used to owe are now measured (§1.20): RQ2's two sites are 0.52–0.87 %
 of request CPU, RQ3's allocation bucket 0.13–0.33 %, RQ5's two off-list patterns bounded at 0.24 %
-and 0.18 %. **The remaining honest gaps are two**: RQ4's deciding clause is untested, and RQ7 was
-never measured at all. "Not shown to cost 2 %" is still not "costs nothing" — but on five of the
-seven questions it is now a measurement saying so rather than an argument.
+and 0.18 %. RQ7 is measured too (§1.21). **One honest gap is left**: RQ4's deciding clause — above
+1.5×, *and* a third of the gap from failed inlining, dispatch or scalar replacement — was never
+tested. Everywhere else, "not shown to cost 2 %" is now a measurement saying so rather than an
+argument.
 
 What does cost — a transaction wrapper at 64 µs, a dispatcher default at 27 % on this box, a
 co-located database taking a third of the machine — is on nobody's list of JIT questions.
@@ -1030,6 +1109,9 @@ is exactly why they would have been lost had the study only filled in its own fo
 | **Two fifths of the request path is Java** — Netty, the PostgreSQL driver and HikariCP are 2567 of 6705 classes and cannot carry a Kotlin codegen pattern at all | 38 % of classes | §1.18 |
 | **Nine tenths of a static size shortlist is code that never runs** — 49 of 638, and the miss rate has to be computed over artifacts that could have appeared at all | 89 % | §1.9 |
 | The real-mode ceiling on a four-core box with a co-located database is **the box**: 3.93 of 4 cores, of which the database takes 1.24 and the kernel 0.80 | — | §1.13 |
+| **Every request on this stack throws exactly one exception** — 1.03 per request by the uncapped counter, all `JobCancellationException`. It costs 0.06–0.15 % of CPU only because it is stackless; the same pattern with a stack-filling exception would be a different finding | 1.03/req | §1.21 |
+| **`jdk.JavaExceptionThrow` is throttled at 300/s in `profile.jfc`** and sat on that ceiling here, understating the throw count by 6–17×. Third time in this phase that a JFR default silently capped the thing being measured | 52 000 against 888 762 | §1.21 |
+| **Starting and stopping a JFR recording deoptimises the service being recorded** — 59–62 events in the first ten seconds and 16–17 in the last, against single digits across the 160 s between | — | §1.21 |
 | **C2's own threads cost 4.9–6.1 % of request CPU on a saturated four-core stand** — four to five times the collector, on a box running flat out where compilation should have settled. The same quantity Open question 3 found at 61 % in a one-core container | 5 % against GC's 1.2 % | §1.20 |
 | **A request on this stack allocates 23–75 KB**, of which a quarter is coroutine machinery on the two small endpoints — and all garbage collection costs 1.2 % of CPU, so the size of the number and the size of its price are unrelated | 23 434 / 74 953 / 30 741 B | §1.20 |
 
@@ -1317,15 +1399,12 @@ green, RQ4 from green to amber) and one number (RQ2's, through the right dispatc
 **What is left is not another construct.** Four things, in descending order of what they would
 change:
 
-1. **[B-49](../backlog/B-49-rq7-steady-state-and-the-compilers-own-cpu.md)** — RQ7, now the only
-   question never measured: deoptimisation rates, exception construction share, and C2's own CPU
-   under a container limit. §1.20 makes this the most valuable item left, because it measured C2's
-   threads at **4.9–6.1 % of CPU on a saturated four-core box** — four to five times the collector,
-   and larger than every construct in the brief's list together.
-2. **RQ4's deciding clause** — above 1.5×, *and* at least a third of the gap from failed inlining,
+1. **RQ4's deciding clause** — above 1.5×, *and* at least a third of the gap from failed inlining,
    dispatch or scalar replacement. The decomposition argues the gap is work; the clause was never
    tested, and it is what holds RQ4 at amber (§1.11).
-**Done since this list was last written:** the three macro shares (§1.20); the RQ0 gate
+**Done since this list was last written:** RQ7 (§1.21), which was the only question never measured —
+red on a deoptimisation threshold that appears unreachable, green on exceptions by a wide margin; the
+three macro shares (§1.20); the RQ0 gate
 ([B-53](../backlog/B-53-compute-the-rq0-gate.md)), which turned out to have three answers; and
 [B-52](../backlog/B-52-multiply-makes-the-loop-faster.md), closed — `-XX:-UseSuperWord` takes the
 multiply arm from 71 to 401 ns/op and leaves the other three untouched, so the advantage is
