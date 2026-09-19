@@ -317,6 +317,46 @@ was ever asked to inline it and refused. `BufferedChannel.toStringDebug` is 941 
 never appear in a request. The shortlist exists to be intersected with the profile, which is
 [B-43](../backlog/B-43-static-scan-across-owners.md)'s second half and B-48's input.
 
+### 1.9 Nine tenths of the size shortlist never runs
+
+§1.8 produced 638 suspects. This intersects them with a CPU profile of the stand, on the engine the
+brief pins, so that a suspect becomes a cost or stops being anything. Run on the Linux box —
+`bench/` on Netty, `/business`, 45 s of warm-up and 90 s of measurement at 64 connections, JVM
+pinned to cores 0–7 and `oha` to 8–15 — 134 870 samples, 91 463 rps, 71 µs of CPU per request.
+
+Two files, and which is committed follows the rule this repository already set for profiles: the
+run's `bench/profile/results/netty-jit/summary.md` is versioned, and the 19 MB of collapsed stacks
+it was computed from stays on the machine that produced it. What carries the numbers below is
+therefore the **join**, `experiments/method-sizes/results/2026-09-19-netty-jit-intersection.log`,
+which is committed and which `intersect.py` rebuilds from any later profile of the same shape.
+
+| Fact | Where verified |
+|---|---|
+| The run reproduces the fourth phase's owner split on Netty: application code **6.0 %** of CPU by owner here against 6.1 % there, on a different build and a different day | `bench/profile/results/netty-jit/summary.md` against [research-engines](research-engines.md) §1.4 |
+| **Of 638 oversized methods, 49 appear in the profile.** 192 belong to five artifacts that cannot appear at all, because this stand has no database — Exposed, HikariCP, the driver. Of the 446 that could have run, **397 never do: 89.0 %** | `experiments/method-sizes/results/2026-09-19-netty-jit-intersection.log` |
+| **All 49 together own 3.86 % of self samples, and the largest single one owns 0.56 %** — `AbstractChannelHandlerContext.write` at 330 bytes | the same log |
+| The artifact where every oversized method runs is the serialisation glue: content negotiation **4 of 4**, `ktor-serialization-kotlinx` 2 of 4 — the same two artifacts §1.8 found densest by share | the same log's per-artifact counts |
+| The four "every request" suspend bodies of §1.8 do run, which confirms the shortlist was reading the right code, and their own bodies are cheap: `RequestBodyHandler$job$1` 0.15 % self, `convertResponseBody$1$2` 0.07 % | the same log |
+| `NettyHttp1Handler$handleRequest$1$1.invokeSuspend` is 381 bytes, **0.05 % self and 43.85 % stack** — the request-handling root. Size plus a large stack share is a frame, not a cost | the same log |
+
+**Consequence — RQ1's size question is grey by the brief's own vocabulary.** The threshold for red is
+2 % of request CPU. No single oversized method on this path owns half a percent of self samples, and
+the entire class of them owns 3.86 %. A study that had scanned, shortlisted and stopped would have
+reported 638 findings, and 89 % of that list is code nothing executes.
+
+**Consequence — and this is the limit of the intersection.** A method's `self` share is the time
+spent in its own body. The cost of a *refused inline* is not that: it is call overhead plus the
+optimisation C2 could not do across the boundary, which can be larger or smaller than the body.
+So this join **locates**, it does not price. RQ1 survives as a toggle experiment — raise
+`FreqInlineSize`, measure µs of CPU per request — and it is now a much smaller one: 49 methods
+rather than 638, with four of them named.
+
+**What this run cannot say.** There is no database behind it. Exposed's 79 oversized methods, the
+driver's 101 and HikariCP's 11 were never given the chance to appear, and RQ4's territory is
+untouched — the whole point of [B-41](../backlog/B-41-jit-stand-data-layer-and-endpoints.md). The
+89 % is the honest miss rate; the 92.3 % over the whole shortlist is the one that would have
+flattered this section.
+
 ---
 
 ## 2. Decisions
@@ -371,6 +411,10 @@ method on the whole request path comes within a factor of four of 8000 bytes, an
 exceed it across 56 471 are cold (§1.8). Splitting a suspend function by hand stays, and §1.8 says
 which one to split first — the four `invokeSuspend` bodies that run on every request belong to Ktor
 and the Netty engine, not to the application.
+
+The dial is now pointed at a list of 49 rather than 638 (§1.9), and the arm is the toggle rather
+than the scan: the scan says which methods are large and which of them run, and neither of those is
+the price of a refused inline.
 
 ### D5. Constructs are counted wherever they occur *(deviation from the brief)*
 
@@ -468,6 +512,8 @@ stand, deciding nothing about the construct list.
 | experiment | `experiments/jfr-compiler-events/long-run.sh` — §1.3, the control that corrected it, and the price of each instrument |
 | experiment | `experiments/json-encoder-census/run.sh`, `experiments/json-encoder-census/Probe.kt` — §1.5 |
 | experiment | `experiments/method-sizes/run.sh`, `experiments/method-sizes/scan.py` — §1.8 |
+| experiment | `experiments/method-sizes/intersect.py` — §1.9, the join with the profile |
+| profile | `bench/profile/results/netty-jit/` — §1.9, the run the join reads |
 | JDK configuration | `openjdk-25.0.2!/lib/jfr/profile.jfc`, `openjdk-25.0.2!/lib/jfr/default.jfc` — §1.3 |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/ResultRow.class` |
 | artefact | `org.jetbrains.exposed:exposed-core:1.4.0!/org/jetbrains/exposed/v1/core/IColumnType.class` |

@@ -1,38 +1,38 @@
 ---
 id: B-43
-title: "Intersect the classpath-wide size shortlist with the profile, so a suspect becomes a cost"
+title: "Re-run the scan and the join once the stand has a database"
 status: open
-priority: P1
-size: S
+priority: P2
+size: XS
 stage: stage-8-jit-constructs
 blocked_by: [B-41]
 ---
 
-# B-43 — The scan is done; what is missing is whether anything calls these methods
+# B-43 — Done for the half of the path that exists; the other half has no database behind it
 
-The classpath-wide scan is committed and answered half of what this item was for
-([research-jit-constructs](../research/research-jit-constructs.md) §1.8): 691 of 56 471 methods on
-the pinned request path exceed `FreqInlineSize`, three exceed 8000 bytes and all three are cold,
-and 52 `invokeSuspend` bodies are over the threshold — four of them on the request path by
-construction, in Ktor and the Netty engine rather than in application code.
+Both halves of this item are built and run
+([research-jit-constructs](../research/research-jit-constructs.md) §1.8 and §1.9). The scan covers
+56 471 methods across the pinned stack and found 638 over `FreqInlineSize`; the join against a CPU
+profile of the stand on Netty found that **49 of them run**, that they own **3.86 %** of self
+samples between them, and that the largest single one owns 0.56 %.
 
-What it cannot say is whether any of them runs. Size is static; a method over the threshold is a
-suspect, and `BufferedChannel.toStringDebug` at 941 bytes will never appear in a request.
+What is left is not more tooling. It is the same two commands against a stand that has a data layer:
+192 of the 638 suspects belong to Exposed, HikariCP and the driver, and on a stand with no database
+they could not appear. The 89 % miss rate is honest about that; the number will change when there is
+something for them to run in.
 
-- **The remaining work is the intersection**: the shortlist against the CPU profile of B-41, so
-  that every row says both how big the method is and what share of samples it owns. A row with no
-  samples is struck out, in the output, rather than quietly dropped.
-- **Then against the inlining log**, because a large method that C2 was never asked to inline costs
-  nothing either. The three questions are separate and only the last one is a finding.
-- **The threshold is read from the JVM at report time**, not written into the scan: `FreqInlineSize`
-  is platform-dependent by declaration and equal on two platforms only in fact.
-- **It stays a report, not a gate.** sborka owns the gate-shaped version (`kapkanMethodSizes`), and
-  a number with two owners has none.
-- Does **not** cover: pricing any of them. That is B-48.
+- **Re-run `run.sh` and `intersect.py` once B-41 lands**, on the four endpoints of the brief and in
+  both data modes, and compare the two miss rates rather than replacing one with the other.
+- **The join locates, it does not price.** A method's `self` share is its own body; the cost of a
+  refused inline is call overhead plus the optimisation lost across the boundary. Pricing is B-48,
+  and §1.9 cut its subject from 638 methods to 49.
+- **It stays a report, not a gate** — sborka owns the gate-shaped version, and a number with two
+  owners has none.
+- Does **not** cover: the alloc profile. Size is a CPU question.
 
-- AC: one table, committed, with a row per method over the threshold that also appears in the
-  profile — size, owner, share of CPU samples, and whether the inlining log names it.
-- AC: the count of over-threshold methods that never appear in the profile, stated, because that
-  number is the reason the scan alone decides nothing.
-- Anchors: `experiments/method-sizes/scan.py`, `experiments/method-sizes/run.sh`,
-  `bench/profile/attribute.py`.
+- AC: the intersection re-run with a database behind the stand, with the miss rate reported over the
+  artifacts that could appear rather than over the whole shortlist.
+- AC: the Exposed and driver rows of the shortlist either gain a share or are struck out in the
+  output, so that the 192 stop being unknown.
+- Anchors: `experiments/method-sizes/intersect.py`, `experiments/method-sizes/scan.py`,
+  `bench/profile/results/netty-jit/`.

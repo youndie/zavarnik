@@ -1,0 +1,32 @@
+samples: 134870; methods over 325 bytes: 638; of those seen in the profile: 49
+never seen: 589 of the whole shortlist (92.3 %), 397 of the 446 in artifacts that appear at all (89.0 %)
+artifacts absent from this profile, so their methods could not run: HikariCP-7.0.2.jar, exposed-core-1.4.0.jar, exposed-jdbc-1.4.0.jar, netty-resolver-4.2.16.Final.jar, postgresql-42.7.13.jar
+
+   bytes   self%  stack%  method
+     330   0.56%   3.43%  io/netty/channel/AbstractChannelHandlerContext.write  [netty-transport-4.2.16.Final.jar]
+     980   0.52%   1.79%  io/ktor/server/routing/RoutingResolveContext.handleRoute  [ktor-server-core-jvm-3.5.2.jar]
+     492   0.37%   7.92%  io/ktor/server/plugins/contentnegotiation/ResponseConverterKt$convertResponseBody$1.invokeSuspend  [ktor-server-content-negotiation-jvm-3.5.2.jar]
+     933   0.28%   3.27%  io/netty/handler/codec/http/HttpObjectDecoder.decode  [netty-codec-http-4.2.16.Final.jar]
+     413   0.26%   0.70%  kotlinx/coroutines/JobSupport.attachChild  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+     352   0.15%   1.49%  kotlinx/coroutines/JobSupport.finalizeFinishingState  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+    1122   0.15%   2.63%  io/ktor/server/netty/cio/RequestBodyHandler$job$1.invokeSuspend  [ktor-server-netty-jvm-3.5.2.jar]
+     407   0.12%   3.28%  kotlinx/serialization/json/internal/StreamingJsonEncoder.encodeSerializableValue  [kotlinx-serialization-json-jvm-1.11.0.jar]
+     356   0.11%   9.66%  io/netty/channel/nio/NioIoHandler.select  [netty-transport-4.2.16.Final.jar]
+     808   0.11%   0.11%  kotlinx/serialization/json/internal/AbstractJsonLexer.consumeNumericLiteral  [kotlinx-serialization-json-jvm-1.11.0.jar]
+     344   0.09%   0.29%  kotlinx/coroutines/flow/FlowKt__BuildersKt$asFlow$$inlined$unsafeFlow$3.collect  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+     660   0.08%   2.27%  io/netty/handler/codec/http/HttpObjectDecoder.readHeaders  [netty-codec-http-4.2.16.Final.jar]
+     577   0.08%   8.13%  io/ktor/server/plugins/contentnegotiation/RequestConverterKt.convertBody  [ktor-server-content-negotiation-jvm-3.5.2.jar]
+     424   0.08%   0.24%  io/netty/buffer/AdaptivePoolingAllocator$Magazine.allocate  [netty-buffer-4.2.16.Final.jar]
+     939   0.07%   7.36%  io/ktor/server/plugins/contentnegotiation/ResponseConverterKt$convertResponseBody$1$2.invokeSuspend  [ktor-server-content-negotiation-jvm-3.5.2.jar]
+     878   0.07%   0.07%  io/ktor/util/StringValuesImpl.<init>  [ktor-utils-jvm-3.5.2.jar]
+     400   0.06%   9.26%  kotlinx/coroutines/DispatchedTask.run  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+     639   0.06%   0.69%  io/ktor/utils/io/ByteChannel.awaitContent  [ktor-io-jvm-3.5.2.jar]
+     557   0.05%   0.56%  kotlinx/coroutines/channels/BufferedChannel.receiveCatching-JP2dKIU$suspendImpl  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+     701   0.05%   0.48%  kotlinx/coroutines/channels/BufferedChannel.receiveCatchingOnNoWaiterSuspend-GKJJFZk  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+     345   0.05%   0.05%  io/netty/handler/codec/http/HttpMethod.valueOf  [netty-codec-http-4.2.16.Final.jar]
+     381   0.05%  43.85%  io/ktor/server/netty/http1/NettyHttp1Handler$handleRequest$1$1.invokeSuspend  [ktor-server-netty-jvm-3.5.2.jar]
+     372   0.04%  40.23%  io/ktor/server/routing/RoutingRoot.interceptor  [ktor-server-core-jvm-3.5.2.jar]
+     390   0.04%   2.67%  kotlinx/coroutines/JobSupport.tryMakeCompletingSlowPath  [kotlinx-coroutines-core-jvm-1.11.0.jar]
+     751   0.03%   5.85%  kotlinx/serialization/json/internal/StreamingJsonDecoder.decodeSerializableValue  [kotlinx-serialization-json-jvm-1.11.0.jar]
+
+oversized methods own 3.86 % of self samples in total

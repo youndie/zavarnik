@@ -28,7 +28,20 @@ are reliably what the top of a size-ordered list is made of — lookup tables, t
 keyword sets — so leaving them in turns the shortlist into a list of large constants.
 
 The result is in [research-jit-constructs](../../docs/research/research-jit-constructs.md) §1.8.
-**These numbers are static and say nothing about what runs.** A method over the threshold is a
-suspect; only the profile says whether anything calls it, and only the inlining log says whether C2
-was asked to inline it and refused. Intersecting the three is
-[B-43](../../docs/backlog/B-43-static-scan-across-owners.md).
+**These numbers are static and say nothing about what runs**, which is what `intersect.py` is for:
+
+```bash
+python3 intersect.py --scan results/<stamp>.json <path-to>/business.cpu.collapsed
+```
+
+It joins the shortlist to a collapsed profile from async-profiler and prints two columns per method
+— `self`, samples whose leaf is this method, and `stack`, samples with it anywhere below. A method
+that is large and hot in `self` is a candidate for the inlining question; one that is large and
+appears only in `stack` is a frame, and its size is somebody else's problem.
+
+The number that matters as much as the table is the miss rate, and it is printed twice: over the
+whole shortlist, and over the part of it in artifacts that appear in the profile at all. A stand
+without a database cannot execute Exposed, and counting its methods as "never seen" would turn an
+absent subject into evidence. On the first run — the stand on Netty, no data layer — 49 of 638
+methods appeared, 89 % of those that could have run did not, and the 49 owned 3.86 % of self
+samples between them (§1.9).
