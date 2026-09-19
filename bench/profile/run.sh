@@ -19,6 +19,13 @@ WARMUP=${WARMUP:-60}; MEASURE=${MEASURE:-120}; CONNS=${CONNS:-64}; LABEL=${LABEL
 PORT=18100; OHA=${OHA:-$HOME/tools/oha}; ASPROF=${ASPROF:-$HOME/tools/async-profiler-4.5-linux-x64/bin/asprof}
 # Empty GEN keeps the single-host behaviour of the first four phases byte for byte.
 GEN=${GEN:-}; TARGET=${TARGET:-127.0.0.1}; GEN_OHA=${GEN_OHA:-\$HOME/tools/oha}
+# RATE turns the generator open-loop: a constant arrival rate instead of a fixed number of
+# connections. It matters more than it looks. Measured on the pair, CPU per request falls from
+# 210 us at 5k rps to 53 us at saturation, because the cost of a wake-up amortises over whatever
+# arrived while the loop was away. So a variant is only comparable with another at the SAME offered
+# rate, and "50-70 % of saturation" is a load-bearing part of the protocol rather than a formality.
+RATE=${RATE:-}
+if [ -n "$RATE" ]; then RATE_ARG="-q $RATE"; else RATE_ARG=""; fi
 JAVA=${JAVA_HOME:?set JAVA_HOME}/bin/java
 # Outside the source tree on purpose: a one-way replica (mutagen) deletes files the run writes
 # into the synced directory, mid-run. Copy the label's directory into bench/profile/results/
@@ -75,7 +82,7 @@ run_endpoint() { # $1 name, rest = oha args
   # 44.9k without), so rps and latency come from here and the profiles from the two windows after.
   local t0 x0 t1 x1
   t0=$(cpu_ticks); x0=$(ctx_switches)
-  gen -z "${MEASURE}s" -c "$CONNS" --no-tui --output-format json "$@" > "$OUT/$name.oha0.json" 2>&1
+  gen -z "${MEASURE}s" -c "$CONNS" $RATE_ARG --no-tui --output-format json "$@" > "$OUT/$name.oha0.json" 2>&1
   t1=$(cpu_ticks); x1=$(ctx_switches)
   python3 - "$OUT/$name.oha0.json" <<'PY' | sed 's/^/clean: /' | tee -a "$OUT/summary.md"
 import json,sys; d=json.load(open(sys.argv[1])); s=d["summary"]; p=d["latencyPercentiles"]
@@ -91,7 +98,7 @@ print(f"cost: cpu={cpu:.1f}s over {secs:.1f}s = {cpu/secs:.2f} cores busy, {cpu/
 PY
   "$ASPROF" -d "$MEASURE" -e cpu -i 1ms -o collapsed -f "$OUT/$name.cpu.collapsed" $PID > /dev/null 2>&1 &
   local pc=$!
-  gen -z "${MEASURE}s" -c "$CONNS" --no-tui --output-format json "$@" > "$OUT/$name.oha.json" 2>&1
+  gen -z "${MEASURE}s" -c "$CONNS" $RATE_ARG --no-tui --output-format json "$@" > "$OUT/$name.oha.json" 2>&1
   wait $pc
   python3 - "$OUT/$name.oha.json" <<'PY' | tee -a "$OUT/summary.md"
 import json,sys; d=json.load(open(sys.argv[1])); s=d["summary"]; p=d["latencyPercentiles"]
@@ -101,7 +108,7 @@ PY
   if [[ " ${PROFILES:-cpu alloc} " == *" alloc "* ]]; then
     "$ASPROF" -d "$MEASURE" -e alloc --total -o collapsed -f "$OUT/$name.alloc.collapsed" $PID > /dev/null 2>&1 &
     pc=$!
-    gen -z "${MEASURE}s" -c "$CONNS" --no-tui --output-format json "$@" > "$OUT/$name.oha2.json" 2>&1
+    gen -z "${MEASURE}s" -c "$CONNS" $RATE_ARG --no-tui --output-format json "$@" > "$OUT/$name.oha2.json" 2>&1
     wait $pc
     python3 profile/attribute.py ${CATEGORIES:+--categories "$CATEGORIES"} "$OUT/$name.cpu.collapsed" "$OUT/$name.alloc.collapsed" | tee -a "$OUT/summary.md"
   else
@@ -121,7 +128,8 @@ for ep in $ENDPOINTS; do
     plaintext) run_endpoint plaintext "http://$TARGET:$PORT/plaintext" ;;
     dbitem) run_endpoint dbitem "http://$TARGET:$PORT/db/items/42" ;;
     dblist) run_endpoint dblist "http://$TARGET:$PORT/db/items?limit=50" ;;
-    dbpost) run_endpoint dbpost -m POST -T application/json -D profile/new-item.json "http://$TARGET:$PORT/db/items" ;;
+    # The body is read by the generator, so with GEN set the path has to exist on that machine.
+    dbpost) run_endpoint dbpost -m POST -T application/json -D "${OHA_BODY:-profile/new-item.json}" "http://$TARGET:$PORT/db/items" ;;
   esac
 done
 echo; echo "## GC and JIT from the service log" | tee -a "$OUT/summary.md"
