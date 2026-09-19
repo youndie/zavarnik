@@ -13,6 +13,14 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.5.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("org.slf4j:slf4j-simple:2.0.17")
+
+    // The fifth phase's data layer. Every version is written out rather than left to a range: the
+    // brief's own rule is that the stack is pinned before the first measurement, and the facts in
+    // research-jit-constructs §1.4 are true of Exposed 1.4.0 and of nothing else.
+    implementation("org.jetbrains.exposed:exposed-core:1.4.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:1.4.0")
+    implementation("com.zaxxer:HikariCP:7.0.2")
+    implementation("org.postgresql:postgresql:42.7.13")
 }
 
 kotlin {

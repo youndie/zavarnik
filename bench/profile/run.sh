@@ -87,13 +87,19 @@ PY
   fi
   awk '{n=split($0,a,";"); leaf=a[n]; sub(/ [0-9]+$/,"",leaf); c[leaf]+=$NF; t+=$NF} END{for(k in c) printf "%5.1f%% %s\n", 100*c[k]/t, k}' "$OUT/$name.cpu.collapsed" | sort -nr | head -${SELF_FRAMES:-5} | sed 's/^/cpu self: /' | tee -a "$OUT/summary.md"
 }
-# ENDPOINTS="echo items business" (default: all); PROFILES="cpu alloc" (default: both).
+# ENDPOINTS="echo items business" (default: the first three phases'); PROFILES="cpu alloc".
+# The fifth phase's four shapes are plaintext, dbitem, dblist and dbpost; they answer to whichever
+# repository -Dbench.data opened, so the same names cover both the real and the stub mode.
 ENDPOINTS=${ENDPOINTS:-"echo items business"}
 for ep in $ENDPOINTS; do
   case $ep in
     echo) run_endpoint echo "http://127.0.0.1:$PORT/echo?msg=hello-from-oha" ;;
     items) run_endpoint items "http://127.0.0.1:$PORT/items?limit=20" ;;
     business) run_endpoint business -m POST -T application/json -D profile/order.json "http://127.0.0.1:$PORT/business" ;;
+    plaintext) run_endpoint plaintext "http://127.0.0.1:$PORT/plaintext" ;;
+    dbitem) run_endpoint dbitem "http://127.0.0.1:$PORT/db/items/42" ;;
+    dblist) run_endpoint dblist "http://127.0.0.1:$PORT/db/items?limit=50" ;;
+    dbpost) run_endpoint dbpost -m POST -T application/json -D profile/new-item.json "http://127.0.0.1:$PORT/db/items" ;;
   esac
 done
 echo; echo "## GC and JIT from the service log" | tee -a "$OUT/summary.md"
