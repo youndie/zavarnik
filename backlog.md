@@ -37,11 +37,12 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (3)
+## Open (4)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
 | [B-50](docs/backlog/B-50-verdict-table-and-write-up.md) `[ ]` | The verdict table and the article, with green, grey and stopped written up like red | P2 | S | - |
+| [B-54](docs/backlog/B-54-verify-the-trap-limit-prediction.md) `[ ]` | Two predictions from the RQ7 review, each falsifiable in one longer window | P2 | S | - |
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 

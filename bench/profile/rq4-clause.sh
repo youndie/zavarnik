@@ -15,6 +15,19 @@
 #
 # PrintInlining runs in a separate pass from the timing, for the reason 1.17 needed: it perturbs
 # what it measures, so it may say which refusals happen and must not say what they cost.
+#
+# TWO THINGS THE FIRST VERSION GOT WRONG, both caught in review.
+#
+#   * **The CPU window wrapped the profiled window.** t0 was taken before async-profiler started and
+#     t1 after it finished, so every us/req figure carried the profiler's own 1 ms sampling. run.sh
+#     takes a CLEAN window first for exactly this reason and says so in its own comment. The gap
+#     survived it - the cost falls on both arms - but the denominator was inflated, and a ratio's
+#     denominator is not a detail. Fixed: a clean window, then the profiled ones.
+#   * **"Failed inlining" was operationalised as interpreted frames.** A refused inline does not
+#     leave code interpreted; it leaves a call to a compiled method and loses the optimisation
+#     across that boundary. Zero interpreted frames answers the huge-method question instead. The
+#     causal test is the lever of 1.17 applied to BOTH arms: whatever raising FreqInlineSize takes
+#     off the gap is what refused inlining was costing it.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 . "$(dirname "$0")/warmup.env"
@@ -38,24 +51,36 @@ run_arm() { # $1 repo arm, $2 extra JAVA_OPTS, $3 tag
   gen -z "${WARM}s" -c "$CONNS" -q "$RATE" --no-tui "$URL" >/dev/null 2>&1
 }
 
-for arm in jdbc exposed; do
-  # timing + CPU + allocation, no diagnostic flags
-  run_arm "$arm" "" "$arm"
+for spec in "jdbc 325" "exposed 325" "jdbc 2000" "exposed 2000"; do
+  set -- $spec; arm=$1; size=$2
+  tag="$arm-$size"
+  run_arm "$arm" "-XX:FreqInlineSize=$size" "$tag"
   TICK=$(getconf CLK_TCK); t() { sed 's/.*) //' "/proc/$PID/stat" | awk '{print $12+$13}'; }
+  # The clean window: no profiler attached, so us/req is the code's and not the instrument's.
   t0=$(t)
-  "$ASPROF" -d "$MEASURE" -e cpu -i 1ms -o collapsed -f "$OUT/$arm.cpu.collapsed" $PID >/dev/null 2>&1 &
-  pc=$!
-  gen -z "${MEASURE}s" -c "$CONNS" -q "$RATE" --no-tui --output-format json "$URL" > "$OUT/$arm.oha.json" 2>/dev/null
-  wait $pc; t1=$(t)
-  "$ASPROF" -d "$MEASURE" -e alloc --total -o collapsed -f "$OUT/$arm.alloc.collapsed" $PID >/dev/null 2>&1 &
-  pc=$!
-  gen -z "${MEASURE}s" -c "$CONNS" -q "$RATE" --no-tui "$URL" >/dev/null 2>&1
-  wait $pc
+  gen -z "${MEASURE}s" -c "$CONNS" -q "$RATE" --no-tui --output-format json "$URL" > "$OUT/$tag.oha.json" 2>/dev/null
+  t1=$(t)
+  # Profiles come from their own windows afterwards, and only at the default threshold, since the
+  # lever arms exist to move a number and not to be profiled.
+  if [ "$size" = 325 ]; then
+    "$ASPROF" -d "$MEASURE" -e cpu -i 1ms -o collapsed -f "$OUT/$arm.cpu.collapsed" $PID >/dev/null 2>&1 &
+    pc=$!
+    gen -z "${MEASURE}s" -c "$CONNS" -q "$RATE" --no-tui "$URL" >/dev/null 2>&1
+    wait $pc
+  fi
+  if [ "$size" = 325 ]; then
+    "$ASPROF" -d "$MEASURE" -e alloc --total -o collapsed -f "$OUT/$arm.alloc.collapsed" $PID >/dev/null 2>&1 &
+    pc=$!
+    gen -z "${MEASURE}s" -c "$CONNS" -q "$RATE" --no-tui "$URL" >/dev/null 2>&1
+    wait $pc
+  fi
   kill -TERM "$PID" 2>/dev/null; wait "$PID" 2>/dev/null
-  for f in "$OUT/$arm.cpu.collapsed" "$OUT/$arm.alloc.collapsed"; do
-    [ "$(wc -c < "$f")" -gt 10000 ] || { echo "FATAL: $f is empty - nothing was sampled"; exit 1; }
-  done
-  TICK=$TICK T0=$t0 T1=$t1 A=$arm S=$MEASURE python3 - "$OUT/$arm.oha.json" <<'PY'
+  if [ "$size" = 325 ]; then
+    for f in "$OUT/$arm.cpu.collapsed" "$OUT/$arm.alloc.collapsed"; do
+      [ "$(wc -c < "$f")" -gt 10000 ] || { echo "FATAL: $f is empty - nothing was sampled"; exit 1; }
+    done
+  fi
+  TICK=$TICK T0=$t0 T1=$t1 A=$tag S=$MEASURE python3 - "$OUT/$tag.oha.json" <<'PY'
 import json, os, sys
 d = json.load(open(sys.argv[1])); s = d["summary"]
 cpu = (int(os.environ["T1"]) - int(os.environ["T0"])) / float(os.environ["TICK"])
@@ -63,7 +88,8 @@ print("%-8s rps=%.0f  %.0f us cpu/req  p50=%.2fms"
       % (os.environ["A"], s["requestsPerSec"], cpu / (s["requestsPerSec"] * float(os.environ["S"])) * 1e6,
          d["latencyPercentiles"]["p50"] * 1000))
 PY
-  # inlining refusals, separate pass
+  # inlining refusals, separate pass, only for the default-threshold arms
+  [ "$size" = 325 ] || continue
   run_arm "$arm" "-XX:+UnlockDiagnosticVMOptions -XX:+PrintInlining" "$arm-inline"
   gen -z 30s -c "$CONNS" -q "$RATE" --no-tui "$URL" >/dev/null 2>&1
   kill -TERM "$PID" 2>/dev/null; wait "$PID" 2>/dev/null

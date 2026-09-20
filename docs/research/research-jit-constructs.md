@@ -695,13 +695,21 @@ against `plainChain`'s 0.917** is the whole cost of a non-suspending suspend fun
 `Integer` and nothing else, and reads 16.000 B/op. Without that control, "16" was a number whose
 meaning had been guessed — which is precisely how the first reading went wrong.
 
-**A finding that fell out of the correction: Kotlin's coroutine boxing helper does not use the
-`Integer` cache.** An arm built to separate the box from the machinery — the same chain on a value
-of 27, well inside the cache — still allocated 16 B/op. `javap -c` on
-`kotlin/coroutines/jvm/internal/Boxing` shows why: `boxInt` compiles to `new Integer(i)`, not
-`Integer.valueOf(i)`. The cache is never consulted. So the earlier reasoning about staying outside
-the cache range was beside the point from the start, and where a suspend-returned primitive genuinely
-does escape, it allocates every time regardless of its value.
+**Kotlin's coroutine boxing helper does not use the `Integer` cache — and that is a decision, not a
+defect.** An arm built to separate the box from the machinery — the same chain on a value of 27, well
+inside the cache — still allocated 16 B/op. `javap -c` on `kotlin/coroutines/jvm/internal/Boxing`
+shows why: `boxInt` compiles to `new Integer(i)`, not `Integer.valueOf(i)`.
+
+An earlier draft reported this as a finding. It is documented intent, and the stdlib source says so
+in a comment on the file itself: *"Box primitive to Java wrapper class by allocating the wrapper
+object. This allows HotSpot JIT to eliminate allocations completely in coroutines code with
+primitives."* A fresh allocation is a better scalar-replacement candidate than a value returned from
+a shared cache array, so the helper allocates on purpose in order that the allocation can be removed.
+
+**Which makes the rest of this section a measurement of that decision working.** The box is gone
+whenever it does not escape, and 0.911 ns against 0.917 is what "gone" reads as. The corollary still
+holds and is worth stating: where a suspend-returned primitive genuinely *does* escape, it allocates
+every time regardless of its value, because the cache is never consulted.
 
 **Verdict: RQ3 is green.** The brief's green condition is "B/op of a non-suspending suspend chain
 within 10 % of the same chain as plain calls". Both are zero, and the time difference for a single
@@ -844,6 +852,13 @@ Three of the four patterns the brief names are free, and not marginally: a value
 a generic or a nullable is **0 B/op** — C2 removes the box entirely — and reads within 0.02 ns of the
 raw `Int`. A capturing lambda passed to a non-`inline` function allocates nothing and runs the same
 speed as the loop it replaces.
+
+**"Free" has a scope and it should travel with the word.** These arms are JMH: the values do not
+escape the benchmark method and the call sites are monomorphic. That is the case C2 optimises best,
+and it is not automatically the case inside a request. What extends the claim past the microbenchmark
+is §1.20's allocation census, which finds the same patterns' products absent from what a real request
+allocates — a bound from the other direction rather than a repetition of this one. Anywhere "free"
+appears without that second measurement beside it, it means "free where nothing escapes".
 
 **The two that cost are not on the brief's list.** `Delegates.observable` is 13.3 ns and one box per
 write, because every write goes through `ReadWriteProperty.setValue` with the old and new values
@@ -1014,37 +1029,63 @@ of magnitude below the raw figure and still above the brief's "under 1 per minut
 `maybe_recompile` / `reinterpret` roughly evenly, and the reasons are ordinary speculation failures —
 `speculate_class_check`, `unstable_if`.
 
-**One site genuinely recurs, and the brief's red names it.** Most repeated "sites" are bursts inside a
-single millisecond — one deoptimisation event recorded several times, not a site returning. Sorting by
-interval instead of by count leaves exactly one: `kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark()@40`,
-four times at **31 s, 26 s, 16 s** apart, reason `unstable_if`, action `reinterpret`. The scheduler's
-park decision is bimodal by construction, C2 speculates it will not park, and it periodically does.
+**One site genuinely recurs, and it recurs exactly four times.** Most repeated "sites" are bursts
+inside a single millisecond — one deoptimisation recorded several times, not a site returning.
+Sorting by interval instead of by count leaves exactly one:
+`kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark()@40`, four times at **31 s, 26 s,
+16 s** apart, reason `unstable_if`, action `reinterpret`. The scheduler's park decision is bimodal by
+construction, C2 speculates it will not park, and it periodically does.
 
-**So RQ7's deoptimisation half is red by the letter of the criterion and worth nothing by the
-measurement** — four events in 160 seconds. That is a *deviation from the brief* worth stating plainly:
-**"under 1 deoptimisation per minute" appears to be a threshold no healthy JVM under load meets**, and
-"a deoptimisation recurring at the same site" fires on ordinary adaptive reprofiling. A criterion that
-a well-behaved service fails does not separate well-behaved services from badly behaved ones.
+**Four is not an arbitrary number.** `PerBytecodeTrapLimit` is **4** on this JVM, read from
+`-XX:+PrintFlagsFinal`: after four traps at one bytecode index C2 stops speculating there and
+compiles the branch without the assumption. So the site is not a runaway; it is a speculation
+retiring itself, and the count is the mechanism's own limit rather than a rate. The prediction that
+follows is testable and is [B-54](../backlog/B-54-verify-the-trap-limit-prediction.md): a longer
+window must show **no fifth event at that bci**.
+
+**And the threshold this was measured against has been withdrawn by the person who set it.** In
+review the brief's author retracted "under 1 deoptimisation per minute" as a guess that the
+measurement showed to separate nothing. So the honest verdict on this half is **green with a
+retracted criterion**, not red by the letter of one: a handful of speculation failures a minute, one
+of which retires itself at the JVM's own trap limit.
 
 **The exception half needed a different instrument than the brief's, for the third time in this
-phase.** `jdk.JavaExceptionThrow` reported 51 607–52 406 throws per 180-second window — nearly the
+phase.** `jdk.JavaExceptionThrow` reported 51 607–52 406 events per 180-second window — nearly the
 same count on endpoints running at 4788, 2974 and 1768 rps, which is not a property of the load. It is
 **throttled at 300/s in `profile.jfc`**: 300 × 180 = 54 000, and the recording was sitting on the
-ceiling. `jdk.ExceptionStatistics` carries the uncapped counter, and it says something else entirely:
+ceiling. `jdk.ExceptionStatistics` carries the uncapped counter:
 
-| | throws in 180 s | per request |
+| | `throwables` in 180 s | per request |
 |---|---|---|
 | dbitem | 888 762 | **1.031** |
 | dblist | 559 790 | **1.046** |
 | dbpost | 328 311 | **1.032** |
 
-**Every request on this stack throws exactly one exception**, and it is `JobCancellationException` —
-exceptions as control flow, which is what RQ7 suspects, at one per request. The throttled sample had
-understated it by a factor of 6 to 17.
+**Every request on this stack constructs exactly one `Throwable`**, and it is
+`JobCancellationException`. The word matters, and an earlier draft of this section had it wrong —
+it said *throws*. `jdk.ExceptionStatistics` counts Throwables **created**, not thrown, which a
+control settles rather than an argument: a program that allocates a million `RuntimeException`s
+without throwing any, and then throws a thousand, moves the counter by **1 001 004**. So one per
+request is a construction, and `JobCancellationException` is normally handed around as a
+cancellation cause rather than passed to `athrow`. How many actually reach a throw site is not
+answerable from a counter pinned to its throttle, and is the other half of
+[B-54](../backlog/B-54-verify-the-trap-limit-prediction.md).
 
-**And it costs nothing, for the reason §1.2 predicted before any of this ran.**
-`JobCancellationException` overrides `fillInStackTrace` and is stackless, so a throw is an allocation
-and no stack walk:
+**And it costs nothing, for the reason §1.2 predicted before any of this ran — on one condition that
+§1.2 did not state.** `JobCancellationException` overrides `fillInStackTrace`, and the override is
+**not unconditional**:
+
+```
+fillInStackTrace():
+  if (DebugKt.getDEBUG()) return super.fillInStackTrace()   // the full walk
+  setStackTrace(new StackTraceElement[0]); return this      // stackless
+```
+
+`getDEBUG()` reads `CoroutineId.class.desiredAssertionStatus()` and the `kotlinx.coroutines.debug`
+system property. **So `-ea`, or `kotlinx.coroutines.debug=on`, turns the stackless path off and every
+request begins filling a stack trace** — one per request, at this rate. That is not this stand's
+configuration, and it is a common one for a test or development JVM. The numbers below hold for
+`DEBUG` off:
 
 | | self samples in exception construction | every sample with an exception frame anywhere |
 |---|---|---|
@@ -1055,16 +1096,25 @@ and no stack walk:
 The right-hand column overcounts badly on purpose — it charges the whole stack to the exception — and
 even that is a third of the brief's 2 % line. **The exception half is green with room to spare.**
 
-**Verdict: RQ7 is red on deoptimisation, green on exceptions, and the red is a criterion problem
-rather than a service problem.** The honest sentence is that steady state on this stack is stable: a
-handful of speculation failures a minute, one of which recurs at a site whose branch really is
-unstable, and one stackless exception per request that costs a tenth of a per cent.
+**The instrument's own bursts have a mechanism, not just a correlation.** Starting a `settings=profile`
+recording retransforms instrumented JDK classes — `Throwable`, the socket and file classes — and
+retransformation invalidates every nmethod compiled against them. The request path depends on exactly
+those classes, which is why the burst lands on the service's own frames and not only on JFR's.
+Stopping the recording undoes the transformation and costs the same again.
+
+**Verdict: RQ7 is green on both halves, with one criterion withdrawn.** Steady state on this stack is
+stable: two to six speculation failures a minute, one site that retires itself at the JVM's own trap
+limit, and one `Throwable` constructed per request that costs a tenth of a per cent because
+`kotlinx.coroutines` keeps it stackless while `DEBUG` is off.
 
 | Fact | Where verified |
 |---|---|
 | Deoptimisation events, buckets, steady-state rate and site intervals | `bench/profile/results/rq7-steady-state.md`, `bench/profile/rq7-steady-state.sh`, `rq7-analyse.py` |
 | `jdk.JavaExceptionThrow` is throttled at 300/s; `jdk.ExceptionStatistics` is not | `openjdk-25.0.4!/lib/jfr/profile.jfc` |
-| One exception per request, and its CPU share | `rq7-exception-total.py`, `rq7-exception-cost.py` over the committed pair profiles |
+| `jdk.ExceptionStatistics` counts Throwables **created**, not thrown | a control that allocates 1 000 000 unthrown `RuntimeException`s and throws 1000: the counter moves 1 001 004 |
+| One `Throwable` per request, and its CPU share | `rq7-exception-total.py`, `rq7-exception-cost.py` over the committed pair profiles |
+| `JobCancellationException.fillInStackTrace` is stackless only while `DEBUG` is off, and `DEBUG` follows `-ea` and `kotlinx.coroutines.debug` | `javap -c` on `org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0!/kotlinx/coroutines/JobCancellationException.class` and `.../DebugKt.class` |
+| `PerBytecodeTrapLimit` is 4 | `-XX:+PrintFlagsFinal` on the stand |
 
 ### 1.22 RQ4's deciding clause, tested at last: about a tenth of the gap, against a required third
 
@@ -1147,7 +1197,7 @@ measurement is a difference, which is the case where a shared bias cancels.
 
 ## 2. Where each research question stands
 
-The brief's deliverable is one row per construct. This is that table as of 2026-09-19, after the
+The brief's deliverable is one row per construct. This is that table as of 2026-09-20, after the
 JMH set of §1.14–§1.18 and the review in §2.3: what is settled, what is priced, and what has not
 been touched. A question can be
 *settled* without being *priced* — knowing that a call site is megamorphic by construction is not
@@ -1155,7 +1205,7 @@ knowing what it costs — and the two are kept apart on purpose.
 
 | RQ | State | What is known, and where |
 |---|---|---|
-| **RQ0** gate | **replaced** | D1, on grounds that were themselves corrected in review. Computed rather than asserted (B-53), the gate has **three answers** — 2.2–4.4 % red on all three endpoints under the narrowest attribution, 11.6–22.8 % green on all three under the broadest — because the brief never says where a `HashMap.get` sample reached from Exposed belongs. Its green and red also leave a hole: one endpoint over the bar is neither. A gate whose verdict is chosen by whoever runs it is not a gate |
+| **RQ0** gate | **replaced; would have passed** | Computed rather than asserted (B-53), the gate has **three answers** depending on an attribution the brief never states — 2.2–4.4 % red under the narrowest, 11.6–22.8 % green under the broadest. The author has since said the **inclusive** reading was meant, so the gate is **green on all three endpoints** and the study was right to proceed. The defect is that the text does not say which, leaves a hole between green and red, and names no rate (D1) |
 | **RQ1** sizes | **GREEN** | Nothing on the path is within a factor of four of the huge-method limit (§1.8); of 638 methods over `FreqInlineSize` only **49 run**, owning 3.86 % of self samples together (§1.9); the dial provably fires — `hot method too big` refusals fall **155 → 3** — and moves CPU per request by **1.3 %, inside a 2.8–4.3 % ruler**, i.e. an effect bounded below ~4 % at n = 3 (§1.17) |
 | **RQ2** megamorphic | **GREEN, measured** | Megamorphic by construction, and priced through the right dispatch table: **4.006 ns against 0.693 monomorphic, 5.8×** via vtable, not the 6.715/8.9× first reported through an interface (§1.19). Macro half now measured rather than argued: the brief's two sites together are **0.52–0.87 % of request CPU** as an upper bound, against its 2 % line (§1.20) |
 | **RQ3** escape analysis | **GREEN on both halves** | Micro: nothing survives the non-suspending path. `-XX:-DoEscapeAnalysis` takes the arm from 16 to **168 B/op**, and the 16 B/op first reported as "the continuation" was the blackhole forcing the fast-path box to escape; consumed as an `Int` a suspend call is **0.911 ns against 0.917 plain, ≈0 B/op** (§1.15). Macro: a real request *does* suspend, and the machinery is **11–27 % of its 23–75 KB of allocation** — but all GC on this stand is 1.17–1.23 % of CPU, so that bucket is worth **0.13–0.33 %** (§1.20). Side finding: `Boxing.boxInt` is `new Integer`, never the cache |
@@ -1186,10 +1236,9 @@ The claim the evidence actually supports is narrower and is worth stating exactl
 
 The macro shares that sentence used to owe are now measured (§1.20): RQ2's two sites are 0.52–0.87 %
 of request CPU, RQ3's allocation bucket 0.13–0.33 %, RQ5's two off-list patterns bounded at 0.24 %
-and 0.18 %. RQ7 is measured too (§1.21). **One honest gap is left**: RQ4's deciding clause — above
-1.5×, *and* a third of the gap from failed inlining, dispatch or scalar replacement — was never
-tested. Everywhere else, "not shown to cost 2 %" is now a measurement saying so rather than an
-argument.
+and 0.18 %. RQ7 is measured (§1.21) and so is RQ4's deciding clause (§1.22). **Every question the
+brief asks now has a measurement behind its verdict rather than an argument** — which was not true of
+this document when its author first read it.
 
 What does cost — a transaction wrapper at 64 µs, a dispatcher default at 27 % on this box, a
 co-located database taking a third of the machine — is on nobody's list of JIT questions.
@@ -1208,10 +1257,10 @@ is exactly why they would have been lost had the study only filled in its own fo
 | **Wrapping the same SQL in an explicit transaction costs ~64 µs per request**, flat in row count — as much as everything Exposed adds on a single-row read | 64 µs | §1.11 |
 | **`kotlin.coroutines.jvm.internal.Boxing.boxInt` compiles to `new Integer(i)`, not `Integer.valueOf(i)`** — the coroutine fast path never consults the `Integer` cache, so an escaping suspend-returned primitive allocates on every call whatever its value | 16 B per escaping box | §1.15 |
 | **`List.map`/`filter` are `inline` and leave no call site; `Sequence.map`/`filter` are not** — yet the lazy chain is 2.6× cheaper, because intermediate lists dominate dispatch. A census of call sites ranks the two backwards | 4592 ns vs 1750 | §1.18 |
-| **Two fifths of the request path is Java** — Netty, the PostgreSQL driver and HikariCP are 2567 of 6705 classes and cannot carry a Kotlin codegen pattern at all | 38 % of classes | §1.18 |
+| **Two fifths of the request path is Java** — Netty, the PostgreSQL driver and HikariCP are 2567 of 6700 classes and cannot carry a Kotlin codegen pattern at all | 38 % of classes | §1.18 |
 | **Nine tenths of a static size shortlist is code that never runs** — 49 of 638, and the miss rate has to be computed over artifacts that could have appeared at all | 89 % | §1.9 |
 | The real-mode ceiling on a four-core box with a co-located database is **the box**: 3.93 of 4 cores, of which the database takes 1.24 and the kernel 0.80 | — | §1.13 |
-| **Every request on this stack throws exactly one exception** — 1.03 per request by the uncapped counter, all `JobCancellationException`. It costs 0.06–0.15 % of CPU only because it is stackless; the same pattern with a stack-filling exception would be a different finding | 1.03/req | §1.21 |
+| **Every request on this stack constructs exactly one `Throwable`** — 1.03 per request by the uncapped counter, all `JobCancellationException`. It costs 0.06–0.15 % of CPU only because `fillInStackTrace` is stackless **while `DEBUG` is off**, and `DEBUG` follows `-ea`: under assertions the same one-per-request becomes a stack walk per request | 1.03/req | §1.21 |
 | **`jdk.JavaExceptionThrow` is throttled at 300/s in `profile.jfc`** and sat on that ceiling here, understating the throw count by 6–17×. Third time in this phase that a JFR default silently capped the thing being measured | 52 000 against 888 762 | §1.21 |
 | **Starting and stopping a JFR recording deoptimises the service being recorded** — 59–62 events in the first ten seconds and 16–17 in the last, against single digits across the 160 s between | — | §1.21 |
 | **C2's own threads cost 4.9–6.1 % of request CPU on a saturated four-core stand** — four to five times the collector, on a box running flat out where compilation should have settled. The same quantity Open question 3 found at 61 % in a one-core container | 5 % against GC's 1.2 % | §1.20 |
@@ -1238,6 +1287,8 @@ else.
 | **"RQ2 costs 6.715 ns against 0.755, 8.9×"** | Measured through an interface (itable). `resumeWith` → `invokeSuspend` is a virtual call on a class (vtable), which prices at 4.006 against 0.693, 5.8× (§1.19) |
 | **"RQ4 is green: 1.27–1.29× against a 1.5× line"** | The ratio is rate-dependent and the two measurements straddle the line — 1.61× at saturation. The line was also specified for stub mode, and the deciding clause of the red condition was never tested (§1.11) |
 | **"Stub mode reached 3.51 of 4 cores"** | The figure is in no results file, §1.10 does not contain it, and the fixed-rate pairs run the other way: stub takes fewer cores than real at the same rate (§1.13) |
+| **"Every request throws one exception"** | `jdk.ExceptionStatistics` counts Throwables *created*. A control that allocates a million unthrown ones moves it by a million. One per request is a construction; how many are thrown is not known (§1.21) |
+| **"`Boxing.boxInt` bypassing the `Integer` cache is a finding"** | It is a documented decision. The stdlib source says so in a comment: "Box primitive to Java wrapper class by allocating the wrapper object. This allows HotSpot JIT to eliminate allocations completely in coroutines code with primitives" (§1.15) |
 | **"`startCoroutineUninterceptedOrReturn` has no JVM member"** | It has three, `private static final`, which is what `@InlineOnly` compiles to. The original `javap` ran without `-p` and public-only output was read as absence (§1.6) |
 | "One `encodeToJsonElement` takes a site from one receiver to three" | Loading three classes is not putting three receivers on a site. Sustained mixing gives **two**, which the profile width covers (§1.16) |
 
@@ -1270,8 +1321,8 @@ brief's output shape has no row for.
 
 **What this exchange says about the method.** Four of the eight — 1, 3, 4 and 7 — are cases where a
 check found its subject, produced a plausible table, and was read wrongly; the numbers were right and
-the sentence over them was not. Three of the thirteen retractions in §2.2 come from this single
-review. The document's own discipline caught eight earlier errors of the same shape and did not catch
+the sentence over them was not. Five of the fourteen retractions in §2.2 come from the two rounds of
+this review. The document's own discipline caught eight earlier errors of the same shape and did not catch
 these, and the difference is that someone who had not run the benchmarks did arithmetic on their
 premises instead of on their output.
 
@@ -1303,20 +1354,25 @@ runs already committed) turns out to matter, because **the gate does not have on
 Taken from `bench-results/pair-real-db{item,list,post}` at 995/1181/1108 µs of CPU per request
 against p50 of 6.22/9.56/4.55 ms.
 
-**So the gate's answer is decided by a rule the brief does not state.** "CPU time in JVM code of the
-application, Ktor, Exposed, serialisation and the JDBC driver" does not say whether a `HashMap.get`
-sample reached from Exposed belongs to Exposed or to the JDK, and the three defensible readings of
-that one sentence span red, undecidable and green. A second gap sits beside it: green is "at least
+**The author has since said which reading was meant: the inclusive one.** A `HashMap.get` reached
+from Exposed is Exposed's cost, because the question the gate asks is whether the layer weighs
+anything next to I/O — and for that question a self-only reading is meaningless. On that reading the
+gate is the **broad** row and **green on all three endpoints**, so the study was right to proceed.
+
+**The defect is that the brief does not say so.** "CPU time in JVM code of the application, Ktor,
+Exposed, serialisation and the JDBC driver" does not distinguish self from inclusive attribution, and
+the three defensible readings of that one sentence span red, undecidable and green. A reader who took
+the narrow one would have stopped at phase 2 and published the opposite conclusion. A second gap sits beside it: green is "at least
 10 % on two or more" and red is "below 10 % on all three", so a run that clears the bar on exactly one
 endpoint satisfies neither. And the author's own note adds a third — the gate is evaluated at no
 stated offered rate, and the ratio moves with it.
 
 **D1 therefore stands, on better grounds than it was first given.** The objection to RQ0 is not that
-it passes by construction; it is that as written it cannot be evaluated without three decisions the
-brief leaves to whoever runs it, and a gate whose verdict is chosen by the person it is meant to
-constrain is not a gate. Had the narrow reading been taken, this study would have stopped at phase 2
-and published "JIT behaviour is not a practical concern for this class of service" — which §1.18 and
-§1.15 now show would have been the right conclusion for the wrong reason.
+it passes by construction — that was an argument about a different quantity, and it is withdrawn. It
+is that as written the gate cannot be evaluated without three decisions the brief leaves to whoever
+runs it: which attribution, what to do when exactly one endpoint clears the bar, and at what offered
+rate. Two of the three are now settled by the author rather than by the text, which is the definition
+of a gate that does not constrain.
 
 ### D2. The macro unit is the share by owner and µs of CPU per request, never rps *(deviation)*
 
