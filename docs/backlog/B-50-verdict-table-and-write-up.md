@@ -58,3 +58,30 @@ cross-reference; the sections are the pages.
 **What is left is the article**, and where it goes is the owner's call, as this item already says.
 The material is §2 for the table, §2.1 for the fourteen findings the brief's form did not ask for,
 §2.2 for the fourteen withdrawn claims, and §2.3 for the review that caught four of them.
+
+## The recipes page — 2026-09-20
+
+The phase was commissioned to answer a practical question — *what should one write, and not write, in
+Kotlin so that C2 optimises it* — and the research document answers it only by implication, spread
+over twenty-three sections. [`docs/research/jit-recipes.md`](../research/jit-recipes.md) is that
+answer stated directly, and it carries nothing that is not measured and addressed in
+[research-jit-constructs](../research/research-jit-constructs.md).
+
+Its shape is the phase's result rather than a chosen structure:
+
+* **Section 1, nine constructs to stop avoiding**, each with the pair it was measured against. Value
+  classes through generics and nullables are 0 B/op; a suspend function that does not suspend is
+  0.911 ns against a plain 0.917.
+* **Section 2, the two that cost** — `Delegates.observable` at 15× and an eager collection chain at
+  3.8× — with the note that neither is a JIT failure and both are bounded at a fraction of a per cent
+  of request CPU.
+* **Section 3, what actually costs**, none of which is construct shape: 60–95 CPU-seconds of compiler
+  warm-up, a co-located database, a transaction wrapper, a per-row `ThreadLocal`.
+* **Section 4**, the one condition that flips a result: `-ea` turns a free exception per request into
+  a stack walk per request.
+* **Section 5**, what "free" is scoped to, and **section 6**, the five measurement habits, drawn from
+  the nineteen retractions rather than from advice.
+
+**What is still the owner's call** is publication — where the article goes, and whether the two
+Exposed findings (the per-row `ThreadLocal` lookup, the transaction wrapper's flat 64 µs) go to an
+upstream tracker. Both are unchanged from this item's original note.
