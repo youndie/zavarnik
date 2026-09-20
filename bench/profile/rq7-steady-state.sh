@@ -22,6 +22,11 @@ OUT=${OUT:-$HOME/bench-results}/rq7; mkdir -p "$OUT"
 export JAVA_HOME=${JAVA_HOME:-$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")}
 JFR="$JAVA_HOME/bin/jfr"
 GEN_BODY=${GEN_BODY:-'~/new-item.json'}
+# Extra JFR.start settings, for the runs that need one event unthrottled. B-54 uses
+# EXTRA_EVENTS="+jdk.JavaExceptionThrow#throttle=off" to turn a construction count into a throw
+# count; with the throttle off the event costs what the true rate costs, so the run has to be
+# watched for the recording changing the number it reports.
+EXTRA_EVENTS=${EXTRA_EVENTS:-}
 url() { case $1 in
   dbitem) echo "http://$TARGET:$PORT/db/items/42" ;;
   dblist) echo "http://$TARGET:$PORT/db/items?limit=50" ;;
@@ -47,7 +52,7 @@ for ep in $ENDPOINTS; do
   "$JAVA_HOME/bin/jcmd" "$pid" JFR.start name=rq7 filename="$OUT/$ep.jfr" \
      settings=profile "+jdk.Deoptimization#enabled=true" "+jdk.Deoptimization#threshold=0ms" \
      "+jdk.Compilation#enabled=true" "+jdk.Compilation#threshold=0ms" \
-     "+jdk.CompilationFailure#enabled=true" >/dev/null 2>&1
+     "+jdk.CompilationFailure#enabled=true" $EXTRA_EVENTS >/dev/null 2>&1
   gen -z "${MEASURE}s" -c "$CONNS" --no-tui --output-format json $(post_args "$ep") "$(url "$ep")" > "$OUT/$ep.oha.json" 2>/dev/null
   "$JAVA_HOME/bin/jcmd" "$pid" JFR.stop name=rq7 >/dev/null 2>&1
   kill -TERM "$pid" 2>/dev/null; wait "$pid" 2>/dev/null

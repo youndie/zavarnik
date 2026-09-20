@@ -37,16 +37,15 @@
 
 <!-- BEGIN INDEX -->
 
-## Open (4)
+## Open (3)
 
 | Task | | Priority | Size | Blocked by |
 |---|---|---|---|---|
 | [B-50](docs/backlog/B-50-verdict-table-and-write-up.md) `[ ]` | The verdict table and the article, with green, grey and stopped written up like red | P2 | S | - |
-| [B-54](docs/backlog/B-54-verify-the-trap-limit-prediction.md) `[ ]` | Two predictions from the RQ7 review, each falsifiable in one longer window | P2 | S | - |
 | [B-09](docs/backlog/B-09-cpu-portability-adapter-caching.md) `[ ]` | Переносимость кэша между CPU: AOTAdapterCaching включается сам, и кэш несёт машинный код | P3 | M | - |
 | [B-13](docs/backlog/B-13-release-v0-1-and-four-week-watch.md) `[ ]` | Выпуск v0.1: Plugin Portal / Central, README с измерением, объявление — и четыре недели наблюдения | P3 | M | B-12 |
 
-## Closed (50)
+## Closed (51)
 
 **Стенд**
 
@@ -121,6 +120,7 @@
 - [B-51](docs/backlog/B-51-real-mode-ceiling-and-its-ruler.md) `[x]` - The real-mode ceiling is the machine, and pinning the database does not lift it
 - [B-52](docs/backlog/B-52-multiply-makes-the-loop-faster.md) `[x]` - A loop that multiplies is five times faster — and it is JDK-8345044
 - [B-53](docs/backlog/B-53-compute-the-rq0-gate.md) `[x]` - Compute the RQ0 gate instead of arguing it away
+- [B-54](docs/backlog/B-54-verify-the-trap-limit-prediction.md) `[x]` - Two predictions from the RQ7 review, each falsifiable in one longer window
 
 <!-- END INDEX -->
 

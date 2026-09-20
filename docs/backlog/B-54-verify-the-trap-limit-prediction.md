@@ -1,7 +1,7 @@
 ---
 id: B-54
 title: "Two predictions from the RQ7 review, each falsifiable in one longer window"
-status: open
+status: done
 priority: P2
 size: S
 stage: stage-8-jit-constructs
@@ -37,3 +37,28 @@ it, but its 300/s throttle was saturated, so the recording could only say "more 
   ratio between them stated.
 - Anchors: `bench/profile/rq7-steady-state.sh`, `bench/profile/rq7-analyse.py`,
   `bench/profile/results/rq7-steady-state.md`.
+
+## Result — 2026-09-20: one prediction held trivially, the other was refuted
+
+400 s window on dbpost after the 90 s warm-up, `+jdk.JavaExceptionThrow#throttle=off`.
+
+**1. No fifth `tryPark@40` — because there was no first.** The site produced **zero** events in
+400 s, against four in the earlier 180 s window. Each run is a fresh JVM with a fresh trap budget,
+so zero is not `PerBytecodeTrapLimit` asserting itself; it is the site not trapping at all this time.
+The trap-limit explanation is therefore **neither confirmed nor refuted** — and it stops mattering,
+because what the longer window does show is stronger: **the site does not recur run-to-run**, which
+removes the only candidate the brief's red condition had.
+
+**2. Every Throwable created is thrown.** Unthrottled, `jdk.JavaExceptionThrow` counted **1 281 796**
+against `ExceptionStatistics`' **1 281 737** created, over **1 242 812** requests — **1.031 each**,
+differing by 59 events in 1.28 million. The guess that `JobCancellationException` is handed around as
+a cancellation cause without reaching `athrow` is **refuted**: construction and throw are the same
+event here. The earlier wording "constructs one per request" was right to be cautious and is now
+"constructs and throws one per request".
+
+The unthrottled event fired 1.28 M times without the recording failing or the achieved rate
+collapsing (3107 rps), so the throttle is not protecting the measurement at this rate — it was only
+hiding it.
+
+**Anchors:** `bench/profile/results/b54-predictions.md`, `bench/profile/rq7-steady-state.sh`
+(`EXTRA_EVENTS`).

@@ -1042,12 +1042,14 @@ Sorting by interval instead of by count leaves exactly one:
 16 s** apart, reason `unstable_if`, action `reinterpret`. The scheduler's park decision is bimodal by
 construction, C2 speculates it will not park, and it periodically does.
 
-**Four is not an arbitrary number.** `PerBytecodeTrapLimit` is **4** on this JVM, read from
-`-XX:+PrintFlagsFinal`: after four traps at one bytecode index C2 stops speculating there and
-compiles the branch without the assumption. So the site is not a runaway; it is a speculation
-retiring itself, and the count is the mechanism's own limit rather than a rate. The prediction that
-follows is testable and is [B-54](../backlog/B-54-verify-the-trap-limit-prediction.md): a longer
-window must show **no fifth event at that bci**.
+**Four looked like a mechanism, and a longer window says something simpler.** `PerBytecodeTrapLimit`
+is **4** on this JVM, so a site that traps four times at one bytecode index stops being speculated
+on — which would make the count the limit rather than a rate. The prediction was that a longer window
+shows no fifth event. **Run on a fresh JVM for 400 s, the site produced none at all** (B-54). A fresh
+JVM starts with a fresh budget, so zero is not the trap limit asserting itself; it is the site not
+trapping this time. **What the longer window actually shows is that `tryPark@40` does not recur
+run-to-run**, which retires the one candidate the brief's red condition had. The trap-limit
+explanation is left neither confirmed nor refuted, and it no longer needs to be.
 
 **And the threshold this was measured against has been withdrawn by the person who set it.** In
 review the brief's author retracted "under 1 deoptimisation per minute" as a guess that the
@@ -1074,8 +1076,12 @@ control settles rather than an argument: a program that allocates a million `Run
 without throwing any, and then throws a thousand, moves the counter by **1 001 004**. So one per
 request is a construction, and `JobCancellationException` is normally handed around as a
 cancellation cause rather than passed to `athrow`. How many actually reach a throw site is not
-answerable from a counter pinned to its throttle, and is the other half of
-[B-54](../backlog/B-54-verify-the-trap-limit-prediction.md).
+answerable from a counter pinned to its throttle — so B-54 unpinned it. With
+`+jdk.JavaExceptionThrow#throttle=off` over a 400 s window: **1 281 796 thrown against 1 281 737
+created, over 1 242 812 requests — 1.031 each**. The two counts differ by 59 events in 1.28 million.
+**Every `Throwable` this stack constructs is thrown**, so the reasonable guess that
+`JobCancellationException` is handed around as a cancellation cause without passing `athrow` is
+refuted here: construction and throw are the same event, once per request.
 
 **And it costs nothing, for the reason §1.2 predicted before any of this ran — on one condition that
 §1.2 did not state.** `JobCancellationException` overrides `fillInStackTrace`, and the override is
@@ -1291,7 +1297,7 @@ knowing what it costs — and the two are kept apart on purpose.
 | **RQ4** Exposed | **not red, measured** | The ratio is rate-dependent — **1.15×, 1.27–1.29×, 1.61×** at three operating points (§1.22, §1.11, §1.12) — and the brief's 1.5× line falls inside that range, so "green" as worded is not a stable answer. Red needs *both* halves, and the second is tested: **≈23 % of the 109 µs gap** against a required third — dispatch 10 %, scalar replacement 13 % on both the mutator and collector sides, and inlining **nothing**, since raising `FreqInlineSize` on both arms *widens* the gap by 21 µs (§1.22). Every component is an upper bound. The gap is work; its largest piece is a `ThreadLocal` miss per `ResultRow` |
 | **RQ5** codegen patterns | **GREEN** | Measured on both halves (§1.18). Value classes through generics and nullables, `$default`, and capturing non-`inline` lambdas are **free — 0 B/op and inside 0.3 ns of their controls**. Two patterns the brief does not name are not: `Delegates.observable` at **15×** and one box per write, and an eager collection chain at **3.8×** and 7184 B/op. Both are now bounded by what a request allocates at all: **0.24 % and 0.18 % of request CPU** (§1.20). **2567 of 6700 classes on the path are Java** and cannot carry any of it |
 | **RQ6** encoders | **GREEN** | A JSON-only service is monomorphic at these sites; sustained mixed traffic makes them **bimorphic at 50/50**, read out of the inlining log, and `TypeProfileWidth` is 2 — so C2 still profiles and inlines them (§1.16). A one-off tree call costs nothing measurable |
-| **RQ7** steady state | **GREEN, one criterion withdrawn** | Measured (§1.21). Steady state is **2.25–5.62 deoptimisations per minute**; the brief's "under 1 per minute" was retracted by its author as a guess that separates nothing. The one site that genuinely recurs fires **exactly four times**, which is `PerBytecodeTrapLimit`: a speculation retiring itself, not a runaway. Exceptions: **1.03 `Throwable` constructed per request**, all `JobCancellationException`, costing **0.06–0.15 % of request CPU** — but only while `DEBUG` is off, since `-ea` restores the stack walk |
+| **RQ7** steady state | **GREEN, one criterion withdrawn** | Measured (§1.21). Steady state is **2.25–12.9 deoptimisations per minute**; the brief's "under 1 per minute" was retracted by its author as a guess that separates nothing. The one site that looked like a recurrence, `tryPark@40`, produced **zero events in a 400 s window on a fresh JVM** — it does not recur run-to-run (B-54). Exceptions: **1.031 `Throwable` constructed and thrown per request**, all `JobCancellationException`, costing **0.06–0.15 % of request CPU** — but only while `DEBUG` is off, since `-ea` restores the stack walk |
 
 **Kill criterion 4 is met several times over.** The criterion is "three RQs in a row come out green
 or grey". RQ1, RQ2, RQ3, RQ5 and RQ6 are green, RQ4 is not red on a clause now tested at 10 % against
@@ -1339,7 +1345,7 @@ is exactly why they would have been lost had the study only filled in its own fo
 | **Two fifths of the request path is Java** — Netty, the PostgreSQL driver and HikariCP are 2567 of 6700 classes and cannot carry a Kotlin codegen pattern at all | 38 % of classes | §1.18 |
 | **Nine tenths of a static size shortlist is code that never runs** — 49 of 638, and the miss rate has to be computed over artifacts that could have appeared at all | 89 % | §1.9 |
 | The real-mode ceiling on a four-core box with a co-located database is **the box**: 3.93 of 4 cores, of which the database takes 1.24 and the kernel 0.80 | — | §1.13 |
-| **Every request on this stack constructs exactly one `Throwable`** — 1.03 per request by the uncapped counter, all `JobCancellationException`. It costs 0.06–0.15 % of CPU only because `fillInStackTrace` is stackless **while `DEBUG` is off**, and `DEBUG` follows `-ea`: under assertions the same one-per-request becomes a stack walk per request | 1.03/req | §1.21 |
+| **Every request on this stack constructs and throws exactly one `Throwable`** — 1.031 per request on both counters, unthrottled, all `JobCancellationException`. It costs 0.06–0.15 % of CPU only because `fillInStackTrace` is stackless **while `DEBUG` is off**, and `DEBUG` follows `-ea`: under assertions the same one-per-request becomes a stack walk per request | 1.03/req | §1.21 |
 | **`jdk.JavaExceptionThrow` is throttled at 300/s in `profile.jfc`** and sat on that ceiling here, understating the throw count by 6–17×. Third time in this phase that a JFR default silently capped the thing being measured | 52 000 against 888 762 | §1.21 |
 | **Starting and stopping a JFR recording deoptimises the service being recorded** — 59–62 events in the first ten seconds and 16–17 in the last, against single digits across the 160 s between | — | §1.21 |
 | **Compilation is fixed capital, not a rate.** Reaching quiet costs **60–95 CPU-seconds, once**, and the steady-state drip after it is **0.02 cores** — about a per cent of the service's own CPU, comparable to the collector. The 4.9–6.1 % an earlier draft reported was a decaying curve averaged over a window that began inside warm-up. Significance follows pod lifetime and deploy frequency, not request rate, which is why the same capital reads 61 % at 50 rps in a one-core container | 62/69/94 CPU-s | §1.23 |
@@ -1369,7 +1375,7 @@ else.
 | **"≈10 % of the RQ4 gap traces to the three mechanisms"** | Two of the three were operationalised wrongly. Failed inlining is not interpreted frames — the causal test is the lever, and it *widens* the gap. Failed scalar replacement is not bounded by the collector alone; the mutator pays for the object too. Corrected: **23 %**, still under a third (§1.22) |
 | **"762 and 894 µs per request"** | The CPU window wrapped the profiled window, so both carried async-profiler's 1 ms sampling. Clean: **710 and 819**, and the gap with them — 109 µs, not 132 (§1.22) |
 | **"C2's threads are 4.9–6.1 % of request CPU, a standing cost"** | A flat profile has no time axis. The share is 26 % in the first ten seconds and near zero after; the windows began 45 s into a 90 s warm-up. Steady state is **0.02 cores** (§1.23) |
-| **"Every request throws one exception"** | `jdk.ExceptionStatistics` counts Throwables *created*. A control that allocates a million unthrown ones moves it by a million. One per request is a construction; how many are thrown is not known (§1.21) |
+| **"`jdk.ExceptionStatistics` proves a throw"** | It counts Throwables *created* — a control allocating a million unthrown ones moves it by a million. The claim needed the unthrottled throw counter, which B-54 then ran: thrown and created agree to 59 events in 1.28 million, so one per request is both (§1.21) |
 | **"`Boxing.boxInt` bypassing the `Integer` cache is a finding"** | It is a documented decision. The stdlib source says so in a comment: "Box primitive to Java wrapper class by allocating the wrapper object. This allows HotSpot JIT to eliminate allocations completely in coroutines code with primitives" (§1.15) |
 | **"`startCoroutineUninterceptedOrReturn` has no JVM member"** | It has three, `private static final`, which is what `@InlineOnly` compiles to. The original `javap` ran without `-p` and public-only output was read as absence (§1.6) |
 | "One `encodeToJsonElement` takes a site from one receiver to three" | Loading three classes is not putting three receivers on a site. Sustained mixing gives **two**, which the profile width covers (§1.16) |
