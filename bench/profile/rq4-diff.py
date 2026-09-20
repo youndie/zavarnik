@@ -1,26 +1,33 @@
 #!/usr/bin/env python3
 """Sort the Exposed-over-JDBC gap into work and JIT failure — RQ4's deciding clause.
 
-    rq4-diff.py <dir> <jdbc us/req> <exposed us/req> <jdbc requests> <exposed requests>
+    rq4-diff.py <dir> <jdbc us/req> <exposed us/req> <requests>
 
 The brief's red for RQ4 has two halves and only the first was ever tested: above 1.5x, AND at least
 a third of the gap traceable to failed inlining, megamorphic dispatch or failed scalar replacement.
-This is the second.
+This is the second, and the first version of this script got two of the three signals wrong.
 
-Method: a difference of two profiles taken at the same fixed rate behind one binary, so every frame
-the arms share cancels. What is left is the layer, and the layer is then split by the brief's own
-distinction - work the code asked for against work C2 failed to remove.
+  * **Failed inlining is NOT interpreted frames.** A refused inline leaves a call to a *compiled*
+    method and loses the optimisation across that boundary; it does not leave the callee running in
+    the interpreter. Counting interpreted frames answers the huge-method question instead, and
+    answers it "zero" whatever the inlining does. The causal test is the lever - FreqInlineSize on
+    both arms - and it lives in the runner, not here.
+  * **Failed scalar replacement is not bounded by GC alone.** An object C2 could not remove costs
+    the collector, and before that it costs the mutator: the header write, the field stores, and
+    every later read going to memory instead of a register. Charging it only the collector's share
+    understates it several-fold. Both are reported, and the allocation-attributable FRAMES are the
+    mutator half.
 
-The three signals, and what each can and cannot show:
-  dispatch stubs     `vtable stub` / `itable stub` frames are megamorphic dispatch, directly.
-  interpreted frames a hot frame still running interpreted is a compilation that did not happen.
-  allocation         bytes Exposed allocates over JDBC bound failed scalar replacement from above -
-                     an object that escapes was never a candidate, so this OVERSTATES the signal,
-                     which is the safe direction for a threshold test.
+What no signal here can do is separate "escaped, so never a candidate" from "did not escape and was
+missed". Everything below therefore bounds the failure component from ABOVE, which is the safe
+direction for a threshold test and is stated rather than implied.
 """
 import collections, sys
 
-d, us_j, us_e, n_j, n_e = sys.argv[1], float(sys.argv[2]), float(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5])
+d, us_j, us_e, reqs = sys.argv[1], float(sys.argv[2]), float(sys.argv[3]), int(sys.argv[4])
+
+ALLOC_FRAMES = ("<init>", ".create", "ArrayList.grow", "Arrays.copyOf", "ArrayList.<init>",
+                "newInstance", "HashMap.resize", "StringBuilder")
 
 def load(path):
     total = 0; own = collections.Counter(); marks = collections.Counter()
@@ -33,37 +40,47 @@ def load(path):
         total += c
         leaf = stack.split(";")[-1]
         own[leaf] += c
-        low = stack.lower()
-        if "vtable stub" in low or "itable stub" in low: marks["dispatch stub"] += c
-        if "_[0]" in leaf or "Interpreter" in leaf: marks["interpreted"] += c
-        if "org/jetbrains/exposed" in stack or "org.jetbrains.exposed" in stack: marks["exposed on stack"] += c
+        if "vtable stub" in leaf or "itable stub" in leaf: marks["dispatch stub"] += c
+        n = leaf.replace("/", ".")
+        if any(f in n for f in ALLOC_FRAMES): marks["allocation frames"] += c
     return total, own, marks
 
 tj, oj, mj = load("%s/jdbc.cpu.collapsed" % d)
 te, oe, me = load("%s/exposed.cpu.collapsed" % d)
 gap = us_e - us_j
-print("CPU per request: jdbc %.0f us, exposed %.0f us, gap %.0f us (%.2fx)" % (us_j, us_e, gap, us_e/us_j))
+print("CPU per request (clean windows): jdbc %.0f us, exposed %.0f us, gap %.0f us (%.2fx)"
+      % (us_j, us_e, gap, us_e / us_j))
 print()
-print("Signals that would make the gap a JIT failure, as a share of each arm's CPU:")
-for k in ("dispatch stub", "interpreted", "exposed on stack"):
-    sj, se = 100.0*mj[k]/tj, 100.0*me[k]/te
-    # each arm's share converted to us/req, then differenced: this is the signal's contribution
-    contrib = se/100.0*us_e - sj/100.0*us_j
-    print("   %-18s jdbc %5.2f%%  exposed %5.2f%%   -> %+6.1f us/req of the %.0f us gap (%+.0f%%)"
-          % (k, sj, se, contrib, gap, 100*contrib/gap))
-print()
+
+def us(counter, total, per_req, leaf):  # samples -> us/req
+    return counter[leaf] / total * per_req
+
+print("Signals, as a share of the gap. Each bounds its mechanism from ABOVE.")
+for k in ("dispatch stub", "allocation frames"):
+    contrib = me[k] / te * us_e - mj[k] / tj * us_j
+    print("   %-20s jdbc %5.2f%%  exposed %5.2f%%  -> %+6.1f us/req = %+.0f%% of the gap"
+          % (k, 100.0 * mj[k] / tj, 100.0 * me[k] / te, contrib, 100 * contrib / gap))
 try:
     aj, _, _ = load("%s/jdbc.alloc.collapsed" % d)
     ae, _, _ = load("%s/exposed.alloc.collapsed" % d)
-    print("Allocation: jdbc %.0f B/req, exposed %.0f B/req, extra %.0f B/req"
-          % (aj/n_j, ae/n_e, ae/n_e - aj/n_j))
+    extra = ae / reqs - aj / reqs
+    gc_share = 0.012  # measured on this stand, 1.17-1.23 % of CPU (research 1.20)
+    gc_us = extra / (ae / reqs) * gc_share * us_e
+    print("   %-20s jdbc %.0f B/req, exposed %.0f B/req, extra %.0f -> collector's share %+.1f us = %+.0f%%"
+          % ("allocation bytes", aj / reqs, ae / reqs, extra, gc_us, 100 * gc_us / gap))
 except FileNotFoundError:
-    print("Allocation: profiles not present")
+    print("   allocation profiles not present")
 print()
-print("Where the extra CPU actually goes - the ten frames that grew most, us/req:")
-delta = []
-for leaf in set(oj) | set(oe):
-    d_us = oe[leaf]/te*us_e - oj[leaf]/tj*us_j
-    if abs(d_us) > 0.5: delta.append((d_us, leaf))
-for d_us, leaf in sorted(delta, reverse=True)[:10]:
+
+delta = sorted(((oe[l] / te * us_e - oj[l] / tj * us_j, l) for l in set(oj) | set(oe)), reverse=True)
+grew = sum(d_us for d_us, _ in delta if d_us > 0)
+shrank = sum(d_us for d_us, _ in delta if d_us < 0)
+top10 = sum(d_us for d_us, _ in delta[:10])
+print("Coverage: frames that grew total %+.0f us, frames that shrank %+.0f us, net %+.0f us against a %.0f us gap."
+      % (grew, shrank, grew + shrank, gap))
+print("          the ten largest cover %.0f us, which is %.0f%% of the gap - the rest is a long tail."
+      % (top10, 100 * top10 / gap))
+print()
+print("The twelve frames that grew most, us/req:")
+for d_us, leaf in delta[:12]:
     print("   %+7.1f us  %s" % (d_us, leaf))

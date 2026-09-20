@@ -981,11 +981,17 @@ and one 16-byte box per write; the largest boxing bucket is 2604 B/req, so **at 
 if every box in the request were one — 2.2 µs, or **0.18 %** of dblist's 1181 µs. Neither can reach
 2 % on this stand without allocating more than the whole request does.
 
-**Side result — C2's own threads cost 4.9–6.1 % of CPU here, on a saturated four-core box.** That is
-four to five times the collector, on a stand running flat out where compilation should long since
-have settled. It is the same quantity Open question 3 found at 61 % in a one-core container at 50
-rps, measured at the other end of the range, and it is larger than every construct in the brief's
-list put together.
+**Side result — C2's own threads are 4.9–6.1 % of CPU in these windows, four to five times the
+collector.** The sentence that used to stand here added "on a stand where compilation should long
+since have settled", and that contradicted this section's own warm-up caveat: the windows start 40–45 s
+in, and §1.22's runner later put the quiet point at 90 s. **A flat profile has no time axis and
+cannot tell a standing cost from the tail of a warm-up** — see §1.23, which puts the axis back.
+
+The unit needs the same care. A share is a ratio to a denominator that itself moves with offered
+rate, so the same compilation work reads 61 % against the tiny denominator of 50 rps in a one-core
+container (§1.1) and 5 % against a saturated four-core box. Compiling the hot set is closer to a
+fixed capital cost in **CPU-seconds**, and it is CPU-seconds and time-to-quiet that a pod lifetime
+and a deploy frequency can be multiplied by. Both are in §1.23.
 
 **What this section does not claim.** Two things. The allocation census warmed for **40 s**, and the
 warm-up measurement that came later ([B-42](../backlog/B-42-warmup-gate-on-printcompilation.md)) put
@@ -1003,7 +1009,7 @@ answers land an order of magnitude below the line, and would not be if they were
 | Allocation per request and its buckets, three endpoints | `bench/profile/results/alloc-census.md`, `bench/profile/alloc-census.sh` |
 | Self samples at the two RQ2 sites; GC and JIT share of CPU | the committed `pair-real-db*.cpu.collapsed` profiles |
 
-### 1.21 RQ7, the only question never measured: green on exceptions, red on a threshold nothing meets
+### 1.21 RQ7, the only question never measured: green on both halves, with one criterion withdrawn
 
 RQ7 asks whether steady state is stable. Its green is "under 1 deoptimisation per minute after
 warmup, and exception construction under 2 % of request CPU"; its red is "a deoptimisation recurring
@@ -1116,50 +1122,83 @@ limit, and one `Throwable` constructed per request that costs a tenth of a per c
 | `JobCancellationException.fillInStackTrace` is stackless only while `DEBUG` is off, and `DEBUG` follows `-ea` and `kotlinx.coroutines.debug` | `javap -c` on `org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0!/kotlinx/coroutines/JobCancellationException.class` and `.../DebugKt.class` |
 | `PerBytecodeTrapLimit` is 4 | `-XX:+PrintFlagsFinal` on the stand |
 
-### 1.22 RQ4's deciding clause, tested at last: about a tenth of the gap, against a required third
+### 1.22 RQ4's deciding clause: the lever widens the gap, and the three mechanisms reach a quarter
 
 RQ4's red has two halves and only the first was ever tested: above 1.5×, **and** at least a third of
-the gap traceable to failed inlining, megamorphic dispatch or failed scalar replacement. §1.11
-argued from a decomposition that the gap is work; an argument is not the test, and the brief's author
-said so. This is the test.
+the gap traceable to failed inlining, megamorphic dispatch or failed scalar replacement. §1.11 argued
+from a decomposition that the gap is work; an argument is not the test. **The first version of this
+section was not the test either**, and the brief's author named both of its defects.
 
-Two arms behind one binary at the **same fixed 2000 rps**, so every frame they share cancels and what
-is left is the layer. Both held the offered rate exactly.
+**Defect one: the denominator carried the instrument.** `t0` was taken before async-profiler started
+and `t1` after it finished, so every µs/req figure included the profiler's own 1 ms sampling —
+something `run.sh` takes a clean window to avoid and says so in its own comment. Measured properly:
 
-| | µs CPU/req | p50 | allocation |
-|---|---|---|---|
-| `jdbc` | 762 | 2.26 ms | 57 388 B/req |
-| `exposed` | 894 | 3.36 ms | 73 942 B/req |
-| **the gap** | **132 µs (1.17×)** | | **+16 554 B/req** |
-
-**The three named mechanisms, measured:**
-
-| mechanism | how it is read | share of the 132 µs gap |
+| | with the profiler attached | clean window |
 |---|---|---|
-| megamorphic dispatch | `vtable stub` / `itable stub` frames: 2.19 % of the jdbc arm, 3.04 % of the exposed arm | **+10.5 µs — 8 %** |
-| failed inlining leaving code uncompiled | interpreted frames: **0.00 % in both arms** | **0 %** |
-| failed scalar replacement | bounded from above by the extra allocation — 16 554 B is 22 % of what the exposed arm allocates, and all GC is 1.2 % of its CPU | **≤ 2.4 µs — 1.8 %** |
-| **together** | | **≈ 10 %** |
+| `jdbc` | 762 µs | **710 µs** |
+| `exposed` | 894 µs | **819 µs** |
+| the gap | 132 µs (1.17×) | **109 µs (1.15×)** |
 
-**The clause is not met, and not narrowly.** About a tenth of the gap traces to the three mechanisms
-the brief names, against the third its red condition requires. The scalar-replacement figure
-deliberately overstates — an object that escapes was never a candidate for scalar replacement, so
-charging *all* the extra allocation to it is the safe direction for a threshold test, and it still
-comes to under two per cent.
+The profiler cost the jdbc arm 7 % and the exposed arm 8.4 %, so it inflated the gap itself by 23 µs.
+Everything below uses the clean numbers.
 
-**Where the gap actually goes is data-structure work, and the largest piece is a surprise:**
+**Defect two: "failed inlining" was operationalised as interpreted frames.** A refused inline does
+not leave the callee in the interpreter; it leaves a call to a compiled method and loses the
+optimisation across that boundary. Counting interpreted frames answers the huge-method question, and
+answers it "zero" whatever the inlining is doing. **The causal test is §1.17's lever applied to both
+arms** — whatever raising `FreqInlineSize` takes off the gap is what refused inlining was costing it:
+
+| arm | `FreqInlineSize=325` | `=2000` | change |
+|---|---|---|---|
+| `jdbc` | 710 µs | 684 µs | **−26 µs** |
+| `exposed` | 819 µs | 814 µs | **−5 µs** |
+| **the gap** | **109 µs** | **130 µs** | **+21 µs** |
+
+**The lever helps the hand-written arm five times more than the Exposed one, so raising it widens the
+gap.** Refused inlining is not what Exposed is paying; if anything JDBC has more of it to recover.
+The contribution to the clause is **zero or negative**.
+
+**What this test can and cannot say.** One window per arm, not §1.17's three rounds, so a few µs is
+inside the noise. What it settles is the threshold question: a third of 109 µs is 36 µs, and a
+36 µs *reduction* is not something a run that produced a 21 µs increase is hiding. "At least a third
+from failed inlining" is excluded; "exactly how little" is not resolved and does not need to be.
+
+**The three mechanisms, each bounded from above:**
+
+| mechanism | how it is read | share of the 109 µs gap |
+|---|---|---|
+| megamorphic dispatch | `vtable`/`itable stub` frames: 1.97 % of the jdbc arm, 2.97 % of the exposed arm | **+10.4 µs — 10 %** |
+| failed scalar replacement, mutator side | allocation frames — constructors, `create`, `ArrayList.grow` — 4.36 % against 5.08 % | **+10.7 µs — 10 %** |
+| failed scalar replacement, collector side | the extra 24 607 B/req as a share of what the arm allocates, times the 1.2 % all GC costs | **+3.0 µs — 3 %** |
+| failed inlining | the lever, above | **≤ 0** |
+| **together** | | **≈ 23 %** |
+
+**A quarter, against a required third — and the earlier "≈10 %" was too low for the reason the review
+gave.** Bounding scalar replacement by the collector's share alone charged the mechanism 3 % when the
+object also costs the mutator its header, its stores and every later read going to memory instead of
+a register; the allocation frames are that half and they are 10 % on their own. The clause still
+fails, but it fails at 23 % rather than 10, and the margin is thinner than the first version claimed.
+
+**No signal here separates "escaped, so never a candidate" from "did not escape and was missed",** so
+every row above is an upper bound on its mechanism. That is the safe direction for a threshold test
+and it is why the conclusion survives the correction.
+
+**The gap is not a pile of extra work; it is a net.** Frames that grew total **+235 µs** and frames
+that shrank **−126 µs**, netting the 109 µs measured. Exposed does not only add — it replaces work
+the JDBC arm did under other names. The ten largest growers cover 64 µs, **59 % of the gap**, and the
+rest is a long tail:
 
 | | µs/req |
 |---|---|
-| `ThreadLocal$ThreadLocalMap.getEntryAfterMiss` | **+13.7** |
-| `HashMap.getNode` | +11.7 |
-| `ArrayList.grow` | +10.0 |
-| `itable stub` | +8.0 |
-| `Intrinsics.areEqual` | +6.9 |
-| `ResultRow$ResultRowCache.<init>` / `ResultRow$Companion.create` | +9.6 |
+| `ThreadLocal$ThreadLocalMap.getEntryAfterMiss` | **+12.5** |
+| `HashMap.getNode` | +9.9 |
+| `itable stub` | +8.3 |
+| `Intrinsics.areEqual` | +7.1 |
+| `ArrayList.grow` | +6.6 |
+| `ResultRow$ResultRowCache.<init>` / `.cached` / `ResultRow$Companion.create` | +13.8 |
 
 `HashMap.getNode` is the per-column `fieldIndex` lookup §1.11 already named. The one at the top is
-new, and its stack says exactly what it is:
+new, and its stack says what it is:
 
 ```
 ResultRow.<init>
@@ -1168,30 +1207,70 @@ ResultRow.<init>
       → ThreadLocal.get → ThreadLocalMap.getEntryAfterMiss
 ```
 
-**Exposed consults a `ThreadLocal` to find the current transaction every time it constructs a
+**Exposed consults a `ThreadLocal` for the current transaction every time it constructs a
 `ResultRow`** — once per row, fifty times on this endpoint — and the lookup misses its direct hash
-slot and falls into the linear probe. That is the single largest component of the Exposed-over-JDBC
-gap, it is pure work, and it is on nobody's list of JIT questions.
+slot into the linear probe. It is the largest single component of the gap, it is work, and it is on
+nobody's list of JIT questions.
 
-**One caution the same run produced.** Frames owned by Exposed are 40.8 % of the exposed arm's CPU —
-365 µs — against a gap of 132 µs. Owner-share is not cost: most of what Exposed's frames do is work
-the JDBC arm also did, under different names. A table that read 40.8 % as "what Exposed costs" would
-overstate it by nearly threefold.
+**One caution the same run produced.** Frames owned by Exposed are 40.8 % of the exposed arm's CPU
+against a gap of 109 µs. Owner-share is not cost: most of what Exposed's frames do is work the JDBC
+arm also did. A table reading that share as "what Exposed costs" would overstate it threefold.
 
-**Verdict: RQ4 is not red, and now for a measured reason.** The red needs both halves; the second is
-10 % against a required 33 %. The ratio itself remains rate-dependent — 1.17× here, 1.27–1.29× in
-§1.11, 1.61× at saturation in §1.12 — so "green" as the brief words it is not a stable answer, but
-"red" is now excluded outright. The gap is work, which is the brief's own category for a library
-cost rather than a finding.
+**Verdict: RQ4 is not red, measured.** The red needs both halves; the second reaches **≈23 % against
+a required 33 %**, with every component an upper bound and the largest of the three mechanisms —
+inlining — contributing nothing. The ratio stays rate-dependent (1.15×, 1.27–1.29×, 1.61× at three
+operating points), so "green" as the brief words it is not a stable answer, but "red" is excluded.
 
-**The same warm-up caveat applies**: this run warmed for 45 s against the 90 s
-[B-42](../backlog/B-42-warmup-gate-on-printcompilation.md) later measured, so both arms carry a
-little unfinished compilation. They carry it equally — same binary, same rate, same warm-up — and the
-measurement is a difference, which is the case where a shared bias cancels.
+**The same warm-up caveat applies as in §1.20**: these windows begin 90 s into the load, which is the
+quiet point [B-42](../backlog/B-42-warmup-gate-on-printcompilation.md) measured, so unlike the first
+version they are taken at steady state.
 
 | Fact | Where verified |
 |---|---|
-| Both arms, their CPU per request, the three signals and the frame diff | `bench/profile/results/rq4-clause.md`, `bench/profile/rq4-clause.sh`, `rq4-diff.py` |
+| Four arms, the lever, the three signals, the frame diff and its coverage | `bench/profile/results/rq4-clause.md`, `bench/profile/rq4-clause.sh`, `rq4-diff.py` |
+
+### 1.23 What the compiler actually costs, once the number has a time axis
+
+§1.20 read 4.9–6.1 % of request CPU in C2's threads off a flat profile and called it a standing cost.
+**A flat profile has no time axis**, and the windows it came from began 45 s into a warm-up whose
+quiet point is 90 s. `jdk.ThreadCPULoad` has the axis:
+
+| compiler share of process CPU, per 10 s | |
+|---|---|
+| dbitem | **26.3 %** 0.7 5.7 0.6 0.0 0.5 0.2 0.3 0.0 … 0.0 |
+| dblist | **27.6 %** – 0.3 1.2 0.8 0.0 0.3 0.0 0.1 … 0.0 |
+| dbpost | **26.3 %** 0.4 1.7 0.0 0.1 0.0 0.0 0.1 1.7 … 0.1 |
+
+**It is a spike and then nothing.** First three buckets 11.5–12.3 %, last three 0.0–3.6 %. The 4.9–6.1 %
+was the average of a decaying curve, and the first bucket of every recording is also `JFR.start`
+forcing recompilation (§1.21), so even the spike is partly the instrument.
+
+**And the share was the wrong unit anyway.** A share divides by a denominator that moves with offered
+rate, which is why the same work reads 61 % at 50 rps in a one-core container (§1.1) and 5 % on a
+saturated four-core box. Compiling the hot set is closer to fixed capital. `jdk.CompilerStatistics`
+carries it directly, as cumulative `totalTimeSpent`:
+
+| | compiler CPU-seconds spent by the time 90 s of load has passed | compilations | steady-state drip |
+|---|---|---|---|
+| dbitem | **62 s** | 7338 | 4 CPU-s / 170 s = **0.024 cores** |
+| dblist | **69 s** | 7336 | 3 CPU-s / 160 s = **0.019 cores** |
+| dbpost | **94 s** | 7921 | 4 CPU-s / 170 s = **0.024 cores** |
+
+**So the correction to §1.20 is large and it points the same way as the original finding.** In steady
+state the compiler costs about **0.02 cores — roughly one per cent of this service's own CPU**,
+comparable to the collector rather than four times it. What is expensive is reaching that state:
+**60 to 95 CPU-seconds, once**, and it is paid again on every restart.
+
+**That is the number the article should carry**, because it is the one that composes. Sixty CPU-seconds
+against a pod that lives an hour is under two per cent of its lifetime; against a pod that lives ten
+minutes it is ten per cent; against a container limited to one core at 50 rps it is the 61 % Open
+question 3 measured, because the denominator is small and the capital is the same. **Significance is
+decided by pod lifetime and deploy frequency, not by request rate** — which is a different claim from
+the one §1.20 made, and a more useful one.
+
+| Fact | Where verified |
+|---|---|
+| Compiler share per 10 s, and CPU-seconds to quiet and after it | `bench/profile/results/c2-cost.md`, `bench/profile/c2-share-over-time.py`, `compiler-cpu-seconds.py` |
 
 ---
 
@@ -1209,10 +1288,10 @@ knowing what it costs — and the two are kept apart on purpose.
 | **RQ1** sizes | **GREEN** | Nothing on the path is within a factor of four of the huge-method limit (§1.8); of 638 methods over `FreqInlineSize` only **49 run**, owning 3.86 % of self samples together (§1.9); the dial provably fires — `hot method too big` refusals fall **155 → 3** — and moves CPU per request by **1.3 %, inside a 2.8–4.3 % ruler**, i.e. an effect bounded below ~4 % at n = 3 (§1.17) |
 | **RQ2** megamorphic | **GREEN, measured** | Megamorphic by construction, and priced through the right dispatch table: **4.006 ns against 0.693 monomorphic, 5.8×** via vtable, not the 6.715/8.9× first reported through an interface (§1.19). Macro half now measured rather than argued: the brief's two sites together are **0.52–0.87 % of request CPU** as an upper bound, against its 2 % line (§1.20) |
 | **RQ3** escape analysis | **GREEN on both halves** | Micro: nothing survives the non-suspending path. `-XX:-DoEscapeAnalysis` takes the arm from 16 to **168 B/op**, and the 16 B/op first reported as "the continuation" was the blackhole forcing the fast-path box to escape; consumed as an `Int` a suspend call is **0.911 ns against 0.917 plain, ≈0 B/op** (§1.15). Macro: a real request *does* suspend, and the machinery is **11–27 % of its 23–75 KB of allocation** — but all GC on this stand is 1.17–1.23 % of CPU, so that bucket is worth **0.13–0.33 %** (§1.20). Side finding: `Boxing.boxInt` is `new Integer`, never the cache |
-| **RQ4** Exposed | **not red, measured** | The ratio is rate-dependent — **1.17×, 1.27–1.29×, 1.61×** at three operating points (§1.22, §1.11, §1.12) — and the brief's 1.5× line falls inside that range, so "green" as worded is not a stable answer. But red needs *both* halves, and the second is now tested: **≈10 % of the gap** traces to dispatch stubs (8 %), uncompiled code (0 %) and failed scalar replacement (≤1.8 %), against a required third (§1.22). The gap is work, and its largest single piece is a `ThreadLocal` miss per `ResultRow` |
+| **RQ4** Exposed | **not red, measured** | The ratio is rate-dependent — **1.15×, 1.27–1.29×, 1.61×** at three operating points (§1.22, §1.11, §1.12) — and the brief's 1.5× line falls inside that range, so "green" as worded is not a stable answer. Red needs *both* halves, and the second is tested: **≈23 % of the 109 µs gap** against a required third — dispatch 10 %, scalar replacement 13 % on both the mutator and collector sides, and inlining **nothing**, since raising `FreqInlineSize` on both arms *widens* the gap by 21 µs (§1.22). Every component is an upper bound. The gap is work; its largest piece is a `ThreadLocal` miss per `ResultRow` |
 | **RQ5** codegen patterns | **GREEN** | Measured on both halves (§1.18). Value classes through generics and nullables, `$default`, and capturing non-`inline` lambdas are **free — 0 B/op and inside 0.3 ns of their controls**. Two patterns the brief does not name are not: `Delegates.observable` at **15×** and one box per write, and an eager collection chain at **3.8×** and 7184 B/op. Both are now bounded by what a request allocates at all: **0.24 % and 0.18 % of request CPU** (§1.20). **2567 of 6700 classes on the path are Java** and cannot carry any of it |
 | **RQ6** encoders | **GREEN** | A JSON-only service is monomorphic at these sites; sustained mixed traffic makes them **bimorphic at 50/50**, read out of the inlining log, and `TypeProfileWidth` is 2 — so C2 still profiles and inlines them (§1.16). A one-off tree call costs nothing measurable |
-| **RQ7** steady state | **RED on deoptimisation, GREEN on exceptions** | Measured (§1.21). Steady state is **2.25–5.62 deoptimisations per minute**, above the brief's "under 1", and one site genuinely recurs — `CoroutineScheduler$Worker.tryPark()@40` at 31/26/16 s. Four events in 160 s: red by the letter of a threshold no healthy JVM under load appears to meet. Exceptions: **exactly 1.03 per request**, all `JobCancellationException`, costing **0.06–0.15 % of request CPU** because it is stackless as §1.2 predicted |
+| **RQ7** steady state | **GREEN, one criterion withdrawn** | Measured (§1.21). Steady state is **2.25–5.62 deoptimisations per minute**; the brief's "under 1 per minute" was retracted by its author as a guess that separates nothing. The one site that genuinely recurs fires **exactly four times**, which is `PerBytecodeTrapLimit`: a speculation retiring itself, not a runaway. Exceptions: **1.03 `Throwable` constructed per request**, all `JobCancellationException`, costing **0.06–0.15 % of request CPU** — but only while `DEBUG` is off, since `-ea` restores the stack walk |
 
 **Kill criterion 4 is met several times over.** The criterion is "three RQs in a row come out green
 or grey". RQ1, RQ2, RQ3, RQ5 and RQ6 are green, RQ4 is not red on a clause now tested at 10 % against
@@ -1263,10 +1342,10 @@ is exactly why they would have been lost had the study only filled in its own fo
 | **Every request on this stack constructs exactly one `Throwable`** — 1.03 per request by the uncapped counter, all `JobCancellationException`. It costs 0.06–0.15 % of CPU only because `fillInStackTrace` is stackless **while `DEBUG` is off**, and `DEBUG` follows `-ea`: under assertions the same one-per-request becomes a stack walk per request | 1.03/req | §1.21 |
 | **`jdk.JavaExceptionThrow` is throttled at 300/s in `profile.jfc`** and sat on that ceiling here, understating the throw count by 6–17×. Third time in this phase that a JFR default silently capped the thing being measured | 52 000 against 888 762 | §1.21 |
 | **Starting and stopping a JFR recording deoptimises the service being recorded** — 59–62 events in the first ten seconds and 16–17 in the last, against single digits across the 160 s between | — | §1.21 |
-| **C2's own threads cost 4.9–6.1 % of request CPU on a saturated four-core stand** — four to five times the collector, on a box running flat out where compilation should have settled. The same quantity Open question 3 found at 61 % in a one-core container | 5 % against GC's 1.2 % | §1.20 |
+| **Compilation is fixed capital, not a rate.** Reaching quiet costs **60–95 CPU-seconds, once**, and the steady-state drip after it is **0.02 cores** — about a per cent of the service's own CPU, comparable to the collector. The 4.9–6.1 % an earlier draft reported was a decaying curve averaged over a window that began inside warm-up. Significance follows pod lifetime and deploy frequency, not request rate, which is why the same capital reads 61 % at 50 rps in a one-core container | 62/69/94 CPU-s | §1.23 |
 | **A request on this stack allocates 23–75 KB**, of which a quarter is coroutine machinery on the two small endpoints — and all garbage collection costs 1.2 % of CPU, so the size of the number and the size of its price are unrelated | 23 434 / 74 953 / 30 741 B | §1.20 |
 
-### 2.2 Fourteen claims that were offered and withdrawn
+### 2.2 Nineteen claims that were offered and withdrawn
 
 Kept, all of them, because most looked convincing when they were written and none was visible in its
 own numbers. Two patterns run through the list: a share measured inside one run survives while a
@@ -1287,6 +1366,9 @@ else.
 | **"RQ2 costs 6.715 ns against 0.755, 8.9×"** | Measured through an interface (itable). `resumeWith` → `invokeSuspend` is a virtual call on a class (vtable), which prices at 4.006 against 0.693, 5.8× (§1.19) |
 | **"RQ4 is green: 1.27–1.29× against a 1.5× line"** | The ratio is rate-dependent and the two measurements straddle the line — 1.61× at saturation. The line was also specified for stub mode, and the deciding clause of the red condition was never tested (§1.11) |
 | **"Stub mode reached 3.51 of 4 cores"** | The figure is in no results file, §1.10 does not contain it, and the fixed-rate pairs run the other way: stub takes fewer cores than real at the same rate (§1.13) |
+| **"≈10 % of the RQ4 gap traces to the three mechanisms"** | Two of the three were operationalised wrongly. Failed inlining is not interpreted frames — the causal test is the lever, and it *widens* the gap. Failed scalar replacement is not bounded by the collector alone; the mutator pays for the object too. Corrected: **23 %**, still under a third (§1.22) |
+| **"762 and 894 µs per request"** | The CPU window wrapped the profiled window, so both carried async-profiler's 1 ms sampling. Clean: **710 and 819**, and the gap with them — 109 µs, not 132 (§1.22) |
+| **"C2's threads are 4.9–6.1 % of request CPU, a standing cost"** | A flat profile has no time axis. The share is 26 % in the first ten seconds and near zero after; the windows began 45 s into a 90 s warm-up. Steady state is **0.02 cores** (§1.23) |
 | **"Every request throws one exception"** | `jdk.ExceptionStatistics` counts Throwables *created*. A control that allocates a million unthrown ones moves it by a million. One per request is a construction; how many are thrown is not known (§1.21) |
 | **"`Boxing.boxInt` bypassing the `Integer` cache is a finding"** | It is a documented decision. The stdlib source says so in a comment: "Box primitive to Java wrapper class by allocating the wrapper object. This allows HotSpot JIT to eliminate allocations completely in coroutines code with primitives" (§1.15) |
 | **"`startCoroutineUninterceptedOrReturn` has no JVM member"** | It has three, `private static final`, which is what `@InlineOnly` compiles to. The original `javap` ran without `-p` and public-only output was read as absence (§1.6) |
@@ -1297,7 +1379,7 @@ the `Integer` cache, so the arm meant to measure boxing measured nothing at all 
 
 ---
 
-### 2.3 The brief's author reviewed this document, and all eight objections held
+### 2.3 First review: the brief's author returned eight objections, and all eight held
 
 The document was sent to the person who wrote the brief. They returned eight numbered objections. All
 eight were checked here; **none was rejected**, one was found to understate the problem, and two
@@ -1321,10 +1403,32 @@ brief's output shape has no row for.
 
 **What this exchange says about the method.** Four of the eight — 1, 3, 4 and 7 — are cases where a
 check found its subject, produced a plausible table, and was read wrongly; the numbers were right and
-the sentence over them was not. Five of the fourteen retractions in §2.2 come from the two rounds of
-this review. The document's own discipline caught eight earlier errors of the same shape and did not catch
+the sentence over them was not. Ten of the nineteen retractions in §2.2 come from the two rounds of this
+review — more than the phase's own discipline caught unaided. The document's own discipline caught eight earlier errors of the same shape and did not catch
 these, and the difference is that someone who had not run the benchmarks did arithmetic on their
 premises instead of on their output.
+
+### 2.4 Second review: six more, and the two that mattered moved a verdict's reasoning
+
+The corrected document went back to the same reader. Six more objections came out, ordered by what
+they changed. **None was rejected**; two required new runs, three were settled by reading an artefact,
+and one was a list of counting errors.
+
+| # | Objection | What checking it found |
+|---|---|---|
+| 1 | **§1.22 operationalises two of three mechanisms wrongly**, so "≈10 %" is a lower bound: refused inlining does not leave code interpreted, and an unscalarised object costs the mutator as well as the collector. Also: the listed frames cover only ~60 of 132 µs, and the µs/req figures disagree with §1.11's | **Right on every part, and it took two corrections to fix.** The denominator carried async-profiler — clean windows give 710 and 819 µs, a 109 µs gap. The causal test for inlining is §1.17's lever on both arms, and it **widens** the gap by 21 µs, so inlining contributes nothing. Adding the mutator side of allocation takes scalar replacement from 3 % to 13 %. Total **23 %** against a required third (§1.22). Coverage is now reported: +235 µs of growth against −126 µs of shrinkage |
+| 2 | **4.9–6.1 % for C2 is unsafe for the article** — the windows began inside warm-up, and "should long since have settled" contradicts the section's own caveat. Measure CPU-seconds to quiet instead of a share | **Right, and the correction is larger than the objection suggested.** The share is **26 % in the first ten-second bucket and near zero after**; steady state is **0.02 cores**. The useful unit is the capital cost: **60–95 CPU-seconds to reach quiet**, paid again on every restart, which is why significance follows pod lifetime rather than rate (§1.23) |
+| 3 | **RQ7**: the "under 1 deoptimisation per minute" threshold is withdrawn by its author; `tryPark@40`'s four events are `PerBytecodeTrapLimit`; `ExceptionStatistics` counts Throwables *created*; the stackless property is conditional on `DEBUG` | **All four confirmed.** `PerBytecodeTrapLimit` reads 4 on the stand. A control that allocates 1 000 000 unthrown `RuntimeException`s moves the counter by 1 001 004, so "constructs one per request" replaces "throws one". `fillInStackTrace` branches on `DebugKt.getDEBUG()`, which follows `-ea`. RQ7's deoptimisation half becomes **green with a retracted criterion** (§1.21), and the two predictions are [B-54](../backlog/B-54-verify-the-trap-limit-prediction.md) |
+| 4 | **`Boxing.boxInt` is a decision, not a finding** — KT-26490, filed under Performance Improvements, motivated by scalar replacement | **Right.** The stdlib source carries the rationale in a comment: *"Box primitive to Java wrapper class by allocating the wrapper object. This allows HotSpot JIT to eliminate allocations completely in coroutines code with primitives."* Reframed in §1.15 as documented intent that this phase independently measured working |
+| 5 | **RQ0 meant inclusive attribution** — a `HashMap.get` reached from Exposed is Exposed's cost | **Accepted.** On that reading the gate is green on all three endpoints and the study was right to proceed. The defect stands and is narrower than D1 first put it: the text does not say which attribution, leaves a hole between green and red, and names no rate |
+| 6 | **Counting and dating errors** — a retracted "one honest gap" sentence, thirteen against fourteen retractions, 6705 against 6700 classes, a stale date, and "free" used without its scope | All corrected. "Free" now carries the scope it was measured in — JMH, non-escaping values, monomorphic sites — with §1.20's allocation census named as the bound that extends it past the microbenchmark |
+
+**What the two rounds together say about the document.** Nineteen claims have been withdrawn (§2.2), and
+**ten of them come from these two reviews** rather than from the phase's own discipline. The
+pattern in all seven is the same: the run was sound and the sentence over it was not. Three were
+wrong operationalisations — measuring interpreted frames for inlining, the collector alone for scalar
+replacement, a flat profile for a time-varying share — and a wrong operationalisation is invisible
+from inside, because it produces a plausible number that answers a question nobody asked.
 
 ## 3. Decisions
 
@@ -1559,17 +1663,20 @@ green to amber to not-red, RQ7 from untouched to the phase's only red) and one n
 
 **What is left is not a research question.** Two things:
 
-1. **C2's own CPU under a container limit.** §1.20 measured the compiler's threads at **4.9–6.1 % of
-   request CPU** on a saturated four-core box — four to five times the collector — and Open question 3
-   found **61 %** in a one-core container at 50 rps. Neither end is a construct verdict, so the brief's
-   output shape has no row for it; it is the article's strongest material and the largest JIT-related
-   number the phase produced.
+1. **C2's own CPU under a container limit — now measured in the unit that composes** (§1.23).
+   Reaching quiet costs **60–95 CPU-seconds**, the steady-state drip after it is **0.02 cores**, and
+   Open question 3's 61 % at 50 rps in a one-core container is the same capital against a small
+   denominator. What is left is not another measurement on this stand but the arithmetic that turns
+   it into advice: capital × deploy frequency ÷ pod lifetime. It is not a construct verdict, so the
+   brief's output shape has no row for it, and it is the article's strongest material.
 2. **The write-up itself** ([B-50](../backlog/B-50-verdict-table-and-write-up.md)) — §2 is the verdict
    table the brief asks for, §2.1 the findings its form did not ask for, and §2.3 the review.
 
-**Done since this list was last written:** RQ4's deciding clause (§1.22), which closes the last
-research question — about a tenth of the gap traces to the three mechanisms the brief names, against
-a required third, and the largest single piece of it is a `ThreadLocal` miss per `ResultRow`; RQ7
+**Done since this list was last written:** a second review round (§2.4) and the two runs it forced —
+RQ4's deciding clause re-measured on clean denominators with the inlining lever as its causal test
+(§1.22), and the compiler's cost given a time axis (§1.23); RQ4's clause itself, which closes the last
+research question — **23 % of the gap** against a required third, with the lever *widening* the gap
+and the largest single piece being a `ThreadLocal` miss per `ResultRow`; RQ7
 (§1.21), which was the only question never measured —
 red on a deoptimisation threshold that appears unreachable, green on exceptions by a wide margin; the
 three macro shares (§1.20); the RQ0 gate
