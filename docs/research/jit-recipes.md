@@ -35,8 +35,8 @@ to, because a number on its own cannot tell "fast" from "the benchmark folded it
 
 | What people avoid | Measured | Its pair | Where |
 |---|---|---|---|
-| Value class through a **generic** | 0.866 ns, **0 B/op** | raw `Int` through the same generic, 0.865 ns | §1.18 |
-| Value class through a **nullable** | 0.866 ns, **0 B/op** | used directly, 0.848 ns | §1.18 |
+| Value class through a **generic**, unwrapped on the spot | 0.866 ns, **0 B/op** | raw `Int` through the same generic, 0.865 ns | §1.18 |
+| Value class through a **nullable**, unwrapped on the spot | 0.866 ns, **0 B/op** | used directly, 0.848 ns | §1.18 |
 | **Default arguments** (the `$default` synthetic) | 0.997 ns | an explicit overload, 0.925 ns | §1.18 |
 | **Capturing lambda** into a non-`inline` function | 302.9 ns / 256 elements, **0.001 B/op** | the loop written out, 305.5 ns | §1.18 |
 | **Null-check intrinsics** | 1.670 ns | the unchecked variant, 1.863 ns | §1.14 |
@@ -47,12 +47,28 @@ to, because a number on its own cannot tell "fast" from "the benchmark folded it
 
 Two of these are worth a sentence, because they are the ones that change how code gets written.
 
-**Value classes do not box in practice.** C2 removes the wrapper entirely when it does not escape —
-**0 B/op**, not "a cheap allocation". The standard library deliberately helps:
-`kotlin.coroutines.jvm.internal.Boxing.boxInt` compiles to `new Integer(i)` rather than
-`Integer.valueOf(i)`, with a source comment saying why — *"This allows HotSpot JIT to eliminate
-allocations completely in coroutines code with primitives"* — because a fresh allocation scalar-replaces
-more reliably than a value loaded out of a shared cache array (§1.15).
+**A value class box is free where it does not escape, and real where it does.** This is the row most
+worth reading carefully, because it is the easiest to over-read.
+
+*What was measured.* `identity(Cents(n)).v` — a `@JvmInline value class` through
+`private fun <T> identity(t: T): T`, unwrapped with `.v` on the next expression. The box is created and
+consumed inside one region C2 inlines, so escape analysis deletes it: **0 B/op**, identical to the raw
+`Int` through the same generic. The boxing is real in the bytecode — the census counts **1175
+`box-impl`/`unbox-impl` call sites** on this classpath — and C2 removes it.
+
+*What was not measured, and where the worry belongs.* Nothing here shows a box surviving a boundary
+being free, and the cases people actually fear are exactly those: a `List<Cents>`, a `Map<K, Cents>`,
+a value class as a suspend function's return type, one crossing into a `Flow`. Those are collections
+of boxes and scalar replacement does not reach them. This document's own §1.15 is the measured
+counterexample — a boxed primitive forced to escape allocates **16 B/op on every call**, and it cannot
+be saved by the `Integer` cache, because `kotlin.coroutines.jvm.internal.Boxing.boxInt` compiles to
+`new Integer(i)` rather than `Integer.valueOf(i)` on purpose (*"This allows HotSpot JIT to eliminate
+allocations completely in coroutines code with primitives"*). That is the same mechanism read from the
+other side: a fresh allocation scalar-replaces well, and pays in full when it cannot.
+
+*So the recipe is about escape, not about value classes.* Wrap and unwrap freely inside a computation.
+Do not assume a `List<Cents>` is free — that one has not been measured here and the mechanism says it
+is not.
 
 **Suspend functions cost nothing on the path where they do not suspend**, which is the common case on
 a request path. Escape analysis removes the state machines outright: the same benchmark under
@@ -153,6 +169,12 @@ only the microbenchmark behind it, "costs nothing" means "costs nothing where no
 
 **And all of it is one stand**, one JDK, one version of each library. Shares travel between stands;
 absolute figures do not.
+
+**The named gap.** The escaping case is measured for a boxed primitive (§1.15) and *not* for a value
+class: no arm here holds a `List<Cents>`, or returns a `Cents` from a suspend function, or pushes one
+through a `Flow`. The mechanism predicts those allocate, and the prediction is not a measurement.
+Until it is, section 1's value-class rows mean only what they say — unwrapped on the spot, inside one
+inlined region.
 
 ---
 
