@@ -113,7 +113,7 @@ public class Workload(
      * workload's own connection.
      */
     override fun close() {
-        http.close()
+        http.closeWhereSupported()
     }
 
     /** `{{name}}` → the captured value; a name nothing captured is a mistake in the workload, not an empty string. */
