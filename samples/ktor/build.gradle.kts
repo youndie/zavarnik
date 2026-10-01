@@ -3,16 +3,16 @@
 // `distTar` ships it. This is the stand from experiments/ktor-readiness on the plugin instead of on
 // hand-written glue.
 plugins {
-    kotlin("jvm") version "2.4.10"
-    kotlin("plugin.serialization") version "2.4.10"
+    kotlin("jvm") version "2.4.20"
+    kotlin("plugin.serialization") version "2.4.20"
     application
     id("io.github.youndie.zavarnik")
 }
 
 dependencies {
-    implementation("io.ktor:ktor-server-cio:3.5.2")
-    implementation("io.ktor:ktor-server-content-negotiation:3.5.2")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:3.5.2")
+    implementation("io.ktor:ktor-server-cio:3.6.0")
+    implementation("io.ktor:ktor-server-content-negotiation:3.6.0")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.6.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("org.slf4j:slf4j-simple:2.0.17")
 }

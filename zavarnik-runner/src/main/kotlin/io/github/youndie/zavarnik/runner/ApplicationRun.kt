@@ -64,8 +64,11 @@ public class ApplicationRun(
         // Closed when the wait ends, and that is not housekeeping: keep-alive holds the connection
         // open on the server's side too, and a CRaC checkpoint refuses while any socket is. The
         // readiness probe was the last socket standing on the Ktor sample.
-        HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1)).build().use { client ->
+        val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1)).build()
+        try {
             return awaitReady(client, url, timeout)
+        } finally {
+            client.closeWhereSupported()
         }
     }
 
@@ -160,4 +163,17 @@ public class ApplicationRun(
         const val LOG_TAIL_LINES = 30
         const val KILL_WAIT_SECONDS = 10L
     }
+}
+
+/**
+ * `HttpClient.close()` where the running JDK has it, and nothing where it does not.
+ *
+ * The client became `AutoCloseable` in Java 21, and this code is compiled for the floor of 17
+ * (`-Xjdk-release=17`), because the Gradle tasks call the runner in-process and Gradle runs on 17.
+ * A plain `close()` or `use {}` compiled against a newer JDK would link fine and then fail on a
+ * daemon running 17 to 20; on those there is no close to call, and the connections go with the
+ * client. On 21 and later this is the same call as before, which is the one a CRaC checkpoint needs.
+ */
+internal fun HttpClient.closeWhereSupported() {
+    (this as? AutoCloseable)?.close()
 }

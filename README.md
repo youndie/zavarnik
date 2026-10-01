@@ -194,7 +194,7 @@ Jib applied the plugin refuses that at configuration time and adds two tasks:
 
 ```kotlin
 plugins {
-    id("io.ktor.plugin") version "3.5.2"          // or com.google.cloud.tools.jib directly
+    id("io.ktor.plugin") version "3.6.0"          // or com.google.cloud.tools.jib directly
     id("io.github.youndie.zavarnik")
 }
 
