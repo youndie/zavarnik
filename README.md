@@ -50,7 +50,7 @@ The DSL is 0.x and may still move before 1.0; the changes are in the backlog.
   Docker's overlay2 on a CI runner and containerd on a k0s node answered differently, and the
   first cache to reach a cluster was refused there, silently. `aotVerify` cannot see this: it runs
   where the training ran. The plugin refuses a wildcard at `installDist`; list the jars instead.
-- Gradle 9 (developed and tested on 9.7.1).
+- Gradle 9 (developed and tested on 9.8.0).
 
 ## Quickstart
 
