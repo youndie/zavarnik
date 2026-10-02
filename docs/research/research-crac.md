@@ -261,7 +261,7 @@ features», так что сорванная передача читается �
 
 | Факт | Где проверено |
 |---|---|
-| Hikari 7.1.0, `maximumPoolSize` 10 (`DB_POOL_SIZE`), Exposed 1.5.0 через `Database.connect(dataSource)`, pgjdbc 42.7.13, Flyway при старте | `konekt/gradle/libs.versions.toml`, `shared/db/src/main/kotlin/io/konekt/db/DatabaseFactory.kt` |
+| Hikari 7.1.0, `maximumPoolSize` 10 (`DB_POOL_SIZE`), Exposed 1.5.0 через `Database.connect(dataSource)`, pgjdbc 42.7.13, Flyway при старте | `youndie/konekt@0b0a4be!/gradle/libs.versions.toml`, `shared/db/src/main/kotlin/io/konekt/db/DatabaseFactory.kt` |
 | Одноразовые коды — `SecureRandom()` (`CodeSecurity.kt`): после restore переинициализируется (§1.3); `MockSmDpPlus` (dev-заглушка eSIM) — `kotlin.random.Random.Default`: последовательность общая у всех реплик, но выдаваемые коды разошлись — §1.3, следствие 2 | `feature/auth-server-data/.../CodeSecurity.kt`, `feature/esim-server-data/.../MockSmDpPlus.kt` |
 | Готовность в кластере сейчас 3 с с AOT-кэшем против 11 (konekt B-123); базовый образ — `eclipse-temurin:25-jre`, не Zulu | konekt `docs/backlog/B-123-*.md`, `Dockerfile` |
 
