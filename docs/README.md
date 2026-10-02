@@ -44,6 +44,10 @@ pip install pyyaml
 make check
 ```
 
+Проверки — [docs-bootstrap](https://github.com/youndie/docs-bootstrap) той версии, что пинует
+`.github/workflows/check.yaml`; первый прогон скачивает её в `.docs-bootstrap/`. `make fix`
+перегенерирует индекс бэклога и дописывает недостающие строки карты покрытия.
+
 ## Карта покрытия
 
 Список ниже **проверяется** по файлам на диске: документ, которого здесь нет, или строка без

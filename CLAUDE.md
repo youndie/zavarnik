@@ -64,3 +64,7 @@ make check      # ровно то, что гоняет CI
 make report     # BDD-покрытие и якоря — читаются человеком
 make fix        # перегенерировать индекс бэклога, дописать карту покрытия
 ```
+
+Проверки — docs-bootstrap той версии, что пинует строка `uses: youndie/docs-bootstrap@…` в
+`.github/workflows/check.yaml`; первый `make check` скачивает её в `.docs-bootstrap/` (каталог сам
+себя игнорирует). Копий под `scripts/`, которые запускались бы руками, нет.
