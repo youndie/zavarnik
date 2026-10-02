@@ -111,7 +111,7 @@ Netty (очередь на поток), ни у Jetty (рандеву без о�
   `LimitedDispatcher.obtainTaskOrDeallocateWorker` 6,9 %, `LimitedDispatcher.dispatch` 4,3 %,
   `LockFreeTaskQueue.removeFirstOrNull` 2,3 % — 30,8 % только в четырёх верхних кадрах.
 - **Netty** — системные вызовы: `writev` 6,9 %, `__write` 5,8 %, `epoll_wait` 5,6 %, `read` 3,5 %.
-  Первый прикладной кадр — `bench/Pricing.quote` 1,6 %.
+  Первый прикладной кадр — `bench.Pricing.quote` 1,6 %.
 - **Jetty** — пробуждения: `pthread_cond_signal` 20,4 % плюс libc 20,9 %, `LockSupport.park`
   и `unpark` по 2 %, `LinkedTransferQueue$DualNode.await` 1,9 %.
 

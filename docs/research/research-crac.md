@@ -37,13 +37,13 @@ Ktor CIO + HikariCP + Exposed при restore, и его риск — CRaC-JDK и
 |---|---|
 | Azul Zulu с CRaC выходит для **17, 21, 22, 23, 24, 25 и 26**: 25.0.4.1 и 26.0.2.1 GA, Linux x64 и arm64; образы `azul/zulu-openjdk:<v>-jdk-crac` и `-jre-crac` обновлены 10.09.2026 | `api.azul.com/metadata/v1/zulu/packages?crac_supported=true`; Docker Hub `azul/zulu-openjdk`, теги `*-crac` |
 | BellSoft Liberica с CRaC — только **17 и 21** (`jdk-17-crac`, `jdk-21-crac`); 24, 25, 26 — ноль тегов | Docker Hub `bellsoft/liberica-runtime-container`, теги `jdk-<v>-crac` |
-| Движки: `criuengine` (CRIU, нужен root или SUID на `lib/criu`; в контейнере — `CHECKPOINT_RESTORE` и `SYS_PTRACE`), **`warp`** («doesn't require any additional privileges, neither for checkpoint nor for restore», октябрь 2024, Linux x86_64 и arm64, glibc), `simengine` (checkpoint сразу переходит в restore в том же процессе — Linux, Windows, macOS), `pauseengine` (JVM ждёт, restore из другой JVM) | docs.azul.com/crac/usage/crac-engines |
-| **На 25.0.4.1 движок по умолчанию — `warp`**: `CRaCEngine = warp {default}`; `lib/criu` 3.17.1-crac лежит рядом, но не используется | `-XX:+PrintFlagsFinal`, `restore-twice.sh`, 11.09.2026 |
+| Движки: `criuengine` (CRIU, нужен root или SUID на `$JAVA_HOME/lib/criu`; в контейнере — `CHECKPOINT_RESTORE` и `SYS_PTRACE`), **`warp`** («doesn't require any additional privileges, neither for checkpoint nor for restore», октябрь 2024, Linux x86_64 и arm64, glibc), `simengine` (checkpoint сразу переходит в restore в том же процессе — Linux, Windows, macOS), `pauseengine` (JVM ждёт, restore из другой JVM) | docs.azul.com/crac/usage/crac-engines |
+| **На 25.0.4.1 движок по умолчанию — `warp`**: `CRaCEngine = warp {default}`; `$JAVA_HOME/lib/criu` 3.17.1-crac лежит рядом, но не используется | `-XX:+PrintFlagsFinal`, `restore-twice.sh`, 11.09.2026 |
 | Флаги CRaC на этой сборке: `CRaCCheckpointTo`, `CRaCRestoreFrom`, `CRaCEngine`, `CRaCEngineOptions`, `CRaCIgnoredFileDescriptors`, `CRaCAllowedOpenFilePrefixes`, `CRaCHeapErgonomics=true`, `CRaCIgnoreRestoreIfUnavailable=false`, `CRaCMaxHeapSizeBeforeCheckpoint=0`, `CRaCMinPid=128`, `CRaCCPUCountInit=false` | там же |
-| API: `jdk.crac.Core`, `Resource` (`beforeCheckpoint`/`afterRestore`), `Context`, `CheckpointException`, `RestoreException` — модуль `jdk.crac`; JDK-ресурсы для сокетов, файлов, селекторов и JFR — `jdk.internal.crac` (`JDKSocketResource`, `JDKFileResource`, `OpenResourcePolicies`); API-совместимая библиотека для JDK без CRaC — `org.crac:crac` 1.5.0 (Central, 19.06.2024) | `openjdk/crac`, ветка `crac`: `src/jdk.crac/share/classes/jdk/crac/`, `src/java.base/share/classes/jdk/internal/crac/`; search.maven.org |
+| API: `jdk.crac.Core`, `Resource` (`beforeCheckpoint`/`afterRestore`), `Context`, `CheckpointException`, `RestoreException` — модуль `jdk.crac`; JDK-ресурсы для сокетов, файлов, селекторов и JFR — `jdk.internal.crac` (`JDKSocketResource`, `JDKFileResource`, `OpenResourcePolicies`); API-совместимая библиотека для JDK без CRaC — `org.crac:crac` 1.5.0 (Central, 19.06.2024) | `openjdk/crac@df66721d284d!/src/jdk.crac/share/classes/jdk/crac/`, `openjdk/crac@df66721d284d!/src/java.base/share/classes/jdk/internal/crac/` (ветка `crac` на 11.09.2026); search.maven.org |
 | Checkpoint: `-XX:CRaCCheckpointTo=<dir>` + `jcmd <main> JDK.checkpoint` (или `Core.checkpointRestore()`); restore: `java -XX:CRaCRestoreFrom=<dir>` — остальные флаги берутся из снимка | CRaC/docs README; прогон |
 | Warp: восстановленный процесс **не** получает прежние PID/TID (потому и не нужны capabilities); политики файловых дескрипторов — свойство `jdk.crac.resource-policies`, файл из правил `type: file\|pipe\|socket\|filedescriptor`, `action: error\|ignore\|close\|reopen`, уточнения `localAddress`, `localPort`, `listening`; сами Azul называют это «limited handling via configuration» — обходом, не решением | docs.azul.com/crac/usage/crac-engines; CRaC/docs `fd-policies.md`; docs.azul.com fd-policies (через поиск: `listening: true` + `action: reopen` переоткрывает слушающий сокет на том же адресе) |
-| В GitHub-версии `fd-policies.md` сказано, что `reopen` для сокетов **не реализован** и даст исключение после restore; на Zulu 25.0.4.1 он реализован и работает (§1.4) — документация CRaC/docs отстаёт от сборки Azul | `CRaC/docs/fd-policies.md`; `experiments/crac-ktor/results/2026-09-11-crac-ktor-policy-*.log` |
+| В GitHub-версии `fd-policies.md` сказано, что `reopen` для сокетов **не реализован** и даст исключение после restore; на Zulu 25.0.4.1 он реализован и работает (§1.4) — документация CRaC/docs отстаёт от сборки Azul | `CRaC/docs@f528f3d20514!/fd-policies.md`; `experiments/crac-ktor/results/2026-09-11-crac-ktor-policy-*.log` |
 
 **Следствие 1 — *отклонение от брифа*.** Риск «нужен CRaC-JDK, только Linux» стоит вдвое
 дешевле, чем в брифе. JDK есть: Zulu 25 и 26 с CRaC выходят в тот же день, что и обычные, в
@@ -74,7 +74,7 @@ wall-время, `java.util.Random`, `ThreadLocalRandom` и `UUID.randomUUID()`.
 |---|---|
 | `System.nanoTime()` после restore скорректирован: CRaC записывает wall-время до checkpoint и после restore и сдвигает `nanoTime` (PR #53 в `openjdk/crac`, обсуждение в crac-dev); наблюдение — тик после restore показывает прошедшее реальное время, а не «время с загрузки другой машины» | mail.openjdk.org crac-dev «Correct System.nanotime() value after restore»; `crac-smoke`, `crac-twice` |
 | **Два restore одного снимка дают одинаковые `java.util.Random` и `ThreadLocalRandom`**: `rnd=-807420337 tlr=200137914` в обоих; UUID (SecureRandom) — разные | `results/2026-09-11-crac-twice-*.log` |
-| `SecureRandom()` **переинициализируется** после restore (`@crac Instances created by this constructor are automatically reseeded after restore from a checkpoint`); `SecureRandom(byte[] seed)` — **нет**; `java.util.Random` и `ThreadLocalRandom` — ни строчки про CRaC | `openjdk/crac`, `java/security/SecureRandom.java` строки 219 и 265; `java/util/Random.java`, `ThreadLocalRandom.java` — grep `crac` пуст |
+| `SecureRandom()` **переинициализируется** после restore (`@crac Instances created by this constructor are automatically reseeded after restore from a checkpoint`); `SecureRandom(byte[] seed)` — **нет**; `java.util.Random` и `ThreadLocalRandom` — ни строчки про CRaC | `openjdk/crac@df66721d284d!/src/java.base/share/classes/java/security/SecureRandom.java` строки 219 и 265; `openjdk/crac@df66721d284d!/src/java.base/share/classes/java/util/Random.java`, `ThreadLocalRandom.java` — grep `crac` пуст |
 
 **Уточнено 11.09.2026 (`experiments/crac-smoke/randoms.sh`, `Randoms.java`).** Пять генераторов,
 считанных **после** restore, два restore одного снимка:
@@ -243,7 +243,7 @@ features», так что сорванная передача читается �
 | Что | Результат | Где проверено |
 |---|---|---|
 | Spring Framework 6.1 / Boot 3.2: `Lifecycle.stop()` перед checkpoint и `start()` после; `-Dspring.context.checkpoint=onRefresh` — автоматический checkpoint при старте; для Hikari — `HikariCheckpointRestoreLifecycle` в `spring-boot-jdbc` | docs.spring.io integration/checkpoint-restore; `spring-projects/spring-boot`, `module/spring-boot-jdbc/.../HikariCheckpointRestoreLifecycle.java` |
-| Micronaut (`micronaut-crac`): `HikariDataSourceResource` — `suspendPool()` перед checkpoint, ожидание закрытия соединений с таймаутом (`datasourcePauseTimeout`), `resumePool()` после; Redis-клиенты уничтожаются и создаются заново | `micronaut-projects/micronaut-crac`, `crac/src/main/java/io/micronaut/crac/resources/datasources/HikariDataSourceResource.java` |
+| Micronaut (`micronaut-crac`): `HikariDataSourceResource` — `suspendPool()` перед checkpoint, ожидание закрытия соединений с таймаутом (`datasourcePauseTimeout`), `resumePool()` после; Redis-клиенты уничтожаются и создаются заново | `micronaut-projects/micronaut-crac@8bbc1a033ece!/crac/src/main/java/io/micronaut/crac/resources/datasources/HikariDataSourceResource.java` |
 | Quarkus — поддержка и пример `CRaC/example-quarkus`; Helidon 4.2 — поддержка добавлена | docs.azul.com/crac/usage/frameworks |
 | **HikariCP сам** — issue #2082 «Allow to stop/restart HikariPool» (2023, **открыта**): «`suspend` … does not guarantee connections are closed», после `softEvictConnections` сокеты закрываются ещё ~500 мс; в 2024 — Spring-приложение после restore пытается работать по невалидному соединению, хотя lifecycle доложил о закрытии | github.com/brettwooldridge/HikariCP/issues/2082 и комментарии |
 | **Ktor** — KTOR-6485 «Support CRaC», Feature, **Submitted** с 18.11.2023, 3 голоса; в ktorio/ktor issues — пусто | youtrack.jetbrains.com/api/issues/KTOR-6485 |
@@ -261,13 +261,13 @@ features», так что сорванная передача читается �
 
 | Факт | Где проверено |
 |---|---|
-| Hikari 7.1.0, `maximumPoolSize` 10 (`DB_POOL_SIZE`), Exposed 1.5.0 через `Database.connect(dataSource)`, pgjdbc 42.7.13, Flyway при старте | `youndie/konekt@0b0a4be!/gradle/libs.versions.toml`, `shared/db/src/main/kotlin/io/konekt/db/DatabaseFactory.kt` |
+| Hikari 7.1.0, `maximumPoolSize` 10 (`DB_POOL_SIZE`), Exposed 1.5.0 через `Database.connect(dataSource)`, pgjdbc 42.7.13, Flyway при старте | `youndie/konekt@0b0a4be!/gradle/libs.versions.toml`, `youndie/konekt@0b0a4be!/shared/db/src/main/kotlin/io/konekt/db/DatabaseFactory.kt` |
 | Одноразовые коды — `SecureRandom()` (`CodeSecurity.kt`): после restore переинициализируется (§1.3); `MockSmDpPlus` (dev-заглушка eSIM) — `kotlin.random.Random.Default`: последовательность общая у всех реплик, но выдаваемые коды разошлись — §1.3, следствие 2 | `feature/auth-server-data/.../CodeSecurity.kt`, `feature/esim-server-data/.../MockSmDpPlus.kt` |
 | Готовность в кластере сейчас 3 с с AOT-кэшем против 11 (konekt B-123); базовый образ — `eclipse-temurin:25-jre`, не Zulu | konekt `docs/backlog/B-123-*.md`, `Dockerfile` |
 
-**Проверено прогоном 11.09.2026** — `konekt/scripts/measure/crac-restore.sh`, десять фаз, журналы в
-konekt `docs/research/measurements-2026-09-11/crac/`, konekt B-125. Стенд: тот же Postgres, брокер и
-миграции из `deploy/compose.yaml`, сервер — дистрибутив konekt на `azul/zulu-openjdk:25-jre-crac`.
+**Проверено прогоном 11.09.2026** — `youndie/konekt@14fb86c6!/scripts/measure/crac-restore.sh`, десять фаз, журналы в
+konekt `youndie/konekt@14fb86c6!/docs/research/measurements-2026-09-11/crac/`, konekt B-125. Стенд: тот же Postgres, брокер и
+миграции из `youndie/konekt@14fb86c6!/deploy/compose.yaml`, сервер — дистрибутив konekt на `azul/zulu-openjdk:25-jre-crac`.
 
 | Гипотеза | Что вышло |
 |---|---|
@@ -330,7 +330,7 @@ zavarnik: restored and served the workload, ready after 511 ms
 | Checkpoint завершает процесс — это и есть признак готовности снимка; каталог наполняется задолго до конца | `Crac.takeSnapshot` ждёт выхода процесса; прогон |
 
 **Следствие 1 — для D3.** Политику пишет раннер в каталог снимка (`zavarnik-crac-policies.yaml`
-рядом с образом), а не в `lib/`: каталог снимка монтируется с хоста и заведомо доступен на
+рядом с образом), а не в `$APP_HOME/lib`: каталог снимка монтируется с хоста и заведомо доступен на
 запись, а образ приложения может быть только для чтения. Файл едет вместе со снимком.
 
 **Следствие 2 — чего нельзя было предвидеть из документации.** «Закрыть все сокеты перед
@@ -381,7 +381,7 @@ restore подряд для D4. Упаковка: слой со снимком �
 
 ### D3. Политика для слушающего сокета — генерирует плагин
 
-Одно правило чинит CIO (§1.4). Плагин пишет `zavarnik-crac-policies.yaml` в `lib/` и передаёт
+Одно правило чинит CIO (§1.4). Плагин пишет `zavarnik-crac-policies.yaml` в `$APP_HOME/lib` и передаёт
 `-Djdk.crac.resource-policies` на тренировке; на restore свойство берётся из снимка. Пользователь
 дописывает правила для своего (пул — см. B-32). Это обход по определению Azul; честная
 альтернатива — `Resource` в Ktor (KTOR-6485), которого нет три года.
@@ -460,6 +460,6 @@ Hikari, ни Ktor; хватило файла политик дескриптор
 Порядок: ~~B-32 (ворота)~~ **сделана 11.09.2026** →
 [B-33](../backlog/B-33-random-after-restore.md) → [B-34](../backlog/B-34-crac-plugin-form.md) →
 [B-35](../backlog/B-35-crac-cpu-features.md). Запись ворот — konekt PR #24,
-`docs/research/measurements-2026-09-11/crac/`, konekt B-125 (выпускать ли — решение владельца
+`youndie/konekt@14fb86c6!/docs/research/measurements-2026-09-11/crac/`, konekt B-125 (выпускать ли — решение владельца
 konekt). Эксперименты первой и второй фаз остаются
 адресами; этот документ правится в месте расхождения.
