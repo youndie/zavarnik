@@ -37,8 +37,8 @@ AVX-512). Скрипт эксперимента и три журнала: `exper
 
 ### 1.1 Что HotSpot проверяет, прежде чем принять кэш
 
-Проверено по исходникам `src/hotspot/share/cds/aotClassLocation.cpp` и `filemap.cpp` на теге
-`jdk-25-ga` репозитория `openjdk/jdk` и прогоном `experiments/aot-validation/run.sh` на 25.0.4
+Проверено по исходникам `openjdk/jdk@6c48f4ed707b!/src/hotspot/share/cds/aotClassLocation.cpp` и `filemap.cpp` на теге
+`jdk-25-ga` и прогоном `experiments/aot-validation/run.sh` на 25.0.4
 (Linux и JBR на маке). На 25.0.2 половина проверок не работает — см. §1.2, там же объяснено,
 почему журнал 25.0.2 для этого раздела ничего не доказывает.
 
@@ -98,9 +98,9 @@ JRE-стадии запуском установленного дистрибу�
 без раннера даёт кэш, который `aotVerify` отверг бы по доле.
 
 **Правка 07.09.2026 (B-25, сделано).** Рецепт образца переведён: `-jdk` делает `installDist`,
-`-jre` копирует дистрибутив и запускает `lib/zavarnik-runner.jar` — `train`, потом `verify` —
+`-jre` копирует дистрибутив и запускает `$APP_HOME/lib/zavarnik-runner.jar` — `train`, потом `verify` —
 на своей же JVM, без Gradle и без `curl`. Раннер — та же логика, что у `aotTrain`/`aotVerify`
-(задачи стали обёртками над ним и читают ту же `lib/zavarnik.properties`). Проверено
+(задачи стали обёртками над ним и читают ту же `$APP_HOME/lib/zavarnik.properties`). Проверено
 `docker-check.sh`: под `-XX:AOTMode=on` стартует, 20 из 20 `sample.*` и 3818 классов из кэша,
 2259 из 2259 классов приложения; образ **562 МБ** вместо 647; `verify` внутри контейнера на
 подменённом jar отвечает тем же текстом, что `aotVerify`, и `exit=1` —
@@ -127,7 +127,7 @@ JRE-стадии запуском установленного дистрибу�
 |---|---|
 | Условие проверки: `num_app_classpaths() > 0 && _max_used_index >= app_cp_start_index() && has_platform_or_app_classes()` | `aotClassLocation.hpp:198–199`, тег `jdk-25-ga` |
 | Исправление: `dumptime_update_max_used_index(runtime()->_max_used_index)` при `is_dumping_final_static_archive()` | `openjdk/jdk#29728` «8377932: AOT cache is not rejected when JAR file has changed», влит 16.02.2026 |
-| В 25u: коммит `2fb3e9c698`, 16.03.2026; строки нет в `jdk-25.0.2-ga` и `jdk-25.0.3-ga`, есть в `jdk-25.0.4-ga` | `openjdk/jdk25u`, `git log -- src/hotspot/share/cds/aotClassLocation.cpp` |
+| В 25u: коммит `2fb3e9c698`, 16.03.2026; строки нет в `jdk-25.0.2-ga` и `jdk-25.0.3-ga`, есть в `jdk-25.0.4-ga` | `git log -- src/hotspot/share/cds/aotClassLocation.cpp` в `openjdk/jdk25u` |
 | В 26u: коммит `3d23e5061d`, 05.03.2026; строки нет в `jdk-26+36` (GA) и `jdk-26.0.1-ga`, есть в `jdk-26.0.2-ga`. На 26.0.2.1 проверка есть **прогоном**: R3 «timestamp has changed», R4, R6 — `shared=0` | `openjdk/jdk26u`; `experiments/aot-validation/results/2026-09-06-linux-x86_64-openjdk-26.0.2.1.log` (B-03) |
 | JVM сравнивает mtime **в секундах** (`st_mtime`): на JDK 26 весь харнесс до R3 укладывался в одну секунду с созданием jar, `touch` попадал в ту же секунду, и первый прогон показал «принят». Харнесс теперь ждёт 1,1 с и печатает обе метки | тот же журнал, R3: `mtime before=…538`, `after=…540`; `aotClassLocation.cpp` — `_timestamp != st.st_mtime` |
 | На 25.0.4 (Linux и JBR 25.0.4.1 на маке) проверка есть: R3, R4, R6 → `shared=0` | `experiments/aot-validation/results/2026-09-06-linux-x86_64-openjdk-25.0.4.log`, `…-macos-aarch64-jbr-25.0.4.1.log` |
@@ -151,7 +151,7 @@ JRE-стадии запуском установленного дистрибу�
 | Кэш записывается при `System.exit`, при `Runtime.halt(0)` и при `SIGTERM`; **не** записывается при `SIGKILL` | журнал E1 «written», E2 «written», E3 «not written» |
 | Одношаговый режим — два процесса: тренировочная JVM пишет `.aot.config` при выходе, лаунчер запускает вторую («Launching child process … to assemble AOT cache»), и кэш появляется после неё; на `hello world` 0,4–1,1 с | JEP 514; вывод при `JAVA_TOOL_OPTIONS=-XX:AOTCacheOutput=…`; журнал M2 |
 | Второй шаг удваивает потребность в памяти: «-Xmx4g … the environment needs 8GB» | JEP 514, раздел о одношаговом режиме |
-| Ktor `EmbeddedServer.start(wait = true)` регистрирует JVM shutdown hook, вызывающий `stop()`; отключается свойством `io.ktor.server.engine.ShutdownHook=false` | `ktor-server/ktor-server-core/jvm/src/io/ktor/server/engine/EmbeddedServerJvm.kt` (`start`), `ShutdownHookJvm.kt`, ветка `main` ktorio/ktor |
+| Ktor `EmbeddedServer.start(wait = true)` регистрирует JVM shutdown hook, вызывающий `stop()`; отключается свойством `io.ktor.server.engine.ShutdownHook=false` | `ktorio/ktor@f92fad043538!/ktor-server/ktor-server-core/jvm/src/io/ktor/server/engine/EmbeddedServerJvm.kt` (`start`), `ShutdownHookJvm.kt` рядом — ветка `main` на 06.09.2026 |
 
 **Следствие 1 — *отклонение от брифа*.** Бриф считал `Runtime.halt` неприемлемым («cache won't be
 written»). Неверно: `.aot.config` пишется в `before_exit` VM, до хуков. Значит, режим «хук внутри
@@ -168,8 +168,8 @@ written»). Неверно: `.aot.config` пишется в `before_exit` VM, д
 
 ### 1.4 Стартовый скрипт плагина `application`
 
-Проверено по шаблону `org/gradle/api/internal/plugins/unixStartScript.txt` в
-`gradle-plugins-application-9.7.1.jar` (дистрибутив Gradle 9.7.1) и сквозным прогоном
+Проверено по шаблону
+`gradle-plugins-application-9.7.1.jar!/org/gradle/api/internal/plugins/unixStartScript.txt` (дистрибутив Gradle 9.7.1) и сквозным прогоном
 `experiments/gradle-start-script/run.sh` (G1–G6, настоящий проект на `application`).
 
 | Факт | Где проверено |
@@ -179,8 +179,8 @@ written»). Неверно: `.aot.config` пишется в `before_exit` VM, д
 | Скрипт складывает `DEFAULT_JVM_OPTS $JAVA_OPTS $<APP>_OPTS` — окружение добавляет флаги, не переписывая скрипт | шаблон, строка 293; G1 (`JAVA_OPTS=-XX:AOTCacheOutput=…` через скрипт даёт кэш), G3 (`JAVA_OPTS=-XX:AOTMode=on` поверх флага скрипта — код 0) |
 | Сторож `if [ -f "$APP_HOME/lib/app.aot" ]; then DEFAULT_JVM_OPTS="$DEFAULT_JVM_OPTS \"-XX:AOTCache=$APP_HOME/lib/app.aot\""; fi`, вставленный постобработкой, работает: до тренировки флага нет, после — классы из кэша, после переезда всего каталога — тоже | `experiments/gradle-start-script/build.gradle.kts`; G1, G2, G4 |
 | Windows-скрипт: `set APP_HOME=%DIRNAME%…`, `set DEFAULT_JVM_OPTS=…`, `set CLASSPATH=…` | `windowsStartScript.txt`, строки 34, 40, 75 — прочитано, прогоном не проверено |
-| Каталог-зависимость (`runtimeOnly(files("conf"))`) `installDist` раскладывает **плоско** в `lib/` (файлы рядом с jar-ами), а в `CLASSPATH` оставляет `$APP_HOME/lib/conf` — путь, которого нет. JVM отсутствующую запись терпит, если её нет и при запуске, и кэш тренируется; случай E4 (непустой каталог на classpath) через плагин `application` недостижим | TestKit `InvalidationFunctionalTest`, случай E4, Linux 25.0.4, 06.09.2026 |
-| Второй шаг одношагового режима получает свои флаги через `JAVA_TOOL_OPTIONS`: «Picked up JAVA_TOOL_OPTIONS: -Djava.class.path=… -XX:AOTMode=create» в журнале тренировки | тот же тест, `build/zavarnik/aotTrain.log` |
+| Каталог-зависимость (`runtimeOnly(files("conf"))`) `installDist` раскладывает **плоско** в `$APP_HOME/lib` (файлы рядом с jar-ами), а в `CLASSPATH` оставляет `$APP_HOME/lib/conf` — путь, которого нет. JVM отсутствующую запись терпит, если её нет и при запуске, и кэш тренируется; случай E4 (непустой каталог на classpath) через плагин `application` недостижим | TestKit `InvalidationFunctionalTest`, случай E4, Linux 25.0.4, 06.09.2026 |
+| Второй шаг одношагового режима получает свои флаги через `JAVA_TOOL_OPTIONS`: «Picked up JAVA_TOOL_OPTIONS: -Djava.class.path=… -XX:AOTMode=create» в журнале тренировки | тот же тест, `<project>/build/zavarnik/aotTrain.log` |
 
 **Следствие.** Один и тот же скрипт — лаунчер тренировки, проверки и прода (→ D1, D2). Без
 сторожа это невозможно из-за G5: безусловный `-XX:AOTCache` в скрипте делает `-XX:AOTCacheOutput`
@@ -209,7 +209,7 @@ written»). Неверно: `.aot.config` пишется в `before_exit` VM, д
 не может нести валидный кэш: формат zip хранит DOS-время в местном поясе, Gradle не пишет extra-поле
 с epoch, и распакованный на другой машине jar получает другой mtime — а 1970 в DOS-времени вообще
 не выражается. `distTar` может — но не через `preserveFileTimestamps = true`, как здесь было записано сначала:
-tar берёт jar-ы из `build/libs` и кэша Gradle с их собственными mtime, а не из `installDist`.
+tar берёт jar-ы из `<project>/build/libs` и кэша Gradle с их собственными mtime, а не из `installDist`.
 Работает обратное: воспроизводимый tar ставит всем записям `86400` с, и если `aotTrain` нормализует
 jar-ы к той же константе, распакованный tar совпадает с кэшем без единой настройки (D3, правка).
 Решение — [B-07](../backlog/B-07-start-scripts-and-distribution-wiring.md): кэш и манифест в
@@ -229,7 +229,7 @@ jar-ы к той же константе, распакованный tar сов�
 | Кэш, натренированный на CPU с AVX-512, падает `SIGILL` в `~AdapterBlob` на CPU без него; обход — `-XX:UseAVX=2` на тренировке | статья coffeesprout.nl о Quarkus на Red Hat 25.0.3+9; Nucleus, issue #400 и флаг `-XX:-AOTAdapterCaching` в `AbstractGenerateAotCacheTask.kt` |
 | Linux-машина — без AVX-512 (`/proc/cpuinfo`, `UseAVX=2`) | прогон |
 | **Не воспроизведено на паре EPYC Genoa (`UseAVX=3`, AVX-512) → Core Ultra 7 255HX (`UseAVX=2`)**, тот же билд `25.0.4+7-1-24.04-Ubuntu`: нативные кэши hello world (326 записей AOT-кода) и образца Ktor (495) загружаются под `-XX:AOTMode=on` и работают, 20 из 20 прогонов, 20 из 20 классов из кэша | `experiments/cpu-portability/results/`, 06.09.2026 |
-| В HotSpot 25.0.4 загрузчик AOT-кода **не проверяет набор инструкций CPU**: в `aotCodeCache.cpp` есть проверки GC, сжатых указателей и версии, но не CPU. В mainline (→ JDK 27) появился `Config::verify_cpu_features` с сообщением «AOT Code Cache disabled: cpu features are incompatible» | `openjdk/jdk25u` `jdk-25.0.4-ga` и `openjdk/jdk` `master`, `src/hotspot/share/code/aotCodeCache.cpp` |
+| В HotSpot 25.0.4 загрузчик AOT-кода **не проверяет набор инструкций CPU**: в `aotCodeCache.cpp` есть проверки GC, сжатых указателей и версии, но не CPU. В mainline (→ JDK 27) появился `Config::verify_cpu_features` с сообщением «AOT Code Cache disabled: cpu features are incompatible» | `openjdk/jdk25u@0b8bc780f976!/src/hotspot/share/code/aotCodeCache.cpp` (тег `jdk-25.0.4-ga`) и `openjdk/jdk@ef54ca1c7758!/src/hotspot/share/code/aotCodeCache.cpp` (`master` на 06.09.2026) |
 | Отчёты о `SIGILL`: Nucleus #400 — тренировка на GitHub CI, падение на Core2 Quad Q9550 (без AVX) и на Ryzen 5 3500X, Windows 11, Nucleus 2.0.5; Quarkus — Red Hat 25.0.3, GitHub-раннер → CPU без AVX-512 | github.com/NucleusFramework/Nucleus/issues/400; coffeesprout.nl |
 
 **Следствие.** Сценарий плагина — тренировка в CI, запуск где угодно — ровно тот, в котором это
@@ -247,8 +247,8 @@ jar-ы к той же константе, распакованный tar сов�
 | Issues gradle/gradle: «leyden», «AOT cache» | пусто; контроль «configuration cache» — есть | `gh search issues … --repo gradle/gradle` |
 | YouTrack KTOR: «leyden», «AOT» | `[]`; контроль «graalvm» — три issue | `youtrack.jetbrains.com/api/issues?query=project: KTOR …` |
 | GitHub, код `AOTCacheOutput` на Kotlin | 17 файлов: JetBrains/compose-multiplatform, NucleusFramework/Nucleus, sproctor/potassium (форк того же), rock3r/indexino (личный), остальное — скрипты | `gh api search/code` |
-| JetBrains Compose Gradle plugin: `AotMode.AotPrebuild` — `-XX:AOTCacheOutput=$APPDIR/app.aot`, свойство `compose.aot.training-run=true`, приложение обязано выйти само; раскладка jpackage | `gradle-plugins/compose/src/main/kotlin/org/jetbrains/compose/desktop/application/dsl/AotSettings.kt` |
-| Nucleus (359 звёзд, активен): `enableAotCache`, JDK ≥ 25, «The application **must** self-terminate … `System.exit(0)`», таймаут безопасности 300 с и `destroyForcibly`, умолчание `-XX:-AOTAdapterCaching` («COMPATIBILITY») | `plugin-build/plugin/src/main/kotlin/dev/nucleusframework/desktop/application/tasks/AbstractGenerateAotCacheTask.kt` |
+| JetBrains Compose Gradle plugin: `AotMode.AotPrebuild` — `-XX:AOTCacheOutput=$APPDIR/app.aot`, свойство `compose.aot.training-run=true`, приложение обязано выйти само; раскладка jpackage | `JetBrains/compose-multiplatform@c71d97f1f814!/gradle-plugins/compose/src/main/kotlin/org/jetbrains/compose/desktop/application/dsl/AotSettings.kt` |
+| Nucleus (359 звёзд, активен): `enableAotCache`, JDK ≥ 25, «The application **must** self-terminate … `System.exit(0)`», таймаут безопасности 300 с и `destroyForcibly`, умолчание `-XX:-AOTAdapterCaching` («COMPATIBILITY») | `NucleusFramework/Nucleus@412ab0d4907b!/plugin-build/plugin/src/main/kotlin/dev/nucleusframework/desktop/application/tasks/AbstractGenerateAotCacheTask.kt` |
 | Spring Framework: `-XX:AOTCacheOutput=app.aot -Dspring.context.exit=onRefresh`; «The timestamps of the JARs must be preserved»; «Additional JARs or directories can be specified at the end»; проверка по `-Xlog:class+load` → `source: shared objects file` | docs.spring.io, integration/aot-cache |
 | Quarkus: `aot-jar` + интеграционные тесты как тренировка, `./mvnw verify -Dquarkus.package.jar.aot.enabled=true` | quarkus.io/blog/leyden-2 |
 | Репозитории «leyden» на GitHub: анализаторы и бенчмарки (Delawen/leyden-analyzer, simonis/LeydenVsGraalNative, shipilev/leyden-perf), плагинов сборки нет | `gh search repos leyden` |
@@ -271,7 +271,7 @@ jar-ы к той же константе, распакованный tar сов�
 | Мак: OpenJDK 25.0.2 (`/Users/youndie/Library/Java/JavaVirtualMachines/openjdk-25.0.2`), JBR 25.0.4.1 (`~/.gradle/jdks/jetbrains_s_r_o_-25-aarch64-os_x.2`), Corretto 21; Gradle-дистрибутивы 9.5.1–9.7.1 в `~/.gradle/wrapper/dists` | `/usr/libexec/java_home -V`, `ls` |
 | Linux-машина: OpenJDK 25.0.4 (`/usr/lib/jvm/java-25-openjdk-amd64`), 21; OpenJDK 26.0.2.1 в `~/jdks/jdk-26.0.2.1` (поставлен 06.09.2026, B-03); Docker 29.1.3; 20 ядер | ssh, `java -version`, `docker version` |
 | Доля классов из кэша на Ktor-стенде (RQ4): 2322 из 2322 классов `stand.*`, `io.ktor.*`, `kotlinx.*`, `kotlin.*`; всего 3824 из 3837 (13 непопавших — классы JDK) — по строкам `source:` в `-Xlog:class+load`, один прогон с нагрузкой | `experiments/ktor-readiness/results/2026-09-06-linux-x86_64-openjdk-25.0.4-run2.log`, T1 |
-| **Hidden-классы лямбд (`$$Lambda/0x…`) архивируются**: на образце под indy (умолчание Kotlin 2.x) загружено 269 lambda-прокси, **269 из кэша**; с `-Xlambdas=class` — 265 прокси (библиотечные), все из кэша, и 2264 из 2264 jar-классов (против 2262 под indy). Разницы между режимами нет, флаг компилятора не нужен — RQ4 закрыт | `./gradlew -p samples/ktor aotVerify [-PlambdasClass] --rerun-tasks`, `build/zavarnik/aotVerify.log`, Linux 25.0.4, 06.09.2026 (B-02) |
+| **Hidden-классы лямбд (`$$Lambda/0x…`) архивируются**: на образце под indy (умолчание Kotlin 2.x) загружено 269 lambda-прокси, **269 из кэша**; с `-Xlambdas=class` — 265 прокси (библиотечные), все из кэша, и 2264 из 2264 jar-классов (против 2262 под indy). Разницы между режимами нет, флаг компилятора не нужен — RQ4 закрыт | `./gradlew -p samples/ktor aotVerify [-PlambdasClass] --rerun-tasks`, `<project>/build/zavarnik/aotVerify.log`, Linux 25.0.4, 06.09.2026 (B-02) |
 
 ### 1.9 Что измерено — и что это (не) значит
 
@@ -392,7 +392,7 @@ mtime, равный умолчанию Jib (`EPOCH_PLUS_SECOND`, `1970-01-01T00:
 **Правка при реализации B-05/B-07 (06.09.2026 вечером):** константа — **`1970-01-02T00:00:00Z`**
 (`86400` с), та, которой Gradle штампует каждую запись воспроизводимого tar
 (`TarCopyAction.CONSTANT_TIME_FOR_TAR_ENTRIES = 86400000`, умолчание с Gradle 9). Причина в §1.5,
-следствие 2: `distTar` не может взять mtime из `installDist` — он копирует jar-ы из `build/libs` и
+следствие 2: `distTar` не может взять mtime из `installDist` — он копирует jar-ы из `<project>/build/libs` и
 кэша Gradle, а не из установленного каталога, — поэтому единственный способ сделать tar валидным без
 настроек — тренировать на той же константе, которую tar поставит сам. Docker `COPY` при этом
 по-прежнему сохраняет mtime, а Jib теряет «работает без настроек»: ему нужна одна строка
@@ -424,7 +424,7 @@ mtime, равный умолчанию Jib (`EPOCH_PLUS_SECOND`, `1970-01-01T00:
 ### D4. Проверка — тройная, и хэши считает плагин
 
 Решение: `aotVerify` красный, если (1) запуск скрипта с `-XX:AOTMode=on` вернул не 0, (2) доля
-классов приложения из кэша ниже порога, (3) SHA-256 jar-ов не совпадает с `lib/app.aot.jars`,
+классов приложения из кэша ниже порога, (3) SHA-256 jar-ов не совпадает с `$APP_HOME/lib/app.aot.jars`,
 который написал `aotTrain`. Плюс предупреждение на конфигурации при JDK 25.0.0–25.0.3 и
 26.0.0–26.0.1.
 
@@ -434,7 +434,7 @@ mtime, равный умолчанию Jib (`EPOCH_PLUS_SECOND`, `1970-01-01T00:
 - на JDK с JDK-8377932 и `AOTMode=on` лжёт (R14 в журнале 25.0.2), поэтому (3);
 - (1) и (3) молчат, если кэш принят, но пуст для приложения (плохая тренировка) — поэтому (2),
   тем же счётчиком, что стенд;
-- цена: манифест — ещё один файл в `lib/`, и порог (2) — число, которое надо будет подобрать по
+- цена: манифест — ещё один файл в `$APP_HOME/lib`, и порог (2) — число, которое надо будет подобрать по
   [B-02](../backlog/B-02-kotlin-classes-archived-share.md).
 
 ### D5. Тренировка заканчивается SIGTERM; `exitAfter` — запасной режим; хука в приложении нет *(отклонение от брифа)*
@@ -472,7 +472,7 @@ ZGC. Симметричный случай — ZGC с обеих сторон �
 выигрыше до JEP 516. Смена GC между тренировкой и запуском по-прежнему допустима, кроме перехода
 через границу сжатых указателей (ZGC ↔ остальные) — её не снимает и `AOTStreamableObjects` на 26.
 Бриф просил «pin the same GC» — не нужно. Пин остаётся один: **тот же билд JDK** (`_jvm_ident`
-и размер `lib/modules`), и это проверяется прогоном `aotVerify`, а не текстом.
+и размер `$JAVA_HOME/lib/modules`), и это проверяется прогоном `aotVerify`, а не текстом.
 
 ### D8. Что проверяется на конфигурации, до первого запуска
 
@@ -562,11 +562,11 @@ arguments for the java command:`, а не номер строки.
 ([B-05](../backlog/B-05-aot-train-task.md)); стенд `experiments/ktor-readiness/app` — первый
 кандидат в `samples/ktor` ([B-15](../backlog/B-15-ktor-sample-on-the-plugin-in-ci.md)).
 
-Когда появится код, слои `features/` и `services/` заводятся в тех же PR, `status: draft` до
+Когда появится код, слои `features` и `services` заводятся в тех же PR, `status: draft` до
 слияния; этот документ правится в месте расхождения, а не переписывается.
 
 **Состояние 07.09.2026.** Плагин реализован и опубликован снапшотами (`0.1.0.7`); последняя
-закрытая задача — [B-25](../backlog/B-25-train-and-verify-without-gradle.md): раннер в `lib/`,
+закрытая задача — [B-25](../backlog/B-25-train-and-verify-without-gradle.md): раннер в `$APP_HOME/lib`,
 JRE-стадия образа тренирует и проверяет кэш сама (§1.1, правка от 07.09). Открытыми остаются
 только отложенные B-09 и B-13. Две статьи по этому ресёрчу опубликованы на kotlin.website в тот
 же день — [про JDK-8377932](https://kotlin.website/blog/stale-aot-cache-on-jdk25) (§1.2) и
@@ -579,7 +579,7 @@ JRE-стадия образа тренирует и проверяет кэш с
 медиане десяти рестартов на вариант, следующая сотня запросов без изменений (JIT, как и в B-24);
 кэш 65 МиБ на 128 jar-ов. Тренировка — раннером внутри контейнера образа на сети стенда, потому что
 сервис не стартует без базы: рецепт B-25 в форме «обучить в запущенном контейнере и доложить слоем»,
-не в `docker build`. Запись — в репозитории konekt, `docs/research/measurements-2026-09-07/aot/`.
+не в `docker build`. Запись — в репозитории konekt, `youndie/konekt@d75e6e007099!/docs/research/measurements-2026-09-07/aot/`.
 **Раскатка в кластер 08.09.2026 — отрицательный результат, B-31.** Кэш v0.1.41, натренированный
 в CI под Docker overlay2, узел k0s (containerd) отверг: «The name of app classpath [1] does not
 match» — konekt ставил в стартовый скрипт `lib/*`, а порядок раскрытия wildcard — это порядок
@@ -589,5 +589,5 @@ match» — konekt ставил в стартовый скрипт `lib/*`, а �
 Тем же днём — **Jib-путь** (B-26, B-29): тот же сервер как Jib-образ, тренировка через `jibAotTrain`
 на сети стенда, кэш слоем; готовность 6244 → 2242 мс по медиане десяти (4253 → 2242 по второму,
 чистому кругу), первый запрос 309 → 168 мс, 4727 из 4730 классов из кэша, образ 537 → 614 МБ —
-`measurements-2026-09-07/aot-jib/` там же. Два пути дают одно и то же: около двух секунд до
+`youndie/konekt@eec7fbacfac7!/docs/research/measurements-2026-09-07/aot-jib/` там же. Два пути дают одно и то же: около двух секунд до
 `/health` на одном ядре против четырёх с лишним.

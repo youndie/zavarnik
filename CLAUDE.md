@@ -61,10 +61,17 @@ DSL `crac { ignoreRemotePort(...) }`, Jib-режим `jibCracCheckpoint`/`jibCra
 ```bash
 pip install pyyaml
 make check      # ровно то, что гоняет CI
-make report     # BDD-покрытие и якоря — читаются человеком
+make report     # BDD-покрытие (читается человеком) и якоря (блокируют)
 make fix        # перегенерировать индекс бэклога, дописать карту покрытия
 ```
 
 Проверки — docs-bootstrap той версии, что пинует строка `uses: youndie/docs-bootstrap@…` в
 `.github/workflows/check.yaml`; первый `make check` скачивает её в `.docs-bootstrap/` (каталог сам
 себя игнорирует). Копий под `scripts/`, которые запускались бы руками, нет.
+
+Отчёт якорей блокирует (`ANCHORS_ARGS ?= --check` в Makefile): путь в `docs/`, который ни на что не
+указывает, роняет `make check`. Путь за пределы репозитория пишется адресом (SPEC §4.1 docs-bootstrap):
+`youndie/<repo>@<коммит>!/<путь>` или `<owner>/<repo>@<коммит>!/<путь>` — на коммит, на котором факт
+прочитан, `<артефакт>!/<путь>` — внутри JDK или jar. Каталог раскладки или сборки пишется с
+подстановкой (`$APP_HOME/lib`, `$JAVA_HOME/lib/modules`, `<project>/build/libs`), чтобы не читаться
+путём в репозитории.

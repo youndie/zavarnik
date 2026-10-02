@@ -58,7 +58,7 @@ Known constraints (from JEP 483 and Quarkus's integration notes):
 Each RQ has a method and a pre-declared red/green outcome. Record results (and retractions) in `RESEARCH.md` in the repo.
 
 ### RQ1 — Path relocation
-*Does a cache trained in `build/install/app/` load when the identical dist is unpacked at `/opt/app/`?*
+*Does a cache trained in `<project>/build/install/app/` load when the identical dist is unpacked at `/opt/app/`?*
 - **Method:** train in `installDist` layout, copy dist to a different absolute path, run with `-XX:AOTCache -Xlog:aot=info -Xlog:cds=info`. Repeat with relative-path classpath in the start script vs. absolute.
 - **Green:** loads at any location, or loads when the classpath is expressed relative to `$APP_HOME`.
 - **Red:** paths are validated as strings → training must happen in the final layout (Docker stage). This changes the plugin's shape but does not kill it.
