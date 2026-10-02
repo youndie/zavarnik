@@ -41,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: youndie/docs-bootstrap@v0.3.0
+      - uses: youndie/docs-bootstrap@v0.3.5
 
   # The plugin: unit tests, TestKit tests against the installed JDKs 21 and 25, ktlint. The tests
   # train real AOT caches, so the runner needs JDK 25 — the shared action installs 21 and 25.
@@ -86,7 +86,7 @@ jobs:
 
       # The code lives in this checkout, so its parent is a directory whose one subdirectory is
       # this repository - which is exactly what REPOS (`..` by default) expects.
-      - uses: youndie/docs-bootstrap@v0.3.0
+      - uses: youndie/docs-bootstrap@v0.3.5
         with:
           target: report
 
@@ -108,6 +108,6 @@ jobs:
       #       done
       #     env:
       #       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   - uses: youndie/docs-bootstrap@v0.3.0
+      #   - uses: youndie/docs-bootstrap@v0.3.5
       #     with:
       #       target: report REPOS=repos
