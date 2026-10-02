@@ -21,11 +21,14 @@ plugins {
 }
 ```
 
-Every push to `main` also publishes a snapshot, `0.1.0.<run>`, to
+Every push to `main` also publishes a snapshot, `<next release>.<run>` (`0.1.1.<run>` now), to
 `https://reposilite.kotlin.website/snapshots` — add it under `pluginManagement.repositories` in
 `settings.gradle.kts` (with `content { includeGroupByRegex("io\\.github\\.youndie.*") }`) and take
 the version from the repository's
 [`maven-metadata.xml`](https://reposilite.kotlin.website/snapshots/io/github/youndie/zavarnik/io.github.youndie.zavarnik.gradle.plugin/maven-metadata.xml).
+A snapshot sorts above the release of the same number, so a build on one is not offered that release
+as an upgrade: moving back to the Portal is a hand edit. `0.1.0.21`–`0.1.0.47` are builds of `0.1.0`
+and the commits after it, published before the head moved; nothing needs them.
 The DSL is 0.x and may still move before 1.0; the changes are in the backlog.
 
 ## Requirements
