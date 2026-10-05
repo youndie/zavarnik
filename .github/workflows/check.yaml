@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: youndie/sborka/.github/actions/setup-kotlin@main
+      - uses: youndie/sborka/.github/actions/setup-kotlin@v0.5.0.130
       - run: ./gradlew check --console=plain
 
   # The consumer's view: the Ktor sample asks for the plugin by id and runs train → verify → tar.
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: youndie/sborka/.github/actions/setup-kotlin@main
+      - uses: youndie/sborka/.github/actions/setup-kotlin@v0.5.0.130
       - run: ./gradlew -p samples/ktor check distTar --console=plain
       - run: tar tf samples/ktor/build/distributions/ktor-sample.tar | grep -E "lib/app\.aot(\.jars)?$"
       # The container recipe: a -jre runtime stage that trains and verifies with the runner, checked
