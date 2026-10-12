@@ -41,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: youndie/docs-bootstrap@v0.3.8
+      - uses: youndie/docs-bootstrap@v0.3.11
 
   # The plugin: unit tests, TestKit tests against the installed JDKs 21 and 25, ktlint. The tests
   # train real AOT caches, so the runner needs JDK 25 — the shared action installs 21 and 25.
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: youndie/sborka/.github/actions/setup-kotlin@v0.5.0.130
+      - uses: youndie/sborka/.github/actions/setup-kotlin@v0.5.0.133
       - run: ./gradlew check --console=plain
 
   # The consumer's view: the Ktor sample asks for the plugin by id and runs train → verify → tar.
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: youndie/sborka/.github/actions/setup-kotlin@v0.5.0.130
+      - uses: youndie/sborka/.github/actions/setup-kotlin@v0.5.0.133
       - run: ./gradlew -p samples/ktor check distTar --console=plain
       - run: tar tf samples/ktor/build/distributions/ktor-sample.tar | grep -E "lib/app\.aot(\.jars)?$"
       # The container recipe: a -jre runtime stage that trains and verifies with the runner, checked
@@ -87,7 +87,7 @@ jobs:
 
       # The code lives in this checkout, so its parent is a directory whose one subdirectory is
       # this repository - which is exactly what REPOS (`..` by default) expects.
-      - uses: youndie/docs-bootstrap@v0.3.8
+      - uses: youndie/docs-bootstrap@v0.3.11
         with:
           target: report
 
