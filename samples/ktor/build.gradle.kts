@@ -3,8 +3,8 @@
 // `distTar` ships it. This is the stand from experiments/ktor-readiness on the plugin instead of on
 // hand-written glue.
 plugins {
-    kotlin("jvm") version "2.4.20"
-    kotlin("plugin.serialization") version "2.4.20"
+    kotlin("jvm") version "2.4.21"
+    kotlin("plugin.serialization") version "2.4.21"
     application
     id("io.github.youndie.zavarnik")
 }
