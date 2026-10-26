@@ -4,7 +4,7 @@
 # there is no Kotlin version in this file to drift from the rest of the portfolio.
 sborka = "0.4.0.111"
 # Publishes to the Gradle Plugin Portal; applied by the plugin module itself, run from sborka's portal.yaml.
-pluginPublish = "2.1.1"
+pluginPublish = "2.2.1"
 
 [plugins]
 sborkaJvm = { id = "io.github.youndie.sborka.jvm", version.ref = "sborka" }
