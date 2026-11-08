@@ -14,8 +14,8 @@
 //
 // `crac-check.sh` does both and then starts the image, whose entrypoint is the restore.
 plugins {
-    kotlin("jvm") version "2.4.20"
-    kotlin("plugin.serialization") version "2.4.20"
+    kotlin("jvm") version "2.4.21"
+    kotlin("plugin.serialization") version "2.4.21"
     id("io.ktor.plugin") version "3.6.0"
     id("io.github.youndie.zavarnik")
 }
@@ -24,8 +24,8 @@ dependencies {
     implementation("io.ktor:ktor-server-cio:3.6.0")
     implementation("io.ktor:ktor-server-content-negotiation:3.6.0")
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.6.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
-    implementation("org.slf4j:slf4j-simple:2.0.17")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
+    implementation("org.slf4j:slf4j-simple:2.0.20")
 }
 
 kotlin { jvmToolchain(25) }
